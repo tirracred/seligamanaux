@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Últimas Notícias - Portal Manaus</title>
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&family=Georgia&display=swap" rel="stylesheet">
+</head>
+<style>
+/* =======================
+   ESTILOS: LAYOUT FEED (Últimas Notícias)
+   ======================== */
+.feed-container {
+    max-width: 750px; /* Limita a largura da linha para melhor leitura */
+    margin: 1.5rem auto; /* Centraliza o feed */
+}
+
+.feed-item {
+    border-bottom: 1px solid var(--cor-borda);
+    padding: 1.5rem 0;
+}
+
+.feed-item:last-child {
+    border-bottom: none;
+}
+
+.feed-timestamp {
+    display: block;
+    font-family: var(--fonte-principal);
+    font-size: 0.8rem; /* 12.8px */
+    font-weight: 700;
+    color: var(--cor-primaria); /* Vermelho para dar senso de urgência */
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+}
+
+.feed-item h2 {
+    font-family: var(--fonte-titulos);
+    font-size: 1.3rem; /* 20.8px */
+    margin: 0 0 0.5rem 0;
+    line-height: 1.3;
+}
+
+.feed-item h2 a {
+    text-decoration: none;
+    color: var(--cor-texto-principal);
+}
+
+.feed-item h2 a:hover {
+    text-decoration: underline;
+}
+
+.feed-item p {
+    font-family: var(--fonte-principal);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--cor-texto-secundario);
+    margin: 0;
+}
+</style>
+
+<body>
+
+    <header class="site-header">
+        <div class="container header-container">
+            <div class="logo"><a href="index.html"><h1>PORTAL MANAUS</h1></a></div>
+            <button class="nav-toggle" aria-label="Abrir menu"><span class="hamburger"></span></button>
+            <nav class="nav-principal">
+                <ul>
+                    <li><a href="index.html">Início</a></li>
+                    <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
+                    <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        
+        <h1 class="page-title">Últimas Notícias</h1>
+
+        <div class="feed-container">
+
+            <article class="feed-item">
+                <span class="feed-timestamp">publicado às 14:32</span>
+                <h2><a href="artigo.html">Título da notícia que acabou de acontecer (Breaking News)</a></h2>
+                <p>Um resumo muito curto, de uma linha, para o feed de últimas notícias.</p>
+            </article>
+            <article class="feed-item">
+                <span class="feed-timestamp">publicado às 14:15</span>
+                <h2><a href="artigo.html">Atualização sobre o trânsito na ponte Rio Negro</a></h2>
+                </article>
+
+            <article class="feed-item">
+                <span class="feed-timestamp">publicado às 13:50</span>
+                <h2><a href="artigo.html">Governador do Amazonas anuncia nova medida econômica</a></h2>
+                <p>O resumo ajuda a dar contexto rápido ao leitor que está escaneando a página.</p>
+            </article>
+            
+            <article class="feed-item">
+                <span class="feed-timestamp">publicado às 13:22</span>
+                <h2><a href="artigo.html">Resultado do jogo do Manaus F.C. na Série D</a></h2>
+            </article>
+
+            </div> </main>
+
+    <footer class="site-footer-bottom">
+        <div class="container">
+            <p>&copy; 2024 Portal Manaus. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+</html>

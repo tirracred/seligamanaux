@@ -18,6 +18,61 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
+
+        /* =======================
+   ESTILOS: HERO GRID (Homepage)
+   ======================== */
+
+.hero-grid {
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+/* Em telas de desktop, ativamos a grade G1 */
+@media (min-width: 992px) {
+   .hero-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr; /* 3 colunas: 50% 25% 25% */
+        grid-template-rows: auto auto auto;
+        gap: 1.5rem; /* Espaço entre os cards */
+
+        /* A "mágica" do layout G1 */
+        grid-template-areas:
+            "principal sub1 sub2"
+            "principal sub3 sub4"
+            "principal sub5 sub5"; /* Exemplo de 5 itens */
+    }
+
+    /* Mapeando cada card para sua área na grade */
+   .card-hero-1 { grid-area: principal; }
+   .card-hero-2 { grid-area: sub1; }
+   .card-hero-3 { grid-area: sub2; }
+   .card-hero-4 { grid-area: sub3; }
+   .card-hero-5 { grid-area: sub4; }
+    /*.card-hero-6 { grid-area: sub5; }... e assim por diante */
+
+    /* Na matéria principal, o título é maior */
+   .card-hero-1 h3 {
+        font-size: 2.5rem; /* 40px */
+        line-height: 1.1;
+    }
+    
+    /* Nas secundárias, o título é menor */
+   .card-hero-2 h4,
+   .card-hero-3 h4,
+   .card-hero-4 h4,
+   .card-hero-5 h4 {
+        font-size: 1.1rem; /* 18px */
+    }
+    
+    /* Oculta o resumo nas matérias menores para um design mais limpo */
+   .card-hero-2 p,
+   .card-hero-3 p,
+   .card-hero-4 p,
+   .card-hero-5 p {
+        display: none;
+    }
+}
         /* Define a fonte Inter como padrão */
         body {
             font-family: 'Inter', sans-serif;
@@ -204,7 +259,64 @@
     </div>
 </header>
 
+
     <!-- Área de Conteúdo Principal -->
+
+    <main class="container">
+    <section class="hero-grid">
+        
+        <article class="card-noticia card-hero-1">
+            <a href="artigo.html">
+                <img src="https://via.placeholder.com/600x400.png?text=Notícia+Principal" alt="Descrição da imagem principal">
+                <div class="card-conteudo">
+                    <span class="categoria-tag">Amazonas</span>
+                    <h3>Título da Notícia Principal e Mais Importante do Dia</h3>
+                    <p>Este é o 'lead' da matéria principal, com um resumo mais longo para atrair o leitor para o clique imediato.</p>
+                </div>
+            </a>
+        </article>
+
+        <article class="card-noticia card-hero-2">
+            <a href="artigo.html">
+                <img src="https://via.placeholder.com/300x200.png?text=Notícia+2" alt="Descrição da notícia 2">
+                <div class="card-conteudo">
+                    <span class="categoria-tag">Manaus</span>
+                    <h4>Título da segunda notícia mais relevante</h4>
+                </div>
+            </a>
+        </article>
+
+        <article class="card-noticia card-hero-3">
+            <a href="artigo.html">
+                <img src="https://via.placeholder.com/300x200.png?text=Notícia+3" alt="Descrição da notícia 3">
+                <div class="card-conteudo">
+                    <span class="categoria-tag">Política</span>
+                    <h4>Título da terceira notícia mais relevante</h4>
+                </div>
+            </a>
+        </article>
+
+        <article class="card-noticia card-hero-4">
+            <a href="artigo.html">
+                <div class="card-conteudo">
+                    <span class="categoria-tag">Economia</span>
+                    <h4>Notícia rápida sem imagem</h4>
+                </div>
+            </a>
+        </article>
+
+        <article class="card-noticia card-hero-5">
+            <a href="artigo.html">
+                <div class="card-conteudo">
+                    <span class="categoria-tag">Esportes</span>
+                    <h4>Outra notícia rápida sem imagem</h4>
+                </div>
+            </a>
+        </article>
+
+    </section>
+    
+    </main>
     <main id="app-container" class="container mx-auto max-w-5xl p-4 flex-grow">
 
         <!-- ===== PÁGINA INÍCIO (Feed de Notícias) ===== -->
