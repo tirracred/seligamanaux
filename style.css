@@ -55,7 +55,7 @@ a:hover {
    CABEÇALHO (Header) - Estilo Claro (G1/BBC)
    ======================== */
 .site-header {
-    background-color: #ffffff; /* Fundo BRANCO */
+    background-color: #ff0000; /* Fundo BRANCO */
     color: var(--texto-principal); /* Texto ESCURO */
     padding: 1rem 0; /* Mais espaçamento para um look "fino" */
     position: sticky;
