@@ -17,8 +17,7 @@
                 <a href="/"><h1>SeligaManaux (ADMIN)</h1></a>
             </div>
 
-
-
+            
         </div>
     </header>
     
@@ -26,19 +25,20 @@
 
         <form id="login-form" class="admin-form">
             <h1 class="page-title-admin">Login do Administrador</h1>
-            
+
+
             <div id="login-feedback-message" class="message" style="display: none;"></div>
 
             <div>
                 <label for="admin-email">Email</label>
                 <input type="email" id="admin-email" required>
             </div>
-            
+
             <div>
                 <label for="admin-password">Senha</label>
                 <input type="password" id="admin-password" required>
             </div>
-            
+
             <button type="submit" id="login-button">ENTRAR</button>
             <p id="loading-login" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Entrando...</p>
         </form>
@@ -46,7 +46,8 @@
 
         <form id="news-form" class="admin-form" style="display: none;">
             <h1 class="page-title-admin">Publicar Nova Notícia</h1>
-            
+
+
             <div id="feedback-message" class="message" style="display: none;"></div>
 
             <div>
@@ -80,13 +81,22 @@
             </div>
 
             <div>
-                <label for="news-image">Anexar Foto</label>
+                <label for="news-image">Anexar Foto Principal (Capa)</label>
                 <input type="file" id="news-image" accept="image/*">
+            </div>
+
+            <div>
+                <label for="news-gallery">Adicionar Galeria (até 10 mídias)</label>
+                <input type="file" id="news-gallery" accept="image/*,video/*" multiple>
+                <small style="color: var(--texto-secundario); margin-top: 5px; display: block;">
+                    Segure Ctrl (ou Cmd) para selecionar múltiplos arquivos.
+                </small>
             </div>
             
             <button type="submit" id="submit-button">PUBLICAR AGORA</button>
             <p id="loading-submit" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Publicando... Aguarde.</p>
         </form>
+
 
 
         <section id="manage-section" style="display: none;">
@@ -104,31 +114,34 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             
-            // Referências dos formulários
+            // --- REFERÊNCIAS DOS ELEMENTOS ---
             const loginForm = document.getElementById('login-form');
             const newsForm = document.getElementById('news-form');
-            const manageSection = document.getElementById('manage-section'); // Novo
+            const manageSection = document.getElementById('manage-section');
             const loginButton = document.getElementById('login-button');
             const loadingLogin = document.getElementById('loading-login');
             const loginFeedback = document.getElementById('login-feedback-message');
             
-            // Referências do form de notícias
+
+
             const submitButton = document.getElementById('submit-button');
             const loadingSubmit = document.getElementById('loading-submit');
             const feedbackMessage = document.getElementById('feedback-message');
             
             const newsTitle = document.getElementById('news-title');
             const newsCategory = document.getElementById('news-category');
-            const newsHeadlineColor = document.getElementById('news-headline-color'); // Novo
+            const newsHeadlineColor = document.getElementById('news-headline-color');
             const newsContent = document.getElementById('news-content');
             const newsImageInput = document.getElementById('news-image');
+            const newsGalleryInput = document.getElementById('news-gallery'); // Novo campo
 
-            // Referências do Gerenciamento
+
+
             const loadingManage = document.getElementById('loading-manage');
             const postListContainer = document.getElementById('post-list-container');
-            postListContainer.addEventListener('click', handleDeleteClick); // Adiciona listener para deleção
+            postListContainer.addEventListener('click', handleDeleteClick);
 
-            // Evento: Tentar fazer login
+            // --- LÓGICA DE LOGIN ---
             loginForm.addEventListener('submit', handleLogin);
 
             async function handleLogin(event) {
@@ -150,12 +163,17 @@
 
                     if (error) throw error;
 
-                    // SUCESSO!
+
+
                     loginForm.style.display = 'none';
                     newsForm.style.display = 'block';
-                    manageSection.style.display = 'block'; // Mostra gerenciamento
+                    manageSection.style.display = 'block';
+
+
                     
-                    // Carrega os posts para gerenciar
+
+
+
                     await loadManagedPosts();
 
                 } catch (err) {
@@ -168,11 +186,11 @@
             }
 
 
-            // --- Lógica do formulário de notícias ---
+            // --- LÓGICA DE PUBLICAÇÃO DE NOTÍCIAS ---
             newsForm.addEventListener('submit', handleFormSubmit);
 
             async function handleFormSubmit(event) {
-                event.preventDefault(); 
+                event.preventDefault();
                 
                 if (!supabase) {
                     showMessage('Erro: Falha na conexão com o banco de dados.', 'error');
@@ -184,21 +202,33 @@
                 feedbackMessage.style.display = 'none';
 
                 try {
-                    const imageFile = newsImageInput.files[0];
-                    let imageUrl = null;
-                    
-                    if (imageFile) {
-                        imageUrl = await uploadMedia(imageFile);
+                    // 1. Upload da Imagem Principal (Capa)
+                    const mainImageFile = newsImageInput.files[0];
+                    let mainImageUrl = null;
+                    if (mainImageFile) {
+                        mainImageUrl = await uploadMedia(mainImageFile);
                     }
 
+                    // 2. Upload da Galeria (ATUALIZADO)
+                    const galleryFiles = Array.from(newsGalleryInput.files).slice(0, 10); // Limita a 10 arquivos
+                    let galleryUrls = [];
+                    if (galleryFiles.length > 0) {
+                        // Faz o upload de todos os arquivos da galeria em paralelo
+                        const uploadPromises = galleryFiles.map(file => uploadMedia(file));
+                        galleryUrls = await Promise.all(uploadPromises);
+                    }
+
+                    // 3. Monta o objeto da notícia
                     const newPost = {
                         title: newsTitle.value,
                         content: newsContent.value,
-                        category: newsCategory.value, 
-                        image_url: imageUrl,
-                        headline_color: newsHeadlineColor.value // Salva a cor da manchete
+                        category: newsCategory.value,
+                        image_url: mainImageUrl, // URL da imagem principal
+                        headline_color: newsHeadlineColor.value,
+                        gallery_urls: galleryUrls.length > 0 ? galleryUrls : null // Salva o array de URLs
                     };
 
+                    // 4. Insere no banco de dados
                     const { error } = await supabase
                         .from(DB_TABLE)
                         .insert(newPost);
@@ -208,7 +238,8 @@
                     showMessage('Sucesso! Notícia publicada.', 'success');
                     newsForm.reset();
                     
-                    // Recarrega a lista de gerenciamento
+
+
                     await loadManagedPosts();
 
                 } catch (err) {
@@ -224,9 +255,10 @@
                 }
             }
 
+            // Função auxiliar de Upload (não mudou)
             async function uploadMedia(file) {
                 if (!file) return null;
-                const fileName = `${Date.now()}-${file.name}`;
+                const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`; // Limpa o nome do arquivo
                 
                 const { data, error } = await supabase.storage
                     .from(STORAGE_BUCKET)
@@ -241,9 +273,8 @@
                 return publicUrlData.publicUrl;
             }
 
-            // --- NOVAS FUNÇÕES DE GERENCIAMENTO ---
+            // --- FUNÇÕES DE GERENCIAMENTO (COM CORREÇÃO DO BOTÃO APAGAR) ---
 
-            // Carrega os posts na área de gerenciamento
             async function loadManagedPosts() {
                 loadingManage.style.display = 'block';
                 postListContainer.innerHTML = '';
@@ -279,7 +310,6 @@
                 });
             }
 
-            // Lida com o clique no botão "Apagar"
             async function handleDeleteClick(event) {
                 if (!event.target.classList.contains('delete-post-btn')) return;
 
@@ -294,14 +324,21 @@
                 button.innerText = 'Apagando...';
 
                 try {
+                    // *** CORREÇÃO APLICADA AQUI ***
+                    // O erro de digitação `error }_` foi removido.
                     const { error } = await supabase
                         .from(DB_TABLE)
                         .delete()
                         .eq('id', postId);
                     
-                    if (error) throw error;
+                    if (error) {
+                        // Se o erro for de RLS (permissão negada), avisa o usuário.
+                        if (error.message.includes("permission denied")) {
+                            throw new Error("Permissão negada. Verifique as regras RLS (DELETE) no Supabase.");
+                        }
+                        throw error;
+                    }
 
-                    // Remove o item da tela
                     button.closest('.post-item').remove();
                     showMessage('Post apagado com sucesso.', 'success');
 
@@ -314,13 +351,13 @@
             }
 
 
-            // Funções de feedback
+            // --- Funções de Feedback ---
             function showMessage(text, type) {
                 feedbackMessage.innerText = text;
                 feedbackMessage.className = `message ${type}`;
                 feedbackMessage.style.display = 'block';
-                
-                // Esconde a mensagem depois de 3 segundos
+
+
                 setTimeout(() => { feedbackMessage.style.display = 'none'; }, 3000);
             }
             
@@ -331,7 +368,14 @@
             }
         });
 
-    </script>
+   
+   </script>
+
+
+
+
+
+
 </body>
 
 
@@ -342,4 +386,5 @@
 
 
 </html>
+
 
