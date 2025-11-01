@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Publicar Notícia</title>
-    
-    <!-- Removido script do Tailwind, não era necessário -->
+    <title>Admin - Login</title>
     <link rel="stylesheet" href="style.css">
-    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -17,14 +14,36 @@
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <!-- Mantido como texto, pois é a página de admin -->
                 <a href="/"><h1>SeligaManaux (ADMIN)</h1></a>
             </div>
         </div>
     </header>
     
     <main class="container">
-        <form id="news-form" class="admin-form">
+
+        <!-- * NOVO: Formulário de Login * -->
+        <form id="login-form" class="admin-form">
+            <h1 class="page-title-admin">Login do Administrador</h1>
+            
+            <div id="login-feedback-message" class="message" style="display: none;"></div>
+
+            <div>
+                <label for="admin-email">Email</label>
+                <input type="email" id="admin-email" required>
+            </div>
+            
+            <div>
+                <label for="admin-password">Senha</label>
+                <input type="password" id="admin-password" required>
+            </div>
+            
+            <button type="submit" id="login-button">ENTRAR</button>
+            <p id="loading-login" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Entrando...</p>
+        </form>
+
+
+        <!-- * Formulário de Notícias (Agora escondido por padrão) * -->
+        <form id="news-form" class="admin-form" style="display: none;">
             <h1 class="page-title-admin">Publicar Nova Notícia</h1>
             
             <div id="feedback-message" class="message" style="display: none;"></div>
@@ -63,21 +82,19 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="main.js"></script>
-    <script>
-        // SENHA SIMPLES
-        const ADMIN_PASSWORD = 'mudar123'; // !! MUDE ISSO !!
 
+    <script>
+        
         document.addEventListener('DOMContentLoaded', () => {
-            // Proteção de Senha
-            const pass = prompt("Digite a senha de administrador:");
-            if (pass !== ADMIN_PASSWORD) {
-                // Não use alert
-                document.body.innerHTML = '<h1 style="color: red; text-align: center; margin-top: 5rem;">ACESSO NEGADO</h1>';
-                return;
-            }
             
-            // Se a senha estiver correta, continua
+            // Referências dos formulários
+            const loginForm = document.getElementById('login-form');
             const newsForm = document.getElementById('news-form');
+            const loginButton = document.getElementById('login-button');
+            const loadingLogin = document.getElementById('loading-login');
+            const loginFeedback = document.getElementById('login-feedback-message');
+            
+            // Referências do form de notícias
             const submitButton = document.getElementById('submit-button');
             const loadingSubmit = document.getElementById('loading-submit');
             const feedbackMessage = document.getElementById('feedback-message');
@@ -87,13 +104,50 @@
             const newsContent = document.getElementById('news-content');
             const newsImageInput = document.getElementById('news-image');
 
+            // Evento: Tentar fazer login
+            loginForm.addEventListener('submit', handleLogin);
+
+            async function handleLogin(event) {
+                event.preventDefault();
+                if (!supabase) return showLoginMessage('Erro: Supabase não inicializado', 'error');
+
+                loginButton.disabled = true;
+                loadingLogin.style.display = 'block';
+                loginFeedback.style.display = 'none';
+
+                const email = document.getElementById('admin-email').value;
+                const password = document.getElementById('admin-password').value;
+
+                try {
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email: email,
+                        password: password,
+                    });
+
+                    if (error) throw error;
+
+                    // SUCESSO!
+                    // Esconde o login e mostra o formulário de notícias
+                    loginForm.style.display = 'none';
+                    newsForm.style.display = 'block';
+
+                } catch (err) {
+                    console.error("Erro de login:", err);
+                    showLoginMessage(`Erro: ${err.message}`, 'error');
+                } finally {
+                    loginButton.disabled = false;
+                    loadingLogin.style.display = 'none';
+                }
+            }
+
+
+            // --- Lógica do formulário de notícias (igual a antes) ---
             newsForm.addEventListener('submit', handleFormSubmit);
 
             async function handleFormSubmit(event) {
                 event.preventDefault(); 
                 
                 if (!supabase) {
-                    console.error("Supabase client not initialized.");
                     showMessage('Erro: Falha na conexão com o banco de dados.', 'error');
                     return;
                 }
@@ -128,7 +182,12 @@
 
                 } catch (err) {
                     console.error("Erro ao publicar:", err);
-                    showMessage(`Erro: ${err.message}`, 'error');
+                    // Se o erro for "permission denied", a regra RLS está funcionando!
+                    if (err.message.includes("permission denied")) {
+                         showMessage('Erro: Você não tem permissão para publicar. Verifique as regras RLS no Supabase.', 'error');
+                    } else {
+                         showMessage(`Erro: ${err.message}`, 'error');
+                    }
                 } finally {
                     submitButton.disabled = false;
                     loadingSubmit.style.display = 'none';
@@ -157,7 +216,14 @@
                 feedbackMessage.className = `message ${type}`;
                 feedbackMessage.style.display = 'block';
             }
+            
+            function showLoginMessage(text, type) {
+                loginFeedback.innerText = text;
+                loginFeedback.className = `message ${type}`;
+                loginFeedback.style.display = 'block';
+            }
         });
     </script>
 </body>
 </html>
+
