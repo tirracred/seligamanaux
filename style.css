@@ -7,7 +7,7 @@
     
     /* Fundo branco, com texto escuro */
     --cor-fundo: #ffffff; 
-    --texto-principal: #111827; /* Texto escuro (gray-900) */
+    --texto-principal: #ffffff; /* Texto escuro (gray-900) */
     --texto-secundario: #4b5563; /* Texto cinza (gray-600) */
 
     /* Cards em dark mode */
