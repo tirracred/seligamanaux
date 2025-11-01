@@ -1,790 +1,114 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head><link rel="icon" type="image/png" href="public/favincon.png"/>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SeligaManaux - Notícias de Manaus</title>
     
-    <!-- Carrega o Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
     
-    <!-- Importa a fonte Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     
-    <!-- Carrega a biblioteca do Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    </head>
+<body>
 
-    <style>
-
-        /* =======================
-   ESTILOS: HERO GRID (Homepage)
-   ======================== */
-
-.hero-grid {
-    width: 100%;
-    margin-bottom: 2rem;
-}
-
-/* Em telas de desktop, ativamos a grade G1 */
-@media (min-width: 992px) {
-   .hero-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr 1fr; /* 3 colunas: 50% 25% 25% */
-        grid-template-rows: auto auto auto;
-        gap: 1.5rem; /* Espaço entre os cards */
-
-        /* A "mágica" do layout G1 */
-        grid-template-areas:
-            "principal sub1 sub2"
-            "principal sub3 sub4"
-            "principal sub5 sub5"; /* Exemplo de 5 itens */
-    }
-
-    /* Mapeando cada card para sua área na grade */
-   .card-hero-1 { grid-area: principal; }
-   .card-hero-2 { grid-area: sub1; }
-   .card-hero-3 { grid-area: sub2; }
-   .card-hero-4 { grid-area: sub3; }
-   .card-hero-5 { grid-area: sub4; }
-    /*.card-hero-6 { grid-area: sub5; }... e assim por diante */
-
-    /* Na matéria principal, o título é maior */
-   .card-hero-1 h3 {
-        font-size: 2.5rem; /* 40px */
-        line-height: 1.1;
-    }
-    
-    /* Nas secundárias, o título é menor */
-   .card-hero-2 h4,
-   .card-hero-3 h4,
-   .card-hero-4 h4,
-   .card-hero-5 h4 {
-        font-size: 1.1rem; /* 18px */
-    }
-    
-    /* Oculta o resumo nas matérias menores para um design mais limpo */
-   .card-hero-2 p,
-   .card-hero-3 p,
-   .card-hero-4 p,
-   .card-hero-5 p {
-        display: none;
-    }
-}
-        /* Define a fonte Inter como padrão */
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        /* Melhora a aparência do input de arquivo */
-        input[type="file"]::file-selector-button {
-            @apply bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors;
-        }
-        .site-header {
-    background-color: var(--cor-fundo);
-    /* A faixa vermelha estilo CNN/Veja */
-    border-top: 5px solid var(--cor-primaria);
-    border-bottom: 1px solid var(--cor-borda);
-    width: 100%;
-    position: sticky; /* Fixa o header no topo ao rolar */
-    top: 0;
-    z-index: 1000;
-}
-
-.header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-}
-
-.logo h1 {
-    margin: 0;
-    font-family: var(--fonte-principal);
-    font-size: 1.5rem; /* 24px */
-    font-weight: 900;
-    color: var(--cor-primaria); /* Cor principal da marca */
-    text-transform: uppercase;
-    letter-spacing: -1px;
-}
-
-.logo a {
-    text-decoration: none;
-}
-
-/* --- Estilos da Navegação Mobile --- */
-
-.nav-toggle {
-    display: block; /* Visível no mobile */
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    z-index: 1001;
-}
-
-.hamburger {
-    display: block;
-    width: 25px;
-    height: 3px;
-    background-color: var(--cor-texto-principal);
-    position: relative;
-    transition: background-color 0.3s ease;
-}
-
-.hamburger::before,
-.hamburger::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 3px;
-    background-color: var(--cor-texto-principal);
-    left: 0;
-    transition: transform 0.3s ease;
-}
-
-.hamburger::before {
-    top: -8px;
-}
-
-.hamburger::after {
-    bottom: -8px;
-}
-
-.nav-principal {
-    display: none; /* Oculto por padrão no mobile */
-    position: absolute;
-    top: 100%; /* Abaixo do header */
-    left: 0;
-    width: 100%;
-    background-color: var(--cor-fundo);
-    border-bottom: 1px solid var(--cor-borda);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-}
-
-/* Estado ativo (via JavaScript) */
-.nav-principal.ativo {
-    display: block;
-}
-
-.nav-principal ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    flex-direction: column;
-}
-
-.nav-principal li {
-    border-bottom: 1px solid var(--cor-borda);
-}
-
-.nav-principal li:last-child {
-    border-bottom: none;
-}
-
-.nav-principal a {
-    display: block;
-    padding: 1rem;
-    text-decoration: none;
-    color: var(--cor-texto-principal);
-    font-family: var(--fonte-principal);
-    font-weight: 700;
-    transition: background-color 0.3s ease;
-}
-
-.nav-principal a:hover {
-    background-color: #f4f4f4;
-}
-
-
-/* --- Estilos da Navegação Desktop --- */
-
-@media (min-width: 768px) {
-   .nav-toggle {
-        display: none; /* Oculta o botão hamburger */
-    }
-
-   .nav-principal {
-        display: flex; /* Exibe a navegação */
-        position: static; /* Remove o posicionamento absoluto */
-        width: auto;
-        border: none;
-        box-shadow: none;
-    }
-
-   .nav-principal ul {
-        display: flex;
-        flex-direction: row; /* Alinha horizontalmente */
-    }
-
-   .nav-principal li {
-        border: none;
-    }
-
-   .nav-principal a {
-        padding: 0.5rem 1rem;
-    }
-    
-   .nav-principal a:hover {
-        background-color: transparent;
-        color: var(--cor-primaria);
-    }
-}
-    </style>
-</head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-
-    <!-- Cabeçalho Principal -->
-   <header class="site-header">
-    <div class="container header-container">
-        <div class="logo">
-            <a href="index.html">
-                <h1>PORTAL MANAUS</h1>
-            </a>
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="/"><h1>SeligaManaux</h1></a>
+            </div>
+            <button class="nav-toggle" aria-label="Abrir menu">
+                <span class="hamburger"></span>
+            </button>
+            <nav class="nav-principal">
+                <ul>
+                    <li><a href="/">Início</a></li>
+                    <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
+                    <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
+                    </ul>
+            </nav>
         </div>
-
-        <button class
-="nav-toggle" aria-label="Abrir menu">
-            <span class="hamburger"></span>
-        </button>
-
-        <nav class="nav-principal">
-            <ul>
-                <li><a href="index.html">Início</a></li>
-                <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
-                <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
-                </ul>
-        </nav>
-    </div>
-</header>
-
-
-    <!-- Área de Conteúdo Principal -->
+    </header>
 
     <main class="container">
-    <section class="hero-grid">
-        
-        <article class="card-noticia card-hero-1">
-            <a href="artigo.html">
-                <img src="https://via.placeholder.com/600x400.png?text=Notícia+Principal" alt="Descrição da imagem principal">
-                <div class="card-conteudo">
-                    <span class="categoria-tag">Amazonas</span>
-                    <h3>Título da Notícia Principal e Mais Importante do Dia</h3>
-                    <p>Este é o 'lead' da matéria principal, com um resumo mais longo para atrair o leitor para o clique imediato.</p>
-                </div>
-            </a>
-        </article>
-
-        <article class="card-noticia card-hero-2">
-            <a href="artigo.html">
-                <img src="https://via.placeholder.com/300x200.png?text=Notícia+2" alt="Descrição da notícia 2">
-                <div class="card-conteudo">
-                    <span class="categoria-tag">Manaus</span>
-                    <h4>Título da segunda notícia mais relevante</h4>
-                </div>
-            </a>
-        </article>
-
-        <article class="card-noticia card-hero-3">
-            <a href="artigo.html">
-                <img src="https://via.placeholder.com/300x200.png?text=Notícia+3" alt="Descrição da notícia 3">
-                <div class="card-conteudo">
-                    <span class="categoria-tag">Política</span>
-                    <h4>Título da terceira notícia mais relevante</h4>
-                </div>
-            </a>
-        </article>
-
-        <article class="card-noticia card-hero-4">
-            <a href="artigo.html">
-                <div class="card-conteudo">
-                    <span class="categoria-tag">Economia</span>
-                    <h4>Notícia rápida sem imagem</h4>
-                </div>
-            </a>
-        </article>
-
-        <article class="card-noticia card-hero-5">
-            <a href="artigo.html">
-                <div class="card-conteudo">
-                    <span class="categoria-tag">Esportes</span>
-                    <h4>Outra notícia rápida sem imagem</h4>
-                </div>
-            </a>
-        </article>
-
-    </section>
-    
-    </main>
-    <main id="app-container" class="container mx-auto max-w-5xl p-4 flex-grow">
-
-        <!-- ===== PÁGINA INÍCIO (Feed de Notícias) ===== -->
-        <section id="page-home">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Últimas Notícias</h2>
-            
-            <!-- Mensagem de Carregamento -->
+        <section class="hero-grid" id="hero-grid-container">
             <div id="loading-message" class="text-center py-16">
-                <p class="text-lg text-gray-600">Carregando notícias...</p>
-            </div>
-
-            <!-- Notícia em Destaque -->
-            <div id="featured-post-container" class="mb-8">
-                <!-- Post em destaque será inserido aqui -->
-            </div>
-
-            <!-- Mais Notícias -->
-            <h2 id="more-news-title" class="hidden text-xl font-bold text-gray-800 mb-4 mt-8 border-t border-gray-300 pt-6">
-                Mais Notícias
-            </h2>
-            
-            <!-- Container do Feed (Layout de Lista/Jornal) -->
-            <div id="news-feed" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- As notícias serão inseridas aqui pelo JavaScript -->
-            </div>
-            
-            <!-- Mensagem de feed vazio -->
-            <div id="empty-feed-message" class="hidden text-center py-16">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <h3 class="mt-2 text-sm font-semibold text-gray-900">Nenhuma notícia publicada</h3>
-                <p class="mt-1 text-sm text-gray-500">Vá para a tela 'Admin' para publicar a primeira notícia.</p>
+                <p class="text-lg text-gray-300">Carregando notícias...</p>
             </div>
         </section>
+        
+        </main>
 
-        <!-- ===== PÁGINA ADMIN (Formulário de Publicação) ===== -->
-        <section id="page-admin" class="hidden">
-            <div class="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Publicar Nova Notícia</h2>
-                
-                <!-- Mensagem de sucesso -->
-                <div id="success-message" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
-                    <strong class="font-bold">Sucesso!</strong>
-                    <span class="block sm:inline">Notícia publicada. Veja no Início.</span>
-                </div>
-                
-                <!-- Mensagem de erro -->
-                <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
-                    <strong class="font-bold">Erro:</strong>
-                    <span id="error-text" class="block sm:inline">Não foi possível publicar.</span>
-                </div>
-
-                <!-- Formulário -->
-                <form id="news-form" class="space-y-4">
-                    <!-- ... campos do formulário ... -->
-                    <div>
-                        <label for="news-title" class="block text-sm font-semibold text-gray-700">Título</label>
-                        <input type="text" id="news-title" name="news-title" required
-                               class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-
-                    <div>
-                        <label for="news-content" class="block text-sm font-semibold text-gray-700">Conteúdo</label>
-                        <textarea id="news-content" name="news-content" rows="6" required
-                                  class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
-                    </div>
-
-                    <div>
-                        <label for="news-image" class="block text-sm font-semibold text-gray-700">Anexar Foto</label>
-                        <input type="file" id="news-image" name="news-image" accept="image/*"
-                               class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:border-0 file:rounded-lg">
-                    </div>
-
-                    <div>
-                        <label for="news-video" class="block text-sm font-semibold text-gray-700">Anexar Vídeo</label>
-                        <input type="file" id="news-video" name="news-video" accept="video/*"
-                               class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:border-0 file:rounded-lg">
-                    </div>
-                    
-                    <!-- Botão de Publicar -->
-                    <div class="pt-4">
-                        <button type="submit" id="submit-button"
-                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform active:scale-95 disabled:bg-gray-400">
-                            PUBLICAR AGORA
-                        </button>
-                        <p id="loading-submit" class="hidden text-center mt-4 text-blue-600">Publicando... Por favor, aguarde.</p>
-                    </div>
-                </form>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Rodapé -->
-    <footer class="bg-gray-800 text-white mt-12">
-        <div class="container mx-auto max-w-5xl p-6 text-center">
-            <p class="text-sm">&copy; 2025 SeligaManaux. Todos os direitos reservados.</p>
-        </div>
+    <footer style="background-color: var(--cor-primaria); color: white; text-align: center; padding: 2rem 1rem; margin-top: 2rem;">
+        <p>&copy; 2025 SeligaManaux. Todos os direitos reservados.</p>
     </footer>
 
-    <!-- ===== JAVASCRIPT (Lógica do App com Supabase) ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-
-            // === 1. CONFIGURAÇÃO DO SUPABASE ===
-            
-            // !! IMPORTANTE !!
-            // Substitua pelas suas chaves do Supabase.
-            // Vá em Project Settings > API > Project URL e Project API Keys
-            const SUPABASE_URL = 'COLE_SUA_URL_AQUI'; 
-            const SUPABASE_ANON_KEY = 'COLE_SUA_ANON_KEY_AQUI'; 
-
-            // Nome da sua tabela (ex: 'noticias')
-            const DB_TABLE = 'noticias';
-            // Nome do seu bucket no Storage (ex: 'midia')
-            const STORAGE_BUCKET = 'midia'; 
-
-            // !! SENHA DO ADMIN !!
-            // !! MUDE ISSO PARA UMA SENHA SUA !!
-            const ADMIN_PASSWORD = 'mudar123';
-
-            // Inicializa o cliente Supabase
-            let supabase;
-            try {
-                 supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            } catch (e) {
-                console.error("Erro ao inicializar Supabase. Verifique a URL e a Chave.", e);
-                alert("Erro: Não foi possível conectar ao Supabase. Verifique o console.");
-                return;
-            }
-
-
-            // === 2. DEFINIÇÃO DE VARIÁVEIS E CONSTANTES ===
-            
-            // Referências de Página
-            const pageHome = document.getElementById('page-home');
-            const pageAdmin = document.getElementById('page-admin');
-            
-            // Botões de Navegação
-            const navHome = document.getElementById('nav-home');
-            const navAdmin = document.getElementById('nav-admin');
-
-            // Feed de Notícias
-            const newsFeed = document.getElementById('news-feed');
+            const gridContainer = document.getElementById('hero-grid-container');
             const loadingMessage = document.getElementById('loading-message');
-            const emptyFeedMessage = document.getElementById('empty-feed-message');
-
-            // Formulário Admin
-            const newsForm = document.getElementById('news-form');
-            const newsTitle = document.getElementById('news-title');
-            const newsContent = document.getElementById('news-content');
-            const newsImageInput = document.getElementById('news-image');
-            const newsVideoInput = document.getElementById('news-video');
-            const successMessage = document.getElementById('success-message');
-            const errorMessage = document.getElementById('error-message');
-            const errorText = document.getElementById('error-text');
-            const submitButton = document.getElementById('submit-button');
-            const loadingSubmit = document.getElementById('loading-submit');
             
+            async function loadHeroNews() {
+                if (!supabase) return;
 
-            // === 3. FUNÇÕES PRINCIPAIS ===
-
-            /**
-             * Formata a data para exibição (ex: "01/11/2025, 14:30")
-             */
-            function formatTimestamp(dateString) {
-                const date = new Date(dateString);
-                const options = { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric',
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                };
-                return date.toLocaleString('pt-BR', options);
-            }
-
-            /**
-             * Renderiza o post principal (em destaque)
-             */
-            function renderFeaturedPost(post, container) {
-                const postElement = document.createElement('article');
-                // Layout de Destaque
-                postElement.className = 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-shadow hover:shadow-2xl';
-                
-                let mediaHtml = '';
-                
-                if (post.video_url) {
-                    mediaHtml = `
-                        <div class="w-full bg-black">
-                            <video src="${post.video_url}" class="w-full h-auto max-h-96" controls></video>
-                        </div>
-                    `;
-                } else if (post.image_url) {
-                    mediaHtml = `<img src="${post.image_url}" alt="${post.title}" class="w-full h-64 md:h-96 object-cover transition-transform duration-300 group-hover:scale-105">`;
-                }
-
-                postElement.innerHTML = `
-                    <div class="relative">
-                        ${mediaHtml}
-                        <span class="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-bold shadow-lg">DESTAQUE</span>
-                    </div>
-                    <div class="p-6 md:p-8">
-                        <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-3 group-hover:text-blue-700 transition-colors">${post.title}</h3>
-                        <p class="text-sm text-gray-500 mb-4">Publicado em: ${formatTimestamp(post.created_at)}</p>
-                        <p class="text-gray-700 text-base md:text-lg mb-5">${post.content.substring(0, 200)}...</p>
-                        <a href="#" class="mt-auto text-blue-600 font-bold hover:underline">Leia a matéria completa &rarr;</a>
-                    </div>
-                `;
-                container.appendChild(postElement);
-            }
-
-            /**
-             * Renderiza um post padrão (na grade)
-             */
-            function renderStandardPost(post, container) {
-                const postElement = document.createElement('article');
-                // Layout de Card Padrão
-                postElement.className = 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-shadow hover:shadow-xl';
-                
-                let mediaHtml = '';
-                
-                if (post.video_url) {
-                    mediaHtml = `
-                        <div class="w-full bg-black">
-                            <video src="${post.video_url}" class="w-full h-48" controls></video>
-                        </div>
-                    `;
-                } else if (post.image_url) {
-                    mediaHtml = `<img src="${post.image_url}" alt="${post.title}" class="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105">`;
-                }
-
-                postElement.innerHTML = `
-                    <div class="relative">
-                        ${mediaHtml}
-                        <!-- Tag de Categoria (Exemplo) -->
-                        <span class="absolute top-2 left-2 bg-gray-700 bg-opacity-80 text-white px-2 py-1 rounded text-xs font-semibold">Manaus</span>
-                    </div>
-                    <div class="p-5 flex flex-col flex-grow">
-                        <h3 class="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-700 transition-colors">${post.title}</h3>
-                        <p class="text-sm text-gray-500 mb-3">${formatTimestamp(post.created_at)}</p>
-                        <p class="text-gray-700 flex-grow mb-4 text-sm">${post.content.substring(0, 120)}...</p>
-                        <a href="#" class="mt-auto text-blue-600 font-semibold hover:underline text-sm">Leia mais...</a>
-                    </div>
-                `;
-                container.appendChild(postElement);
-            }
-
-
-            /**
-             * Carrega e renderiza as notícias do Supabase.
-             */
-            async function loadNews() {
-                // Mostra o loading, esconde o resto
-                loadingMessage.classList.remove('hidden');
-                emptyFeedMessage.classList.add('hidden');
-                
-                const featuredContainer = document.getElementById('featured-post-container');
-                const moreNewsTitle = document.getElementById('more-news-title');
-                
-                featuredContainer.innerHTML = '';
-                newsFeed.innerHTML = '';
-                moreNewsTitle.classList.add('hidden');
-
-
-                try {
-                    // Busca no Supabase, ordenando do mais novo (created_at) para o mais antigo
-                    const { data: posts, error } = await supabase
-                        .from(DB_TABLE)
-                        .select('*')
-                        .order('created_at', { ascending: false });
-
-                    if (error) {
-                        throw error;
-                    }
-
-                    // Esconde o loading
-                    loadingMessage.classList.add('hidden');
-
-                    if (posts.length === 0) {
-                        // Mostra mensagem de feed vazio
-                        emptyFeedMessage.classList.remove('hidden');
-                    } else {
-                        // 1. Renderiza Post em Destaque (o mais novo)
-                        const featuredPost = posts[0];
-                        renderFeaturedPost(featuredPost, featuredContainer);
-
-                        // 2. Renderiza Posts Restantes
-                        const otherPosts = posts.slice(1);
-                        if (otherPosts.length > 0) {
-                            moreNewsTitle.classList.remove('hidden');
-                            otherPosts.forEach(post => {
-                                renderStandardPost(post, newsFeed);
-                            });
-                        }
-                    }
-                } catch (err) {
-                    console.error("Erro ao carregar notícias:", err);
-                    loadingMessage.innerText = "Erro ao carregar notícias. Tente novamente.";
-                }
-            }
-
-            /**
-             * Controla qual "página" (div) está visível.
-             * @param {'home' | 'admin'} viewName
-             */
-            function showView(viewName) {
-                // ... (lógica de navegação igual ao protótipo anterior) ...
-                pageHome.classList.add('hidden');
-                pageAdmin.classList.add('hidden');
-                navHome.classList.remove('bg-blue-600', 'text-white');
-                navHome.classList.add('bg-blue-100', 'text-blue-600');
-                navAdmin.classList.remove('bg-blue-600', 'text-white');
-                navAdmin.classList.add('bg-blue-100', 'text-blue-600');
-
-                if (viewName === 'home') {
-                    pageHome.classList.remove('hidden');
-                    navHome.classList.add('bg-blue-600', 'text-white');
-                    navHome.classList.remove('bg-blue-100', 'text-blue-600');
-                    // Recarrega as notícias do Supabase sempre que for para a home
-                    loadNews();
-                } else if (viewName === 'admin') {
-                    pageAdmin.classList.remove('hidden');
-                    navAdmin.classList.add('bg-blue-600', 'text-white');
-                    navAdmin.classList.remove('bg-blue-100', 'text-blue-600');
-                }
-            }
-
-            /**
-             * Faz o upload de um arquivo para o Supabase Storage.
-             * @param {File} file - O arquivo (imagem ou vídeo)
-             * @returns {Promise<string|null>} - A URL pública do arquivo ou null
-             */
-            async function uploadMedia(file) {
-                if (!file) return null;
-
-                // Cria um nome de arquivo único (ex: '1678886400000-meu-video.mp4')
-                const fileName = `${Date.now()}-${file.name}`;
-                
-                // Faz o upload
-                const { data, error } = await supabase.storage
-                    .from(STORAGE_BUCKET)
-                    .upload(fileName, file, {
-                        cacheControl: '3600', // Cache de 1 hora
-                        upsert: false 
-                    });
+                // Busca as 5 notícias mais recentes
+                const { data: posts, error } = await supabase
+                    .from(DB_TABLE)
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(5);
 
                 if (error) {
-                    throw new Error(`Erro no upload: ${error.message}`);
+                    console.error("Erro ao carregar notícias:", error);
+                    loadingMessage.innerHTML = "Erro ao carregar notícias.";
+                    return;
                 }
                 
-                // Pega a URL pública do arquivo que acabamos de enviar
-                const { data: publicUrlData } = supabase.storage
-                    .from(STORAGE_BUCKET)
-                    .getPublicUrl(data.path);
-                    
-                return publicUrlData.publicUrl;
-            }
+                if (posts.length === 0) {
+                    loadingMessage.innerHTML = "Nenhuma notícia publicada ainda.";
+                    return;
+                }
 
-
-            /**
-             * Lida com o envio do formulário de nova notícia.
-             */
-            async function handleFormSubmit(event) {
-                event.preventDefault(); 
+                // Limpa o container
+                loadingMessage.style.display = 'none';
+                gridContainer.innerHTML = '';
                 
-                // Desativa o botão e mostra o loading
-                submitButton.disabled = true;
-                loadingSubmit.classList.remove('hidden');
-                successMessage.classList.add('hidden');
-                errorMessage.classList.add('hidden');
-
-                try {
-                    // Pega os arquivos
-                    const imageFile = newsImageInput.files[0];
-                    const videoFile = newsVideoInput.files[0];
-
-                    // 1. Faz upload das mídias
-                    // (O await garante que o upload termine antes de continuar)
-                    const imageUrl = await uploadMedia(imageFile);
-                    const videoUrl = await uploadMedia(videoFile);
-
-                    // 2. Prepara o objeto para o banco de dados
-                    const newPost = {
-                        title: newsTitle.value,
-                        content: newsContent.value,
-                        image_url: imageUrl, // Coluna no Supabase
-                        video_url: videoUrl  // Coluna no Supabase
-                        // O 'created_at' é definido automaticamente pelo Supabase
-                    };
-
-                    // 3. Insere os dados no banco
-                    const { error } = await supabase
-                        .from(DB_TABLE)
-                        .insert(newPost);
-
-                    if (error) {
-                        throw error;
-                    }
-
-                    // 4. Sucesso
-                    newsForm.reset();
-                    successMessage.classList.remove('hidden');
-                    
-                    // Muda para a tela inicial para ver o post
-                    setTimeout(() => {
-                        showView('home');
-                    }, 1000); // Espera 1s para o usuário ver a msg de sucesso
-
-                } catch (err) {
-                    console.error("Erro ao publicar:", err);
-                    errorText.innerText = err.message || "Ocorreu um erro desconhecido.";
-                    errorMessage.classList.remove('hidden');
-                } finally {
-                    // Reativa o botão e esconde o loading
-                    submitButton.disabled = false;
-                    loadingSubmit.classList.add('hidden');
-                }
+                // Mapeia os posts para o grid
+                posts.forEach((post, index) => {
+                    const postClass = `card-hero-${index + 1}`; // card-hero-1, card-hero-2, etc.
+                    gridContainer.appendChild(createNewsCard(post, postClass));
+                });
             }
-            
 
-            // === 4. EVENT LISTENERS (Ouvintes de Ações) ===
+            function createNewsCard(post, cardClass) {
+                const article = document.createElement('article');
+                article.className = `card-noticia ${cardClass}`;
+                
+                const titleTag = (cardClass === 'card-hero-1') ? 'h3' : 'h4';
+                const showSummary = (cardClass === 'card-hero-1') && post.content;
+                
+                // Usa uma imagem placeholder se não houver imagem
+                const imageUrl = post.image_url || 'https://via.placeholder.com/600x400.png?text=SeligaManaux';
 
-            // Navegação
-            navHome.addEventListener('click', () => showView('home'));
-            
-            navAdmin.addEventListener('click', () => {
-                const pass = prompt("Digite a senha de administrador:");
-                if (pass === ADMIN_PASSWORD) {
-                    showView('admin');
-                } else if (pass) { // Só dá alerta se o usuário digitou algo
-                    alert("Senha incorreta!");
-                }
-            });
-
-            // Formulário
-            newsForm.addEventListener('submit', handleFormSubmit);
-            
-            // === 5. INICIALIZAÇÃO DO APP ===
-            
-            // Verifica se o Supabase foi inicializado
-            if (supabase) {
-                // Inicia na página "Home" e carrega as notícias
-                showView('home');
+                article.innerHTML = `
+                    <a href="#"> <img src="${imageUrl}" alt="${post.title}">
+                        <div class="card-conteudo">
+                            <span class="categoria-tag">${post.category || 'Geral'}</span>
+                            <${titleTag}>${post.title}</${titleTag}>
+                            ${showSummary ? `<p>${post.content.substring(0, 150)}...</p>` : ''}
+                        </div>
+                    </a>
+                `;
+                return article;
             }
+
+            loadHeroNews();
         });
-        /* =======================
-   JAVASCRIPT: Menu Toggle
-   ======================== */
-document.addEventListener('DOMContentLoaded', function() {
-    const navToggle = document.querySelector('.nav-toggle');
-    const navPrincipal = document.querySelector('.nav-principal');
-
-    if (navToggle && navPrincipal) {
-        navToggle.addEventListener('click', function() {
-            // Alterna a classe 'ativo' na navegação
-            navPrincipal.classList.toggle('ativo');
-            
-            // Opcional: Animação do botão hamburger
-            const hamburger = navToggle.querySelector('.hamburger');
-            if (hamburger) {
-                hamburger.style.backgroundColor = navPrincipal.classList.contains('ativo')? 'transparent' : 'var(--cor-texto-principal)';
-                // Aqui você pode adicionar mais classes para animar o ::before e ::after para formar um 'X'
-            }
-        });
-    }
-});
     </script>
 </body>
 </html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Publicar Notícia</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="/"><h1>SeligaManaux (ADMIN)</h1></a>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container">
+        <form id="news-form" class="admin-form">
+            <h1 class="page-title">Publicar Nova Notícia</h1>
+            
+            <div id="feedback-message" class="message" style="display: none;"></div>
+
+            <div>
+                <label for="news-title">Título</label>
+                <input type="text" id="news-title" required>
+            </div>
+            
+            <div>
+                <label for="news-category">Categoria</label>
+                <select id="news-category" required>
+                    <option value="">Selecione...</option>
+                    <option value="Manaus e Região">Manaus e Região</option>
+                    <option value="Política">Política</option>
+                    <option value="Esportes">Esportes</option>
+                    <option value="Economia">Economia</option>
+                    <option value="Geral">Geral</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="news-content">Conteúdo</label>
+                <textarea id="news-content" rows="8" required></textarea>
+            </div>
+
+            <div>
+                <label for="news-image">Anexar Foto</label>
+                <input type="file" id="news-image" accept="image/*">
+            </div>
+            
+            <button type="submit" id="submit-button">PUBLICAR AGORA</button>
+            <p id="loading-submit" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Publicando... Aguarde.</p>
+        </form>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="main.js"></script>
+    <script>
+        // SENHA SIMPLES
+        const ADMIN_PASSWORD = 'mudar123'; // !! MUDE ISSO !!
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Proteção de Senha
+            const pass = prompt("Digite a senha de administrador:");
+            if (pass !== ADMIN_PASSWORD) {
+                alert("Senha incorreta!");
+                document.body.innerHTML = '<h1 style="color: red; text-align: center; margin-top: 5rem;">ACESSO NEGADO</h1>';
+                return;
+            }
+            
+            // Se a senha estiver correta, continua
+            const newsForm = document.getElementById('news-form');
+            const submitButton = document.getElementById('submit-button');
+            const loadingSubmit = document.getElementById('loading-submit');
+            const feedbackMessage = document.getElementById('feedback-message');
+            
+            const newsTitle = document.getElementById('news-title');
+            const newsCategory = document.getElementById('news-category');
+            const newsContent = document.getElementById('news-content');
+            const newsImageInput = document.getElementById('news-image');
+
+            newsForm.addEventListener('submit', handleFormSubmit);
+
+            async function handleFormSubmit(event) {
+                event.preventDefault(); 
+                
+                submitButton.disabled = true;
+                loadingSubmit.style.display = 'block';
+                feedbackMessage.style.display = 'none';
+
+                try {
+                    const imageFile = newsImageInput.files[0];
+                    const imageUrl = await uploadMedia(imageFile);
+
+                    const newPost = {
+                        title: newsTitle.value,
+                        content: newsContent.value,
+                        category: newsCategory.value, // Salva a categoria
+                        image_url: imageUrl,
+                        // video_url: null (não temos campo de vídeo neste form)
+                    };
+
+                    const { error } = await supabase
+                        .from(DB_TABLE)
+                        .insert(newPost);
+
+                    if (error) throw error;
+
+                    showMessage('Sucesso! Notícia publicada.', 'success');
+                    newsForm.reset();
+
+                } catch (err) {
+                    console.error("Erro ao publicar:", err);
+                    showMessage(`Erro: ${err.message}`, 'error');
+                } finally {
+                    submitButton.disabled = false;
+                    loadingSubmit.style.display = 'none';
+                }
+            }
+
+            async function uploadMedia(file) {
+                if (!file) return null;
+                const fileName = `${Date.now()}-${file.name}`;
+                
+                const { data, error } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .upload(fileName, file);
+
+                if (error) throw new Error(`Erro no upload: ${error.message}`);
+                
+                const { data: publicUrlData } = supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .getPublicUrl(data.path);
+                    
+                return publicUrlData.publicUrl;
+            }
+            
+            function showMessage(text, type) {
+                feedbackMessage.innerText = text;
+                feedbackMessage.className = `message ${type}`;
+                feedbackMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
