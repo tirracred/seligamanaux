@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+<head><link rel="icon" type="image/png" href="public/favincon.png"/>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,30 +26,183 @@
         input[type="file"]::file-selector-button {
             @apply bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors;
         }
+        .site-header {
+    background-color: var(--cor-fundo);
+    /* A faixa vermelha estilo CNN/Veja */
+    border-top: 5px solid var(--cor-primaria);
+    border-bottom: 1px solid var(--cor-borda);
+    width: 100%;
+    position: sticky; /* Fixa o header no topo ao rolar */
+    top: 0;
+    z-index: 1000;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+}
+
+.logo h1 {
+    margin: 0;
+    font-family: var(--fonte-principal);
+    font-size: 1.5rem; /* 24px */
+    font-weight: 900;
+    color: var(--cor-primaria); /* Cor principal da marca */
+    text-transform: uppercase;
+    letter-spacing: -1px;
+}
+
+.logo a {
+    text-decoration: none;
+}
+
+/* --- Estilos da Navegação Mobile --- */
+
+.nav-toggle {
+    display: block; /* Visível no mobile */
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1001;
+}
+
+.hamburger {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background-color: var(--cor-texto-principal);
+    position: relative;
+    transition: background-color 0.3s ease;
+}
+
+.hamburger::before,
+.hamburger::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 3px;
+    background-color: var(--cor-texto-principal);
+    left: 0;
+    transition: transform 0.3s ease;
+}
+
+.hamburger::before {
+    top: -8px;
+}
+
+.hamburger::after {
+    bottom: -8px;
+}
+
+.nav-principal {
+    display: none; /* Oculto por padrão no mobile */
+    position: absolute;
+    top: 100%; /* Abaixo do header */
+    left: 0;
+    width: 100%;
+    background-color: var(--cor-fundo);
+    border-bottom: 1px solid var(--cor-borda);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+/* Estado ativo (via JavaScript) */
+.nav-principal.ativo {
+    display: block;
+}
+
+.nav-principal ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex-direction: column;
+}
+
+.nav-principal li {
+    border-bottom: 1px solid var(--cor-borda);
+}
+
+.nav-principal li:last-child {
+    border-bottom: none;
+}
+
+.nav-principal a {
+    display: block;
+    padding: 1rem;
+    text-decoration: none;
+    color: var(--cor-texto-principal);
+    font-family: var(--fonte-principal);
+    font-weight: 700;
+    transition: background-color 0.3s ease;
+}
+
+.nav-principal a:hover {
+    background-color: #f4f4f4;
+}
+
+
+/* --- Estilos da Navegação Desktop --- */
+
+@media (min-width: 768px) {
+   .nav-toggle {
+        display: none; /* Oculta o botão hamburger */
+    }
+
+   .nav-principal {
+        display: flex; /* Exibe a navegação */
+        position: static; /* Remove o posicionamento absoluto */
+        width: auto;
+        border: none;
+        box-shadow: none;
+    }
+
+   .nav-principal ul {
+        display: flex;
+        flex-direction: row; /* Alinha horizontalmente */
+    }
+
+   .nav-principal li {
+        border: none;
+    }
+
+   .nav-principal a {
+        padding: 0.5rem 1rem;
+    }
+    
+   .nav-principal a:hover {
+        background-color: transparent;
+        color: var(--cor-primaria);
+    }
+}
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
     <!-- Cabeçalho Principal -->
-    <header class="bg-white shadow-md sticky top-0 z-10">
-        <nav class="container mx-auto max-w-5xl px-4 py-4 flex flex-col sm:flex-row justify-between items-center">
-            <!-- Logo/Título -->
-            <div class="text-center sm:text-left mb-4 sm:mb-0">
-                <h1 class="text-3xl font-extrabold text-blue-900">SeligaManaux</h1>
-                <p class="text-sm text-gray-600">As notícias de Manaus, na palma da sua mão.</p>
-            </div>
-            
-            <!-- Botões de Navegação -->
-            <div class="flex space-x-2">
-                <button id="nav-home" class="px-5 py-2 font-semibold rounded-lg text-white bg-blue-600">
-                    Início
-                </button>
-                <button id="nav-admin" class="px-5 py-2 font-semibold rounded-lg text-blue-600 bg-blue-100">
-                    Admin
-                </button>
-            </div>
+   <header class="site-header">
+    <div class="container header-container">
+        <div class="logo">
+            <a href="index.html">
+                <h1>PORTAL MANAUS</h1>
+            </a>
+        </div>
+
+        <button class
+="nav-toggle" aria-label="Abrir menu">
+            <span class="hamburger"></span>
+        </button>
+
+        <nav class="nav-principal">
+            <ul>
+                <li><a href="index.html">Início</a></li>
+                <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
+                <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
+                </ul>
         </nav>
-    </header>
+    </div>
+</header>
 
     <!-- Área de Conteúdo Principal -->
     <main id="app-container" class="container mx-auto max-w-5xl p-4 flex-grow">
@@ -498,6 +652,27 @@
                 showView('home');
             }
         });
+        /* =======================
+   JAVASCRIPT: Menu Toggle
+   ======================== */
+document.addEventListener('DOMContentLoaded', function() {
+    const navToggle = document.querySelector('.nav-toggle');
+    const navPrincipal = document.querySelector('.nav-principal');
+
+    if (navToggle && navPrincipal) {
+        navToggle.addEventListener('click', function() {
+            // Alterna a classe 'ativo' na navegação
+            navPrincipal.classList.toggle('ativo');
+            
+            // Opcional: Animação do botão hamburger
+            const hamburger = navToggle.querySelector('.hamburger');
+            if (hamburger) {
+                hamburger.style.backgroundColor = navPrincipal.classList.contains('ativo')? 'transparent' : 'var(--cor-texto-principal)';
+                // Aqui você pode adicionar mais classes para animar o ::before e ::after para formar um 'X'
+            }
+        });
+    }
+});
     </script>
 </body>
 </html>
