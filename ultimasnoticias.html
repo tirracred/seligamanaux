@@ -4,133 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Últimas Notícias - SeligaManaux</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
-<body class="dark-mode">
-    <!-- HEADER -->
+<body>
+
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <h1><a href="index.html">SELIGAMANAUX</a></h1>
+                <a href="/"><h1>SeligaManaux</h1></a>
             </div>
-            
+            <button class="nav-toggle" aria-label="Abrir menu">
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav-principal">
                 <ul>
-                    <li><a href="index.html">Início</a></li>
-                    <li><a href="ultimasnoticias.html" class="ativo">Últimas Notícias</a></li>
-                    <li><a href="manauseregiao.html">Manaus & Região</a></li>
+                    <li><a href="/">Início</a></li>
+                    <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
+                    <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
                 </ul>
             </nav>
-
-            <button class="dark-mode-toggle">🌙 Dark</button>
-
-            <button class="nav-toggle">
-                <div class="hamburger">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </button>
         </div>
     </header>
 
-    <!-- CONTEÚDO PRINCIPAL -->
     <main class="container">
-        <h1 class="page-title">📰 Últimas Notícias</h1>
+        <h1 class="page-title">Últimas Notícias</h1>
         
-        <div class="feed-grid">
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Noticia1" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag">Geral</span>
-                        <h4>Primeira Notícia em Destaque</h4>
-                        <p>Resumo da primeira notícia que será exibida no feed de últimas notícias...</p>
-                        <span class="card-timestamp">Há 1 hora</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Noticia2" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag azul">Política</span>
-                        <h4>Segunda Notícia Importante</h4>
-                        <p>Resumo da segunda notícia do feed...</p>
-                        <span class="card-timestamp">Há 2 horas</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Noticia3" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag amarelo">Economia</span>
-                        <h4>Terceira Notícia do Dia</h4>
-                        <p>Resumo da terceira notícia...</p>
-                        <span class="card-timestamp">Há 3 horas</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Noticia4" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag">Região</span>
-                        <h4>Quarta Notícia Regional</h4>
-                        <p>Resumo da notícia regional...</p>
-                        <span class="card-timestamp">Há 4 horas</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Noticia5" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag azul">Cultura</span>
-                        <h4>Quinta Notícia de Cultura</h4>
-                        <p>Resumo sobre eventos culturais...</p>
-                        <span class="card-timestamp">Há 5 horas</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Noticia6" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag">Esportes</span>
-                        <h4>Sexta Notícia de Esportes</h4>
-                        <p>Resumo sobre eventos esportivos...</p>
-                        <span class="card-timestamp">Há 6 horas</span>
-                    </div>
-                </a>
-            </article>
+        <div id="loading-message" class="text-center py-16">
+            <p class="text-lg text-gray-300">Carregando notícias...</p>
         </div>
-
-
+        
+        <section class="feed-grid" id="feed-container">
+            </section>
     </main>
-    
 
-    <!-- FOOTER -->
-    <footer class="site-footer">
-        <div class="footer-content">
-            <p>&copy; 2025 SeligaManaux - Notícias de Manaus. Todos os direitos reservados.</p>
-            <div>
-                <a href="#">Sobre</a>
-                <a href="#">Contato</a>
-                <a href="#">Política de Privacidade</a>
-            </div>
-        </div>
+    <footer style="background-color: var(--cor-primaria); color: white; text-align: center; padding: 2rem 1rem; margin-top: 2rem;">
+        <p>&copy; 2025 SeligaManaux. Todos os direitos reservados.</p>
     </footer>
 
-    <script src="darkmode.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const feedContainer = document.getElementById('feed-container');
+            const loadingMessage = document.getElementById('loading-message');
+            
+            async function loadAllNews() {
+                if (!supabase) return;
+
+                // Busca TODAS as notícias
+                const { data: posts, error } = await supabase
+                    .from(DB_TABLE)
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error("Erro ao carregar notícias:", error);
+                    loadingMessage.innerHTML = "Erro ao carregar notícias.";
+                    return;
+                }
+                
+                if (posts.length === 0) {
+                    loadingMessage.innerHTML = "Nenhuma notícia publicada ainda.";
+                    return;
+                }
+
+                loadingMessage.style.display = 'none';
+                feedContainer.innerHTML = '';
+                
+                posts.forEach(post => {
+                    feedContainer.appendChild(createNewsCard(post));
+                });
+            }
+
+            function createNewsCard(post) {
+                const article = document.createElement('article');
+                article.className = 'card-noticia';
+                
+                const imageUrl = post.image_url || 'https://via.placeholder.com/400x250.png?text=SeligaManaux';
+
+                article.innerHTML = `
+                    <a href="#"> <img src="${imageUrl}" alt="${post.title}">
+                        <div class="card-conteudo">
+                            <span class="categoria-tag">${post.category || 'Geral'}</span>
+                            <h4>${post.title}</h4>
+                            <p>${post.content.substring(0, 100)}...</p>
+                        </div>
+                    </a>
+                `;
+                return article;
+            }
+
+            loadAllNews();
+        });
+    </script>
 </body>
 </html>

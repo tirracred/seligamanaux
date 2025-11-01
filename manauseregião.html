@@ -4,133 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manaus e Região - SeligaManaux</title>
+    
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
-<body class="dark-mode">
-    <!-- HEADER -->
+<body>
+
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <h1><a href="index.html">SELIGAMANAUX</a></h1>
+                <a href="/"><img src="logo.png" alt="SeligaManaux Logo" class="logo-img"></a>
             </div>
-            
+            <button class="nav-toggle" aria-label="Abrir menu">
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav-principal">
                 <ul>
-                    <li><a href="index.html">Início</a></li>
-                    <li><a href="ultimasnoticias.html">Últimas Notícias</a></li>
-                    <li><a href="manauseregiao.html" class="ativo">Manaus & Região</a></li>
+                    <!-- Links de navegação corrigidos -->
+                    <li><a href="/">Início</a></li>
+                    <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
+                    <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
                 </ul>
             </nav>
-
-            <button class="dark-mode-toggle">🌙 Dark</button>
-
-            <button class="nav-toggle">
-                <div class="hamburger">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </button>
         </div>
     </header>
 
-    <!-- CONTEÚDO PRINCIPAL -->
     <main class="container">
-        <h1 class="page-title azul">🏙️ Manaus e Região</h1>
+        <h1 class="page-title">Manaus e Região</h1>
         
-        <div class="feed-grid">
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Manaus1" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag">Local</span>
-                        <h4>Notícia Regional de Manaus</h4>
-                        <p>Resumo sobre eventos e notícias locais de Manaus...</p>
-                        <span class="card-timestamp">Há 1 hora</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Regiao1" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag azul">Regional</span>
-                        <h4>Notícia da Região Metropolitana</h4>
-                        <p>Resumo sobre a região metropolitana de Manaus...</p>
-                        <span class="card-timestamp">Há 2 horas</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Manaus2" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag">Segurança</span>
-                        <h4>Notícia de Segurança Pública</h4>
-                        <p>Resumo sobre segurança e policiamento...</p>
-                        <span class="card-timestamp">Há 3 horas</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Transporte1" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag amarelo">Transportes</span>
-                        <h4>Notícia sobre Transportes</h4>
-                        <p>Resumo sobre transporte público...</p>
-                        <span class="card-timestamp">Há 4 horas</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Amazonia1" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag">Amazônia</span>
-                        <h4>Notícia sobre Floresta Amazônica</h4>
-                        <p>Resumo sobre preservação da Amazônia...</p>
-                        <span class="card-timestamp">Há 5 horas</span>
-                    </div>
-                </a>
-            </article>
-
-            <article class="card-noticia">
-                <a href="artigo.html">
-                    <img src="https://via.placeholder.com/400x250?text=Cultura1" alt="Notícia">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag azul">Cultura Local</span>
-                        <h4>Notícia de Cultura Local</h4>
-                        <p>Resumo sobre a cultura local de Manaus...</p>
-                        <span class="card-timestamp">Há 6 horas</span>
-                    </div>
-                </a>
-            </article>
+        <div id="loading-message" style="text-align: center; padding: 4rem 0;">
+            <p style="font-size: 1.2rem; color: var(--texto-secundario);">Carregando notícias...</p>
         </div>
-
+        
+        <section class="feed-grid" id="feed-container">
+            <!-- Notícias serão carregadas aqui -->
+        </section>
     </main>
-    
 
-    <!-- FOOTER -->
     <footer class="site-footer">
-        <div class="footer-content">
-            <p>&copy; 2025 SeligaManaux - Notícias de Manaus. Todos os direitos reservados.</p>
-            <div>
-                <a href="#">Sobre</a>
-                <a href="#">Contato</a>
-                <a href="#">Política de Privacidade</a>
-            </div>
-        </div>
+        <p>&copy; 2025 SeligaManaux. Todos os direitos reservados.</p>
     </footer>
 
-    <script src="darkmode.js"></script>
-</body>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const feedContainer = document.getElementById('feed-container');
+            const loadingMessage = document.getElementById('loading-message');
+            
+            async function loadCategoryNews() {
+                if (!supabase) {
+                    console.error("Supabase client not initialized.");
+                    loadingMessage.innerHTML = "Erro ao conectar com o banco de dados.";
+                    return;
+                }
 
+                // Busca notícias ONDE a categoria é 'Manaus e Região'
+                const { data: posts, error } = await supabase
+                    .from(DB_TABLE)
+                    .select('id, title, content, image_url, category, created_at')
+                    .eq('category', 'Manaus e Região') // O FILTRO!
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error("Erro ao carregar notícias:", error);
+                    loadingMessage.innerHTML = "Erro ao carregar notícias.";
+                    return;
+                }
+                
+                if (posts.length === 0) {
+                    loadingMessage.innerHTML = "Nenhuma notícia publicada nesta categoria ainda.";
+                    return;
+                }
+
+                loadingMessage.style.display = 'none';
+                feedContainer.innerHTML = '';
+                
+                posts.forEach(post => {
+                    feedContainer.appendChild(createNewsCard(post));
+                });
+            }
+
+            function createNewsCard(post) {
+                const article = document.createElement('article');
+                article.className = 'card-noticia';
+                const imageUrl = post.image_url || 'https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux';
+
+                article.innerHTML = `
+                    <a href="artigo.html?id=${post.id}"> <img src="${imageUrl}" alt="${post.title}">
+                        <div class="card-conteudo">
+                            <span class="categoria-tag">${post.category}</span>
+                            <h4>${post.title}</h4>
+                            <p>${post.content.substring(0, 100)}...</p>
+                        </div>
+                    </a>
+                `;
+                return article;
+            }
+
+            loadCategoryNews();
+        });
+    </script>
+</body>
 </html>

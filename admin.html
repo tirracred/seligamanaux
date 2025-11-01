@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - SeligaManaux</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style-new.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -141,7 +141,7 @@
         </div>
     </footer>
 
-    <script src="darkmode.js"></script>
+    <script src="darkmode-final.js"></script>
     <script>
         // ===== CONFIGURAÇÃO DO ADMIN =====
         
@@ -214,12 +214,23 @@
             };
 
             try {
+                // AQUI você conecta ao seu Neon DB
+                // Exemplo:
+                // const response = await fetch('/.netlify/functions/criar-noticia', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify(noticia)
+                // });
+
                 console.log('Notícia publicada:', noticia);
                 
                 document.getElementById('noticiaForm').reset();
                 imagePreview.style.display = 'none';
 
-                loadPosts();
+                // Recarregar lista de posts
+                setTimeout(() => {
+                    loadPosts();
+                }, 500);
 
             } catch (error) {
                 console.error('Erro:', error);
@@ -229,6 +240,11 @@
         // Carregar lista de posts publicados
         function loadPosts() {
             const postsContainer = document.getElementById('postsContainer');
+
+            // AQUI você busca do Neon DB
+            // Exemplo:
+            // const response = await fetch('/.netlify/functions/get-noticias');
+            // const posts = await response.json();
 
             // Dados de exemplo
             const posts = [
@@ -288,15 +304,11 @@
         // Carregar posts ao abrir a página
         document.addEventListener('DOMContentLoaded', loadPosts);
     </script>
-
 </body>
 
 
 
-
-
-
-
-
 </html>
+
+
 
