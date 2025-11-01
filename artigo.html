@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carregando... - SeligaManaux</title>
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        .article-body {
+            font-size: 1.15rem; /* Tamanho de fonte confortável para leitura */
+            line-height: 1.8;
+            color: var(--texto-principal);
+        }
+        .article-body p {
+            margin-bottom: 1.5rem; /* Espaçamento entre parágrafos */
+        }
+        .article-image {
+            width: 100%;
+            height: auto;
+            max-height: 500px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .article-meta {
+            font-size: 0.9rem;
+            color: var(--texto-secundario);
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="/"><h1>SeligaManaux</h1></a>
+            </div>
+            <button class="nav-toggle" aria-label="Abrir menu">
+                <span class="hamburger"></span>
+            </button>
+            <nav class="nav-principal">
+                <ul>
+                    <li><a href="/">Início</a></li>
+                    <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
+                    <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <article id="article-container" style="max-width: 800px; margin: 2rem auto;">
+            
+            <div id="loading-message" style="text-align: center; padding: 4rem 0;">
+                <p style="font-size: 1.2rem; color: var(--texto-secundario);">Carregando artigo...</p>
+            </div>
+
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <p>&copy; 2025 SeligaManaux. Todos os direitos reservados.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const articleContainer = document.getElementById('article-container');
+            const loadingMessage = document.getElementById('loading-message');
+
+            /**
+             * Formata a data para exibição (ex: "01/11/2025, 14:30")
+             */
+            function formatTimestamp(dateString) {
+                const date = new Date(dateString);
+                const options = { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric',
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                };
+                return date.toLocaleString('pt-BR', options);
+            }
+
+            /**
+             * Busca e renderiza o artigo com base no ID da URL
+             */
+            async function loadArticle() {
+                // 1. Pega o ID da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const articleId = urlParams.get('id');
+
+                if (!articleId) {
+                    loadingMessage.innerHTML = '<h1 class="page-title">Erro</h1><p style="color: var(--texto-secundario);">Nenhum artigo foi especificado.</p>';
+                    return;
+                }
+                
+                if (!supabase) return;
+
+                // 2. Busca o artigo ÚNICO no Supabase
+                try {
+                    const { data: post, error } = await supabase
+                        .from(DB_TABLE)
+                        .select('*')
+                        .eq('id', articleId) // Filtra pelo ID
+                        .single(); // Espera apenas UM resultado
+
+                    if (error) throw error;
+
+                    if (!post) {
+                        loadingMessage.innerHTML = '<h1 class="page-title">Artigo não encontrado</h1><p style="color: var(--texto-secundario);">O link que você seguiu pode estar quebrado ou o artigo foi removido.</p>';
+                        return;
+                    }
+
+                    // 3. Renderiza o artigo
+                    renderArticle(post);
+
+                } catch (err) {
+                    console.error("Erro ao buscar artigo:", err);
+                    loadingMessage.innerHTML = '<h1 class="page-title">Erro ao Carregar</h1><p style="color: var(--texto-secundario);">Não foi possível conectar ao banco de dados para carregar este artigo.</p>';
+                }
+            }
+
+            /**
+             * Insere o HTML do artigo na página
+             */
+            function renderArticle(post) {
+                // Atualiza o título da aba do navegador
+                document.title = `${post.title} - SeligaManaux`;
+                
+                // Esconde a mensagem de "Carregando"
+                loadingMessage.style.display = 'none';
+
+                // Formata o conteúdo: substitui quebras de linha (\n) por tags <p>
+                const formattedContent = post.content
+                    .split('\n') // Divide o texto em um array a cada nova linha
+                    .filter(p => p.trim() !== '') // Remove linhas vazias
+                    .map(p => `<p>${p}</p>`) // Envolve cada linha em tags <p>
+                    .join(''); // Junta tudo de volta
+
+                // Cria o HTML final
+                articleContainer.innerHTML = `
+                    <span class="categoria-tag">${post.category || 'Geral'}</span>
+                    
+                    <h1 class="page-title" style="border-bottom: none; margin: 0.5rem 0 0.5rem 0; line-height: 1.2;">
+                        ${post.title}
+                    </h1>
+                    
+                    <p class="article-meta">
+                        Publicado em ${formatTimestamp(post.created_at)}
+                    </p>
+                    
+                    ${post.image_url ? `<img src="${post.image_url}" alt="${post.title}" class="article-image">` : ''}
+                    
+                    <div class="article-body">
+                        ${formattedContent}
+                    </div>
+                `;
+            }
+
+            // Inicia o processo
+            loadArticle();
+        });
+    </script>
+</body>
+</html>

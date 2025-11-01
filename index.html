@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SeligaManaux - Notícias de Manaus</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
-    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-    
-    </head>
+</head>
 <body>
 
     <header class="site-header">
@@ -28,21 +25,20 @@
                     <li><a href="/">Início</a></li>
                     <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
                     <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
-                    </ul>
+                </ul>
             </nav>
         </div>
     </header>
 
     <main class="container">
         <section class="hero-grid" id="hero-grid-container">
-            <div id="loading-message" class="text-center py-16">
-                <p class="text-lg text-gray-300">Carregando notícias...</p>
+            <div id="loading-message" style="text-align: center; padding: 4rem 0;">
+                <p style="font-size: 1.2rem; color: var(--texto-secundario);">Carregando notícias...</p>
             </div>
         </section>
-        
-        </main>
+    </main>
 
-    <footer style="background-color: var(--cor-primaria); color: white; text-align: center; padding: 2rem 1rem; margin-top: 2rem;">
+    <footer class="site-footer">
         <p>&copy; 2025 SeligaManaux. Todos os direitos reservados.</p>
     </footer>
 
@@ -59,7 +55,7 @@
                 // Busca as 5 notícias mais recentes
                 const { data: posts, error } = await supabase
                     .from(DB_TABLE)
-                    .select('*')
+                    .select('id, title, content, image_url, category, created_at') // Pegando o ID
                     .order('created_at', { ascending: false })
                     .limit(5);
 
@@ -74,13 +70,11 @@
                     return;
                 }
 
-                // Limpa o container
                 loadingMessage.style.display = 'none';
                 gridContainer.innerHTML = '';
                 
-                // Mapeia os posts para o grid
                 posts.forEach((post, index) => {
-                    const postClass = `card-hero-${index + 1}`; // card-hero-1, card-hero-2, etc.
+                    const postClass = `card-hero-${index + 1}`;
                     gridContainer.appendChild(createNewsCard(post, postClass));
                 });
             }
@@ -91,12 +85,10 @@
                 
                 const titleTag = (cardClass === 'card-hero-1') ? 'h3' : 'h4';
                 const showSummary = (cardClass === 'card-hero-1') && post.content;
-                
-                // Usa uma imagem placeholder se não houver imagem
                 const imageUrl = post.image_url || 'https://via.placeholder.com/600x400.png?text=SeligaManaux';
 
                 article.innerHTML = `
-                    <a href="#"> <img src="${imageUrl}" alt="${post.title}">
+                    <a href="artigo.html?id=${post.id}"> <img src="${imageUrl}" alt="${post.title}">
                         <div class="card-conteudo">
                             <span class="categoria-tag">${post.category || 'Geral'}</span>
                             <${titleTag}>${post.title}</${titleTag}>
