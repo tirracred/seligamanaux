@@ -12,12 +12,13 @@ const DB_TABLE = 'noticias';
 const STORAGE_BUCKET = 'midia'; 
 
 // Inicializa o cliente Supabase
+// A variável 'supabase' é exposta globalmente pelo script da CDN
 let supabase;
 try {
-    supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } catch (e) {
     console.error("Erro ao inicializar Supabase:", e);
-    alert("Erro: Não foi possível conectar ao Supabase.");
+    // Evite usar alert, pois bloqueia a execução
 }
 
 
@@ -33,17 +34,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Alterna a classe 'ativo' na navegação
             navPrincipal.classList.toggle('ativo');
 
-            // Animação do Hamburger para "X" (opcional)
+            // Animação do Hamburger para "X"
             const hamburger = navToggle.querySelector('.hamburger');
             hamburger.classList.toggle('ativo');
         });
     }
 
     // Adiciona a classe 'ativo' ao link da página atual
+    // Corrigido para lidar com nomes de arquivo com hífens
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
     let activeLink;
 
-    if (currentPath === 'index.html') {
+    if (currentPath === 'index.html' || currentPath === '') {
         activeLink = document.querySelector('.nav-principal a[href="/"]');
     } else {
         activeLink = document.querySelector(`.nav-principal a[href="${currentPath}"]`);

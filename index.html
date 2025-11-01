@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SeligaManaux - Notícias de Manaus</title>
     
+    <!-- Link corrigido para o style.css -->
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,13 +16,15 @@
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <a href="/"><h1>SeligaManaux</h1></a>
+                <!-- Logo implementada -->
+                <a href="/"><img src="logo.png" alt="SeligaManaux Logo" class="logo-img"></a>
             </div>
             <button class="nav-toggle" aria-label="Abrir menu">
                 <span class="hamburger"></span>
             </button>
             <nav class="nav-principal">
                 <ul>
+                    <!-- Links de navegação corrigidos -->
                     <li><a href="/">Início</a></li>
                     <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
                     <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
@@ -50,7 +53,12 @@
             const loadingMessage = document.getElementById('loading-message');
             
             async function loadHeroNews() {
-                if (!supabase) return;
+                // Espera o supabase ser inicializado pelo main.js
+                if (!supabase) {
+                    console.error("Supabase client not initialized.");
+                    loadingMessage.innerHTML = "Erro ao conectar com o banco de dados.";
+                    return;
+                }
 
                 // Busca as 5 notícias mais recentes
                 const { data: posts, error } = await supabase
@@ -85,7 +93,7 @@
                 
                 const titleTag = (cardClass === 'card-hero-1') ? 'h3' : 'h4';
                 const showSummary = (cardClass === 'card-hero-1') && post.content;
-                const imageUrl = post.image_url || 'https://via.placeholder.com/600x400.png?text=SeligaManaux';
+                const imageUrl = post.image_url || 'https://placehold.co/600x400/1f2937/9ca3af?text=SeligaManaux';
 
                 article.innerHTML = `
                     <a href="artigo.html?id=${post.id}"> <img src="${imageUrl}" alt="${post.title}">

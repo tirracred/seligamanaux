@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Publicar Notícia</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Removido script do Tailwind, não era necessário -->
     <link rel="stylesheet" href="style.css">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +17,7 @@
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
+                <!-- Mantido como texto, pois é a página de admin -->
                 <a href="/"><h1>SeligaManaux (ADMIN)</h1></a>
             </div>
         </div>
@@ -24,7 +25,7 @@
     
     <main class="container">
         <form id="news-form" class="admin-form">
-            <h1 class="page-title">Publicar Nova Notícia</h1>
+            <h1 class="page-title-admin">Publicar Nova Notícia</h1>
             
             <div id="feedback-message" class="message" style="display: none;"></div>
 
@@ -70,7 +71,7 @@
             // Proteção de Senha
             const pass = prompt("Digite a senha de administrador:");
             if (pass !== ADMIN_PASSWORD) {
-                alert("Senha incorreta!");
+                // Não use alert
                 document.body.innerHTML = '<h1 style="color: red; text-align: center; margin-top: 5rem;">ACESSO NEGADO</h1>';
                 return;
             }
@@ -91,20 +92,29 @@
             async function handleFormSubmit(event) {
                 event.preventDefault(); 
                 
+                if (!supabase) {
+                    console.error("Supabase client not initialized.");
+                    showMessage('Erro: Falha na conexão com o banco de dados.', 'error');
+                    return;
+                }
+                
                 submitButton.disabled = true;
                 loadingSubmit.style.display = 'block';
                 feedbackMessage.style.display = 'none';
 
                 try {
                     const imageFile = newsImageInput.files[0];
-                    const imageUrl = await uploadMedia(imageFile);
+                    let imageUrl = null;
+                    
+                    if (imageFile) {
+                        imageUrl = await uploadMedia(imageFile);
+                    }
 
                     const newPost = {
                         title: newsTitle.value,
                         content: newsContent.value,
-                        category: newsCategory.value, // Salva a categoria
+                        category: newsCategory.value, 
                         image_url: imageUrl,
-                        // video_url: null (não temos campo de vídeo neste form)
                     };
 
                     const { error } = await supabase

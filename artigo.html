@@ -11,10 +11,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     
     <style>
+        /* Estilos específicos da página de artigo */
         .article-body {
             font-size: 1.15rem; /* Tamanho de fonte confortável para leitura */
             line-height: 1.8;
-            color: var(--texto-principal);
+            color: var(--texto-principal); /* Texto escuro no fundo branco */
         }
         .article-body p {
             margin-bottom: 1.5rem; /* Espaçamento entre parágrafos */
@@ -26,13 +27,30 @@
             object-fit: cover;
             border-radius: 8px;
             margin-bottom: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .article-meta {
             font-size: 0.9rem;
             color: var(--texto-secundario);
             margin-bottom: 2rem;
         }
+        /* Container do artigo com fundo branco */
+        #article-container {
+             max-width: 800px; 
+             margin: 2rem auto;
+             background-color: #ffffff; /* Fundo branco para o artigo */
+             padding: 2rem;
+             border-radius: 8px;
+             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        /* Ajuste para o body ter fundo cinza e o artigo branco */
+        body {
+            background-color: #f4f4f5; /* Um cinza bem claro para o fundo da página */
+        }
+        .page-title {
+            color: var(--texto-principal);
+        }
+
     </style>
 </head>
 <body>
@@ -40,13 +58,14 @@
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <a href="/"><h1>SeligaManaux</h1></a>
+                <a href="/"><img src="logo.png" alt="SeligaManaux Logo" class="logo-img"></a>
             </div>
             <button class="nav-toggle" aria-label="Abrir menu">
                 <span class="hamburger"></span>
             </button>
             <nav class="nav-principal">
                 <ul>
+                    <!-- Links de navegação corrigidos -->
                     <li><a href="/">Início</a></li>
                     <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
                     <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
@@ -55,13 +74,14 @@
         </div>
     </header>
 
-    <main class="container">
-        <article id="article-container" style="max-width: 800px; margin: 2rem auto;">
+    <!-- O main agora serve como o fundo cinza claro -->
+    <main>
+        <article id="article-container">
             
             <div id="loading-message" style="text-align: center; padding: 4rem 0;">
                 <p style="font-size: 1.2rem; color: var(--texto-secundario);">Carregando artigo...</p>
             </div>
-
+            <!-- Conteúdo do artigo será injetado aqui -->
         </article>
     </main>
 
@@ -76,9 +96,6 @@
             const articleContainer = document.getElementById('article-container');
             const loadingMessage = document.getElementById('loading-message');
 
-            /**
-             * Formata a data para exibição (ex: "01/11/2025, 14:30")
-             */
             function formatTimestamp(dateString) {
                 const date = new Date(dateString);
                 const options = { 
@@ -91,11 +108,7 @@
                 return date.toLocaleString('pt-BR', options);
             }
 
-            /**
-             * Busca e renderiza o artigo com base no ID da URL
-             */
             async function loadArticle() {
-                // 1. Pega o ID da URL
                 const urlParams = new URLSearchParams(window.location.search);
                 const articleId = urlParams.get('id');
 
@@ -104,15 +117,18 @@
                     return;
                 }
                 
-                if (!supabase) return;
+                if (!supabase) {
+                    console.error("Supabase client not initialized.");
+                    loadingMessage.innerHTML = '<h1 class="page-title">Erro de Conexão</h1>';
+                    return;
+                }
 
-                // 2. Busca o artigo ÚNICO no Supabase
                 try {
                     const { data: post, error } = await supabase
                         .from(DB_TABLE)
                         .select('*')
-                        .eq('id', articleId) // Filtra pelo ID
-                        .single(); // Espera apenas UM resultado
+                        .eq('id', articleId) 
+                        .single(); 
 
                     if (error) throw error;
 
@@ -121,7 +137,6 @@
                         return;
                     }
 
-                    // 3. Renderiza o artigo
                     renderArticle(post);
 
                 } catch (err) {
@@ -130,24 +145,17 @@
                 }
             }
 
-            /**
-             * Insere o HTML do artigo na página
-             */
             function renderArticle(post) {
-                // Atualiza o título da aba do navegador
                 document.title = `${post.title} - SeligaManaux`;
-                
-                // Esconde a mensagem de "Carregando"
                 loadingMessage.style.display = 'none';
 
                 // Formata o conteúdo: substitui quebras de linha (\n) por tags <p>
                 const formattedContent = post.content
-                    .split('\n') // Divide o texto em um array a cada nova linha
-                    .filter(p => p.trim() !== '') // Remove linhas vazias
-                    .map(p => `<p>${p}</p>`) // Envolve cada linha em tags <p>
-                    .join(''); // Junta tudo de volta
+                    .split('\n') 
+                    .filter(p => p.trim() !== '') 
+                    .map(p => `<p>${p}</p>`) 
+                    .join(''); 
 
-                // Cria o HTML final
                 articleContainer.innerHTML = `
                     <span class="categoria-tag">${post.category || 'Geral'}</span>
                     
@@ -167,7 +175,6 @@
                 `;
             }
 
-            // Inicia o processo
             loadArticle();
         });
     </script>

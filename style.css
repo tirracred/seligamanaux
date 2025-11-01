@@ -1,0 +1,402 @@
+/* =======================
+   VARIÁVEIS DE COR (Tema Híbrido)
+   ======================== */
+:root {
+    --cor-primaria: #b91c1c; /* Vermelho Escuro (CNN) */
+    --cor-primaria-hover: #991b1b; /* Vermelho mais escuro */
+    
+    /* Fundo branco, com texto escuro */
+    --cor-fundo: #ffffff; 
+    --texto-principal: #111827; /* Texto escuro (gray-900) */
+    --texto-secundario: #4b5563; /* Texto cinza (gray-600) */
+
+    /* Cards em dark mode */
+    --cor-card: #1f2937; /* Fundo dos Cards (gray-800) */
+    --cor-borda-card: #374151; /* Bordas (gray-700) */
+    --texto-card-principal: #f3f4f6; /* Texto claro (gray-100) */
+    --texto-card-secundario: #9ca3af; /* Texto cinza claro (gray-400) */
+    
+    --texto-link: #3b82f6; /* Azul para links (blue-500) */
+    --texto-link-hover: #2563eb; /* Azul mais escuro */
+
+    --fonte-principal: 'Inter', sans-serif;
+}
+
+/* =======================
+   RESET E BASE
+   ======================== */
+body {
+    font-family: var(--fonte-principal);
+    background-color: var(--cor-fundo); /* Fundo da página é BRANCO */
+    color: var(--texto-principal); /* Texto padrão é ESCURO */
+    margin: 0;
+    line-height: 1.6;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+a {
+    color: var(--texto-link);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+a:hover {
+    color: var(--texto-link-hover);
+}
+
+/* =======================
+   CABEÇALHO (Header)
+   ======================== */
+.site-header {
+    background-color: var(--cor-primaria);
+    color: white;
+    padding: 0.75rem 0; /* Padding levemente reduzido */
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 3px solid var(--cor-primaria-hover);
+}
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+.logo h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+}
+.logo a {
+    color: white;
+    text-decoration: none;
+}
+/* Estilo da Imagem da Logo */
+.logo-img {
+    height: 40px;
+    width: auto;
+}
+
+.nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+.hamburger {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background-color: white;
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+.hamburger::before, .hamburger::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 3px;
+    background-color: white;
+    left: 0;
+    transition: transform 0.3s ease;
+}
+.hamburger::before { top: -8px; }
+.hamburger::after { bottom: -8px; }
+
+/* Hamburger ativo (X) */
+.hamburger.ativo {
+    background-color: transparent;
+}
+.hamburger.ativo::before {
+    transform: rotate(45deg);
+    top: 0;
+}
+.hamburger.ativo::after {
+    transform: rotate(-45deg);
+    bottom: 0;
+}
+
+.nav-principal ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+}
+.nav-principal a {
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+.nav-principal a:hover,
+.nav-principal a.ativo {
+    border-bottom-color: white;
+    opacity: 0.8;
+}
+
+/* --- Navegação Mobile --- */
+@media (max-width: 768px) {
+    .nav-toggle {
+        display: block;
+    }
+    .nav-principal {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: var(--cor-primaria);
+        border-top: 1px solid var(--cor-primaria-hover);
+    }
+    .nav-principal.ativo {
+        display: block;
+    }
+    .nav-principal ul {
+        flex-direction: column;
+        gap: 0;
+    }
+    .nav-principal li {
+        border-bottom: 1px solid var(--cor-primaria-hover);
+    }
+    .nav-principal a {
+        display: block;
+        padding: 1rem;
+        border-bottom: none;
+    }
+    .nav-principal a:hover {
+        background-color: var(--cor-primaria-hover);
+    }
+}
+
+/* =======================
+   CARD DE NOTÍCIA (Dark Mode)
+   ======================== */
+.card-noticia {
+    background-color: var(--cor-card); /* Fundo ESCURO */
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-noticia:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+.card-noticia a {
+    text-decoration: none;
+    color: var(--texto-card-principal); /* Texto CLARO */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.card-noticia img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+.card-noticia a:hover img {
+    transform: scale(1.05);
+}
+.card-conteudo {
+    padding: 1.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+.categoria-tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--texto-link); /* Link azul */
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+.card-conteudo h3, .card-conteudo h4 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 0.5rem 0;
+    color: var(--texto-card-principal); /* Texto CLARO */
+    transition: color 0.2s ease;
+}
+.card-conteudo p {
+    font-size: 1rem;
+    color: var(--texto-card-secundario); /* Texto secundário CLARO */
+    margin: 0;
+    flex-grow: 1;
+    line-height: 1.5;
+}
+.card-noticia a:hover h3, .card-noticia a:hover h4 {
+    color: var(--texto-link); /* manchete colorida no hover */
+}
+
+/* =======================
+   ESTILOS: HERO GRID (Homepage)
+   ======================== */
+.hero-grid {
+    width: 100%;
+    margin: 2rem 0;
+    display: grid;
+    grid-template-columns: 1fr; /* Mobile: 1 coluna */
+    gap: 1.5rem;
+}
+@media (min-width: 992px) {
+   .hero-grid {
+        grid-template-columns: 2fr 1fr 1fr;
+        grid-template-rows: auto auto;
+        gap: 1.5rem;
+        grid-template-areas:
+            "principal sub1 sub2"
+            "principal sub3 sub4";
+    }
+   .card-hero-1 { grid-area: principal; }
+   .card-hero-2 { grid-area: sub1; }
+   .card-hero-3 { grid-area: sub2; }
+   .card-hero-4 { grid-area: sub3; }
+   .card-hero-5 { grid-area: sub4; }
+   
+   .card-hero-1 .card-conteudo h3 {
+        font-size: 2.5rem; /* Título maior para o principal */
+        line-height: 1.1;
+    }
+   .card-hero-2 p, .card-hero-3 p,
+   .card-hero-4 p, .card-hero-5 p {
+        display: none; /* Oculta resumo nos cards menores */
+    }
+}
+
+/* =======================
+   FEED (Últimas Notícias / Categorias)
+   ======================== */
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 900;
+    border-bottom: 3px solid var(--cor-primaria);
+    padding-bottom: 0.5rem;
+    margin: 2rem 0;
+    color: var(--texto-principal); /* Título escuro no fundo branco */
+}
+.feed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* =======================
+   ADMIN FORM (Dark Mode)
+   ======================== */
+.admin-form {
+    max-width: 700px;
+    margin: 2rem auto;
+    background-color: var(--cor-card); /* Fundo ESCURO */
+    padding: 2.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--cor-borda-card);
+}
+.page-title-admin {
+    font-size: 2rem;
+    font-weight: 900;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    color: var(--texto-card-principal); /* Texto CLARO */
+    text-align: center;
+}
+.admin-form div {
+    margin-bottom: 1.5rem;
+}
+.admin-form label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--texto-card-principal); /* Texto CLARO */
+}
+.admin-form input[type="text"],
+.admin-form input[type="file"],
+.admin-form select,
+.admin-form textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: #111827; /* Fundo do input (gray-900) */
+    border: 1px solid var(--cor-borda-card);
+    color: var(--texto-card-principal); /* Texto CLARO */
+    border-radius: 6px;
+    font-family: var(--fonte-principal);
+    font-size: 1rem;
+}
+.admin-form input:focus, 
+.admin-form select:focus, 
+.admin-form textarea:focus {
+    outline: none;
+    border-color: var(--texto-link);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+.admin-form textarea {
+    min-height: 150px;
+}
+.admin-form button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    background-color: var(--cor-primaria);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.admin-form button:hover {
+    background-color: var(--cor-primaria-hover);
+}
+.admin-form button:disabled {
+    background-color: var(--cor-borda-card);
+    cursor: not-allowed;
+}
+
+/* Mensagens de feedback */
+.message {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    display: none; /* Oculto por padrão */
+}
+.message.success {
+    background-color: #166534; /* green-800 */
+    color: #dcfce7; /* green-100 */
+}
+.message.error {
+    background-color: #991b1b; /* red-900 */
+    color: #fee2e2; /* red-100 */
+}
+
+/* Rodapé */
+.site-footer {
+    background-color: var(--cor-primaria);
+    color: white;
+    text-align: center;
+    padding: 2rem 1rem;
+    margin-top: 3rem;
+    border-top: 3px solid var(--cor-primaria-hover);
+}

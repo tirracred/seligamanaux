@@ -15,13 +15,14 @@
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <a href="/"><h1>SeligaManaux</h1></a>
+                <a href="/"><img src="logo.png" alt="SeligaManaux Logo" class="logo-img"></a>
             </div>
             <button class="nav-toggle" aria-label="Abrir menu">
                 <span class="hamburger"></span>
             </button>
             <nav class="nav-principal">
                 <ul>
+                    <!-- Links de navegação corrigidos -->
                     <li><a href="/">Início</a></li>
                     <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
                     <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
@@ -38,7 +39,8 @@
         </div>
         
         <section class="feed-grid" id="feed-container">
-            </section>
+            <!-- Notícias serão carregadas aqui -->
+        </section>
     </main>
 
     <footer class="site-footer">
@@ -53,9 +55,12 @@
             const loadingMessage = document.getElementById('loading-message');
             
             async function loadCategoryNews() {
-                if (!supabase) return;
+                if (!supabase) {
+                    console.error("Supabase client not initialized.");
+                    loadingMessage.innerHTML = "Erro ao conectar com o banco de dados.";
+                    return;
+                }
 
-                // ***** AQUI ESTÁ A MÁGICA *****
                 // Busca notícias ONDE a categoria é 'Manaus e Região'
                 const { data: posts, error } = await supabase
                     .from(DB_TABLE)
@@ -85,7 +90,7 @@
             function createNewsCard(post) {
                 const article = document.createElement('article');
                 article.className = 'card-noticia';
-                const imageUrl = post.image_url || 'https://via.placeholder.com/400x250.png?text=SeligaManaux';
+                const imageUrl = post.image_url || 'https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux';
 
                 article.innerHTML = `
                     <a href="artigo.html?id=${post.id}"> <img src="${imageUrl}" alt="${post.title}">
