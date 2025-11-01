@@ -10,79 +10,41 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     
-    <style>
-        /* Estilos específicos da página de artigo */
-        .article-body {
-            font-size: 1.15rem; /* Tamanho de fonte confortável para leitura */
-            line-height: 1.8;
-            color: var(--texto-principal); /* Texto escuro no fundo branco */
-        }
-        .article-body p {
-            margin-bottom: 1.5rem; /* Espaçamento entre parágrafos */
-        }
-        .article-image {
-            width: 100%;
-            height: auto;
-            max-height: 500px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .article-meta {
-            font-size: 0.9rem;
-            color: var(--texto-secundario);
-            margin-bottom: 2rem;
-        }
-        /* Container do artigo com fundo branco */
-        #article-container {
-             max-width: 800px; 
-             margin: 2rem auto;
-             background-color: #ffffff; /* Fundo branco para o artigo */
-             padding: 2rem;
-             border-radius: 8px;
-             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
-        /* Ajuste para o body ter fundo cinza e o artigo branco */
-        body {
-            background-color: #f4f4f5; /* Um cinza bem claro para o fundo da página */
-        }
-        .page-title {
-            color: var(--texto-principal);
-        }
-
-    </style>
-</head>
+    </head>
 <body>
 
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <a href="/"><img src="logo.png" alt="SeligaManaux Logo" class="logo-img"></a>
+                <a href="/"><h1>SELIGAMANAUX</h1></a>
             </div>
             <button class="nav-toggle" aria-label="Abrir menu">
                 <span class="hamburger"></span>
             </button>
             <nav class="nav-principal">
                 <ul>
-                    <!-- Links de navegação corrigidos -->
                     <li><a href="/">Início</a></li>
                     <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
                     <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
                 </ul>
+                
+                <div class="theme-switch-wrapper">
+                    <label class="theme-switch" for="theme-toggle">
+                        <input type="checkbox" id="theme-toggle" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </nav>
         </div>
     </header>
 
-    <!-- O main agora serve como o fundo cinza claro -->
     <main>
         <article id="article-container">
             
             <div id="loading-message" style="text-align: center; padding: 4rem 0;">
                 <p style="font-size: 1.2rem; color: var(--texto-secundario);">Carregando artigo...</p>
             </div>
-            <!-- Conteúdo do artigo será injetado aqui -->
-        </article>
+            </article>
     </main>
 
     <footer class="site-footer">
@@ -126,9 +88,9 @@
                 try {
                     const { data: post, error } = await supabase
                         .from(DB_TABLE)
-                        .select('*')
+                        .select('*, headline_color') // Pega a coluna de cor
                         .eq('id', articleId) 
-                        .single(); 
+                        .single();
 
                     if (error) throw error;
 
@@ -156,10 +118,13 @@
                     .map(p => `<p>${p}</p>`) 
                     .join(''); 
 
+                // Define a classe de cor do título
+                const titleColorClass = post.headline_color === 'red' ? 'titulo-vermelho' : 'titulo-azul';
+
                 articleContainer.innerHTML = `
                     <span class="categoria-tag">${post.category || 'Geral'}</span>
                     
-                    <h1 class="page-title" style="border-bottom: none; margin: 0.5rem 0 0.5rem 0; line-height: 1.2;">
+                    <h1 class="page-title ${titleColorClass}" style="border-bottom: none; margin: 0.5rem 0 0.5rem 0; line-height: 1.2;">
                         ${post.title}
                     </h1>
                     
@@ -179,4 +144,5 @@
         });
     </script>
 </body>
+
 </html>

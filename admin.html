@@ -4,311 +4,342 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - SeligaManaux</title>
-    <link rel="stylesheet" href="style-new.css">
+    <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
-<body class="dark-mode">
-    <!-- HEADER -->
+<body>
+    
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <h1><a href="index.html">SELIGAMANAUX</a></h1>
+                <a href="/"><h1>SeligaManaux (ADMIN)</h1></a>
             </div>
-            
-            <nav class="nav-principal">
-                <ul>
-                    <li><a href="index.html">Início</a></li>
-                    <li><a href="#">Admin</a></li>
-                </ul>
-            </nav>
 
-            <button class="dark-mode-toggle">🌙 Dark</button>
 
-            <button class="nav-toggle">
-                <div class="hamburger">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </button>
+
         </div>
     </header>
-
-    <!-- CONTEÚDO ADMIN -->
+    
     <main class="container">
-        <!-- SEÇÃO DE PUBLICAÇÃO -->
-        <div class="admin-form" id="adminForm">
-            <h2 class="page-title-admin">📝 Publicar Notícia</h2>
 
-            <form id="noticiaForm">
-                <!-- SEÇÃO BÁSICA -->
-                <div class="admin-form-section">
-                    <h3>Informações Básicas</h3>
+        <form id="login-form" class="admin-form">
+            <h1 class="page-title-admin">Login do Administrador</h1>
+            
+            <div id="login-feedback-message" class="message" style="display: none;"></div>
 
-                    <div class="form-group">
-                        <label for="categoria">📂 Categoria *</label>
-                        <select id="categoria" required>
-                            <option value="">Selecione uma categoria</option>
-                            <option value="geral">Geral</option>
-                            <option value="politica">Política</option>
-                            <option value="economia">Economia</option>
-                            <option value="cultura">Cultura</option>
-                            <option value="esportes">Esportes</option>
-                            <option value="saude">Saúde</option>
-                            <option value="tecnologia">Tecnologia</option>
-                            <option value="regiao">Região</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="titulo">📰 Título *</label>
-                        <input type="text" id="titulo" placeholder="Escreva o título da notícia" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="resumo">✏️ Resumo / Lead *</label>
-                        <textarea id="resumo" placeholder="Resumo conciso (2-3 linhas)" required></textarea>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO DE CONTEÚDO -->
-                <div class="admin-form-section">
-                    <h3>Conteúdo Completo</h3>
-
-                    <div class="form-group">
-                        <label for="conteudo">📄 Conteúdo *</label>
-                        <textarea id="conteudo" placeholder="Escreva o conteúdo completo da notícia..." style="min-height: 200px;" required></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="autor">✍️ Autor</label>
-                        <input type="text" id="autor" placeholder="Nome do autor (opcional)">
-                    </div>
-                </div>
-
-                <!-- SEÇÃO DE MÍDIA -->
-                <div class="admin-form-section">
-                    <h3>Mídia e Imagens</h3>
-
-                    <div class="form-group">
-                        <label for="imagem">🖼️ Imagem de Capa</label>
-                        <div class="upload-area" id="uploadArea">
-                            <input type="file" id="imagem" accept="image/*" style="display: none;">
-                            <p style="cursor: pointer; color: var(--cor-azul); font-weight: 600;">
-                                📤 Clique ou arraste uma imagem aqui
-                            </p>
-                            <p style="font-size: 12px; color: var(--cor-texto-cinza);">
-                                PNG, JPG, WebP • Tamanho máx: 5MB
-                            </p>
-                        </div>
-                        <div class="image-preview" id="imagePreview">
-                            <img id="previewImg" src="" alt="Preview">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="urlExterna">🔗 Ou URL da Imagem</label>
-                        <input type="text" id="urlExterna" placeholder="https://exemplo.com/imagem.jpg">
-                    </div>
-                </div>
-
-                <!-- BOTÕES -->
-                <div class="form-buttons">
-                    <button type="submit" class="btn-submit">✅ Publicar Notícia</button>
-                    <button type="reset" class="btn-cancel">🔄 Limpar Formulário</button>
-                </div>
-            </form>
-        </div>
-
-        <!-- SEÇÃO DE GERENCIAMENTO DE POSTS -->
-        <div class="admin-form posts-list" id="postsList">
-            <h3>📊 Notícias Publicadas</h3>
-
-            <div id="postsContainer" style="margin-top: 20px;">
-                <p style="color: var(--cor-texto-cinza); text-align: center; padding: 30px;">
-                    Carregando notícias publicadas...
-                </p>
+            <div>
+                <label for="admin-email">Email</label>
+                <input type="email" id="admin-email" required>
             </div>
-        </div>
+            
+            <div>
+                <label for="admin-password">Senha</label>
+                <input type="password" id="admin-password" required>
+            </div>
+            
+            <button type="submit" id="login-button">ENTRAR</button>
+            <p id="loading-login" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Entrando...</p>
+        </form>
+
+
+        <form id="news-form" class="admin-form" style="display: none;">
+            <h1 class="page-title-admin">Publicar Nova Notícia</h1>
+            
+            <div id="feedback-message" class="message" style="display: none;"></div>
+
+            <div>
+                <label for="news-title">Título</label>
+                <input type="text" id="news-title" required>
+            </div>
+            
+            <div>
+                <label for="news-category">Categoria</label>
+                <select id="news-category" required>
+                    <option value="">Selecione...</option>
+                    <option value="Manaus e Região">Manaus e Região</option>
+                    <option value="Política">Política</option>
+                    <option value="Esportes">Esportes</option>
+                    <option value="Economia">Economia</option>
+                    <option value="Geral">Geral</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="news-headline-color">Cor da Manchete</label>
+                <select id="news-headline-color" required>
+                    <option value="blue">Azul (Padrão)</option>
+                    <option value="red">Vermelho (Destaque)</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="news-content">Conteúdo</label>
+                <textarea id="news-content" rows="8" required></textarea>
+            </div>
+
+            <div>
+                <label for="news-image">Anexar Foto</label>
+                <input type="file" id="news-image" accept="image/*">
+            </div>
+            
+            <button type="submit" id="submit-button">PUBLICAR AGORA</button>
+            <p id="loading-submit" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Publicando... Aguarde.</p>
+        </form>
+
+
+        <section id="manage-section" style="display: none;">
+             <h1 class="page-title-admin">Gerenciar Notícias</h1>
+             <p id="loading-manage" style="text-align: center; color: var(--texto-secundario);">Carregando notícias...</p>
+             <div id="post-list-container">
+                </div>
+        </section>
+
     </main>
 
-    <!-- FOOTER -->
-    <footer class="site-footer">
-        <div class="footer-content">
-            <p>&copy; 2025 SeligaManaux - Painel Administrativo</p>
-        </div>
-    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="main.js"></script>
 
-    <script src="darkmode-final.js"></script>
     <script>
-        // ===== CONFIGURAÇÃO DO ADMIN =====
-        
-        // Upload de arquivo com drag and drop
-        const uploadArea = document.getElementById('uploadArea');
-        const imagemInput = document.getElementById('imagem');
-        const imagePreview = document.getElementById('imagePreview');
-        const previewImg = document.getElementById('previewImg');
-
-        uploadArea.addEventListener('click', () => imagemInput.click());
-
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
+        document.addEventListener('DOMContentLoaded', () => {
             
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                imagemInput.files = files;
-                handleImageUpload();
-            }
-        });
+            // Referências dos formulários
+            const loginForm = document.getElementById('login-form');
+            const newsForm = document.getElementById('news-form');
+            const manageSection = document.getElementById('manage-section'); // Novo
+            const loginButton = document.getElementById('login-button');
+            const loadingLogin = document.getElementById('loading-login');
+            const loginFeedback = document.getElementById('login-feedback-message');
+            
+            // Referências do form de notícias
+            const submitButton = document.getElementById('submit-button');
+            const loadingSubmit = document.getElementById('loading-submit');
+            const feedbackMessage = document.getElementById('feedback-message');
+            
+            const newsTitle = document.getElementById('news-title');
+            const newsCategory = document.getElementById('news-category');
+            const newsHeadlineColor = document.getElementById('news-headline-color'); // Novo
+            const newsContent = document.getElementById('news-content');
+            const newsImageInput = document.getElementById('news-image');
 
-        imagemInput.addEventListener('change', handleImageUpload);
+            // Referências do Gerenciamento
+            const loadingManage = document.getElementById('loading-manage');
+            const postListContainer = document.getElementById('post-list-container');
+            postListContainer.addEventListener('click', handleDeleteClick); // Adiciona listener para deleção
 
-        function handleImageUpload() {
-            const file = imagemInput.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewImg.src = e.target.result;
-                    imagePreview.style.display = 'block';
-                    document.getElementById('urlExterna').value = '';
-                };
-                reader.readAsDataURL(file);
-            }
-        }
+            // Evento: Tentar fazer login
+            loginForm.addEventListener('submit', handleLogin);
 
-        // Envio do Formulário
-        document.getElementById('noticiaForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+            async function handleLogin(event) {
+                event.preventDefault();
+                if (!supabase) return showLoginMessage('Erro: Supabase não inicializado', 'error');
 
-            // Validar campos obrigatórios
-            const titulo = document.getElementById('titulo').value.trim();
-            const resumo = document.getElementById('resumo').value.trim();
-            const conteudo = document.getElementById('conteudo').value.trim();
-            const categoria = document.getElementById('categoria').value;
+                loginButton.disabled = true;
+                loadingLogin.style.display = 'block';
+                loginFeedback.style.display = 'none';
 
-            if (!titulo || !resumo || !conteudo || !categoria) {
-                return;
-            }
+                const email = document.getElementById('admin-email').value;
+                const password = document.getElementById('admin-password').value;
 
-            // Preparar dados da notícia
-            const noticia = {
-                titulo: titulo,
-                resumo: resumo,
-                conteudo: conteudo,
-                categoria: categoria,
-                autor: document.getElementById('autor').value.trim() || 'Redação',
-                imagem: document.getElementById('urlExterna').value.trim() || previewImg.src || null,
-                data: new Date().toISOString()
-            };
+                try {
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email: email,
+                        password: password,
+                    });
 
-            try {
-                // AQUI você conecta ao seu Neon DB
-                // Exemplo:
-                // const response = await fetch('/.netlify/functions/criar-noticia', {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify(noticia)
-                // });
+                    if (error) throw error;
 
-                console.log('Notícia publicada:', noticia);
-                
-                document.getElementById('noticiaForm').reset();
-                imagePreview.style.display = 'none';
+                    // SUCESSO!
+                    loginForm.style.display = 'none';
+                    newsForm.style.display = 'block';
+                    manageSection.style.display = 'block'; // Mostra gerenciamento
+                    
+                    // Carrega os posts para gerenciar
+                    await loadManagedPosts();
 
-                // Recarregar lista de posts
-                setTimeout(() => {
-                    loadPosts();
-                }, 500);
-
-            } catch (error) {
-                console.error('Erro:', error);
-            }
-        });
-
-        // Carregar lista de posts publicados
-        function loadPosts() {
-            const postsContainer = document.getElementById('postsContainer');
-
-            // AQUI você busca do Neon DB
-            // Exemplo:
-            // const response = await fetch('/.netlify/functions/get-noticias');
-            // const posts = await response.json();
-
-            // Dados de exemplo
-            const posts = [
-                {
-                    id: 1,
-                    titulo: 'Prefeitura anuncia novo programa de desenvolvimento',
-                    categoria: 'Política',
-                    data: new Date().toLocaleDateString('pt-BR'),
-                    views: 245
-                },
-                {
-                    id: 2,
-                    titulo: 'Economia de Manaus cresce 8% no trimestre',
-                    categoria: 'Economia',
-                    data: new Date(Date.now() - 86400000).toLocaleDateString('pt-BR'),
-                    views: 189
-                },
-                {
-                    id: 3,
-                    titulo: 'Festival Cultural 2025 acontece no próximo mês',
-                    categoria: 'Cultura',
-                    data: new Date(Date.now() - 172800000).toLocaleDateString('pt-BR'),
-                    views: 423
+                } catch (err) {
+                    console.error("Erro de login:", err);
+                    showLoginMessage(`Erro: ${err.message}`, 'error');
+                } finally {
+                    loginButton.disabled = false;
+                    loadingLogin.style.display = 'none';
                 }
-            ];
-
-            if (posts.length === 0) {
-                postsContainer.innerHTML = '<p style="color: var(--cor-texto-cinza); text-align: center; padding: 30px;">Nenhuma notícia publicada ainda.</p>';
-                return;
             }
 
-            postsContainer.innerHTML = posts.map(post => `
-                <div class="post-item">
-                    <div class="post-info">
-                        <h4>${post.titulo}</h4>
-                        <p>📂 ${post.categoria} | 📅 ${post.data} | 👁️ ${post.views} visualizações</p>
-                    </div>
-                    <div class="post-actions">
-                        <button class="btn-small btn-edit" onclick="editPost(${post.id})">✏️ Editar</button>
-                        <button class="btn-small btn-delete-small" onclick="deletePost(${post.id})">🗑️ Deletar</button>
-                    </div>
-                </div>
-            `).join('');
-        }
 
-        function editPost(id) {
-            console.log('Editar post ID:', id);
-        }
+            // --- Lógica do formulário de notícias ---
+            newsForm.addEventListener('submit', handleFormSubmit);
 
-        function deletePost(id) {
-            if (confirm('Tem certeza que deseja deletar esta notícia?')) {
-                console.log('Deletar post ID:', id);
-                loadPosts();
+            async function handleFormSubmit(event) {
+                event.preventDefault(); 
+                
+                if (!supabase) {
+                    showMessage('Erro: Falha na conexão com o banco de dados.', 'error');
+                    return;
+                }
+                
+                submitButton.disabled = true;
+                loadingSubmit.style.display = 'block';
+                feedbackMessage.style.display = 'none';
+
+                try {
+                    const imageFile = newsImageInput.files[0];
+                    let imageUrl = null;
+                    
+                    if (imageFile) {
+                        imageUrl = await uploadMedia(imageFile);
+                    }
+
+                    const newPost = {
+                        title: newsTitle.value,
+                        content: newsContent.value,
+                        category: newsCategory.value, 
+                        image_url: imageUrl,
+                        headline_color: newsHeadlineColor.value // Salva a cor da manchete
+                    };
+
+                    const { error } = await supabase
+                        .from(DB_TABLE)
+                        .insert(newPost);
+
+                    if (error) throw error;
+
+                    showMessage('Sucesso! Notícia publicada.', 'success');
+                    newsForm.reset();
+                    
+                    // Recarrega a lista de gerenciamento
+                    await loadManagedPosts();
+
+                } catch (err) {
+                    console.error("Erro ao publicar:", err);
+                    if (err.message.includes("permission denied")) {
+                         showMessage('Erro: Você não tem permissão para publicar. Verifique as regras RLS no Supabase.', 'error');
+                    } else {
+                         showMessage(`Erro: ${err.message}`, 'error');
+                    }
+                } finally {
+                    submitButton.disabled = false;
+                    loadingSubmit.style.display = 'none';
+                }
             }
-        }
 
-        // Carregar posts ao abrir a página
-        document.addEventListener('DOMContentLoaded', loadPosts);
+            async function uploadMedia(file) {
+                if (!file) return null;
+                const fileName = `${Date.now()}-${file.name}`;
+                
+                const { data, error } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .upload(fileName, file);
+
+                if (error) throw new Error(`Erro no upload: ${error.message}`);
+                
+                const { data: publicUrlData } = supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .getPublicUrl(data.path);
+                    
+                return publicUrlData.publicUrl;
+            }
+
+            // --- NOVAS FUNÇÕES DE GERENCIAMENTO ---
+
+            // Carrega os posts na área de gerenciamento
+            async function loadManagedPosts() {
+                loadingManage.style.display = 'block';
+                postListContainer.innerHTML = '';
+
+                if (!supabase) return;
+
+                const { data: posts, error } = await supabase
+                    .from(DB_TABLE)
+                    .select('id, title, created_at')
+                    .order('created_at', { ascending: false });
+                
+                loadingManage.style.display = 'none';
+
+                if (error) {
+                    console.error("Erro ao carregar posts:", error);
+                    postListContainer.innerHTML = `<p style="color: red; padding: 1rem;">Erro ao carregar posts.</p>`;
+                    return;
+                }
+
+                if (posts.length === 0) {
+                     postListContainer.innerHTML = `<p style="color: var(--texto-secundario); padding: 1rem;">Nenhum post publicado.</p>`;
+                     return;
+                }
+
+                posts.forEach(post => {
+                    const postEl = document.createElement('div');
+                    postEl.className = 'post-item';
+                    postEl.innerHTML = `
+                        <span>${post.title}</span>
+                        <button class="delete-post-btn" data-id="${post.id}">Apagar</button>
+                    `;
+                    postListContainer.appendChild(postEl);
+                });
+            }
+
+            // Lida com o clique no botão "Apagar"
+            async function handleDeleteClick(event) {
+                if (!event.target.classList.contains('delete-post-btn')) return;
+
+                const button = event.target;
+                const postId = button.dataset.id;
+                
+                if (!confirm("Tem certeza que deseja apagar este post? Esta ação não pode ser desfeita.")) {
+                    return;
+                }
+
+                button.disabled = true;
+                button.innerText = 'Apagando...';
+
+                try {
+                    const { error } = await supabase
+                        .from(DB_TABLE)
+                        .delete()
+                        .eq('id', postId);
+                    
+                    if (error) throw error;
+
+                    // Remove o item da tela
+                    button.closest('.post-item').remove();
+                    showMessage('Post apagado com sucesso.', 'success');
+
+                } catch (err) {
+                    console.error("Erro ao apagar:", err);
+                    showMessage(`Erro ao apagar: ${err.message}`, 'error');
+                    button.disabled = false;
+                    button.innerText = 'Apagar';
+                }
+            }
+
+
+            // Funções de feedback
+            function showMessage(text, type) {
+                feedbackMessage.innerText = text;
+                feedbackMessage.className = `message ${type}`;
+                feedbackMessage.style.display = 'block';
+                
+                // Esconde a mensagem depois de 3 segundos
+                setTimeout(() => { feedbackMessage.style.display = 'none'; }, 3000);
+            }
+            
+            function showLoginMessage(text, type) {
+                loginFeedback.innerText = text;
+                loginFeedback.className = `message ${type}`;
+                loginFeedback.style.display = 'block';
+            }
+        });
+
     </script>
 </body>
 
 
 
+
+
+
+
+
 </html>
-
-
 

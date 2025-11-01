@@ -1,36 +1,46 @@
 /* =======================
-   VARIÁVEIS DE COR (Tema Híbrido)
+   1. VARIÁVEIS DE COR (TEMAS)
    ======================== */
+
 :root {
+    /* Cores Globais (Não mudam com o tema) */
     --cor-primaria: #b91c1c; /* Vermelho Escuro (CNN) */
-    --cor-primaria-hover: #991b1b; /* Vermelho mais escuro */
+    --cor-primaria-hover: #991b1b;
+    --cor-titulo-vermelho: #e53e3e; /* Vermelho mais claro para manchetes */
+    --cor-titulo-azul: #3b82f6; /* Azul para manchetes */
     
-    /* Fundo branco, com texto escuro */
-    --cor-fundo: #ffffff; 
-    --texto-principal: #ffffff; /* Texto escuro (gray-900) */
-    --texto-secundario: #4b5563; /* Texto cinza (gray-600) */
-
-    /* Cards em dark mode */
-    --cor-card: #1f2937; /* Fundo dos Cards (gray-800) */
-    --cor-borda-card: #374151; /* Bordas (gray-700) */
-    --texto-card-principal: #f3f4f6; /* Texto claro (gray-100) */
-    --texto-card-secundario: #9ca3af; /* Texto cinza claro (gray-400) */
-    
-    --texto-link: #3b82f6; /* Azul para links (blue-500) */
-    --texto-link-hover: #2563eb; /* Azul mais escuro */
-
     --fonte-principal: 'Inter', sans-serif;
+
+    /* TEMA CLARO (Light Mode) - Oposto do padrão */
+    --cor-fundo: #f4f4f5;         /* Fundo do Site (cinza claro) */
+    --cor-card: #ffffff;         /* Fundo dos Cards (branco) */
+    --cor-borda: #e5e7eb;         /* Bordas (cinza-200) */
+    --texto-principal: #111827;   /* Texto (preto) */
+    --texto-secundario: #6b7280;  /* Texto (cinza-500) */
+    --texto-link: #2563eb;       
 }
 
+body.dark-mode {
+    /* TEMA ESCURO (Dark Mode) - Padrão (Estilo Gemini) */
+    --cor-fundo: #1f2937;         /* Fundo do Site (cinza-800) */
+    --cor-card: #374151;         /* Fundo dos Cards (cinza-700) */
+    --cor-borda: #4b5563;         /* Bordas (cinza-600) */
+    --texto-principal: #f3f4f6;   /* Texto (branco) */
+    --texto-secundario: #9ca3af;  /* Texto (cinza-400) */
+    --texto-link: #60a5fa;
+}
+
+
 /* =======================
-   RESET E BASE
+   2. RESET E BASE
    ======================== */
 body {
     font-family: var(--fonte-principal);
-    background-color: var(--cor-fundo); /* Fundo da página é BRANCO */
-    color: var(--texto-principal); /* Texto padrão é ESCURO */
+    background-color: var(--cor-fundo);
+    color: var(--texto-principal);
     margin: 0;
     line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 .container {
     max-width: 1200px;
@@ -51,18 +61,22 @@ a:hover {
     color: var(--texto-link-hover);
 }
 
+/* Classes de Cor de Título */
+.titulo-vermelho { color: var(--cor-titulo-vermelho) !important; }
+.titulo-azul { color: var(--cor-titulo-azul) !important; }
+
+
 /* =======================
-   CABEÇALHO (Header) - Estilo Claro (G1/BBC)
+   3. CABEÇALHO (Header) - Estilo Vermelho
    ======================== */
 .site-header {
-    background-color: #ff0000; /* Fundo BRANCO */
-    color: var(--texto-principal); /* Texto ESCURO */
-    padding: 1rem 0; /* Mais espaçamento para um look "fino" */
+    background-color: var(--cor-primaria); /* Vermelho */
+    color: white;
+    padding: 1rem 0;
     position: sticky;
     top: 0;
     z-index: 1000;
-    border-bottom: 1px solid #e5e7eb; /* Borda cinza clara */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.03); /* Sombra sutil */
+    border-bottom: 3px solid var(--cor-primaria-hover);
 }
 .header-container {
     display: flex;
@@ -74,22 +88,15 @@ a:hover {
 }
 .logo h1 {
     margin: 0;
-    font-size: 1.6rem; /* Tamanho elegante */
+    font-size: 1.8rem;
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: -1px;
 }
 .logo a {
-    color: var(--cor-primaria); /* Logo em VERMELHO */
+    color: white; /* Texto "SELIGAMANAUX" em BRANCO */
     text-decoration: none;
-    transition: opacity 0.2s ease;
 }
-.logo a:hover {
-    opacity: 0.8;
-}
-
-/* Removemos a classe .logo-img que não é mais necessária */
-
 .nav-toggle {
     display: none;
     background: none;
@@ -101,7 +108,7 @@ a:hover {
     display: block;
     width: 25px;
     height: 3px;
-    background-color: #111827; /* Hamburger ESCURO */
+    background-color: white; /* Hamburger BRANCO */
     position: relative;
     transition: background-color 0.2s ease;
 }
@@ -110,26 +117,22 @@ a:hover {
     position: absolute;
     width: 100%;
     height: 3px;
-    background-color: #111827; /* Hamburger ESCURO */
+    background-color: white;
     left: 0;
     transition: transform 0.3s ease;
 }
 .hamburger::before { top: -8px; }
 .hamburger::after { bottom: -8px; }
-
 /* Hamburger ativo (X) */
-.hamburger.ativo {
-    background-color: transparent;
-}
-.hamburger.ativo::before {
-    transform: rotate(45deg);
-    top: 0;
-}
-.hamburger.ativo::after {
-    transform: rotate(-45deg);
-    bottom: 0;
-}
+.hamburger.ativo { background-color: transparent; }
+.hamburger.ativo::before { transform: rotate(45deg); top: 0; }
+.hamburger.ativo::after { transform: rotate(-45deg); bottom: 0; }
 
+.nav-principal {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
 .nav-principal ul {
     list-style: none;
     margin: 0;
@@ -139,7 +142,7 @@ a:hover {
     gap: 1.5rem;
 }
 .nav-principal a {
-    color: var(--texto-principal); /* Links ESCUROS */
+    color: white;
     text-decoration: none;
     font-weight: 700;
     font-size: 1rem;
@@ -149,43 +152,8 @@ a:hover {
 }
 .nav-principal a:hover,
 .nav-principal a.ativo {
-    color: var(--cor-primaria); /* Cor primária (vermelho) no hover/ativo */
-    border-bottom-color: var(--cor-primaria); 
-}
-
-/* --- Navegação Mobile (Estilo Claro) --- */
-@media (max-width: 768px) {
-    .nav-toggle {
-        display: block;
-    }
-    .nav-principal {
-        display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        width: 100%;
-        background-color: #ffffff; /* Fundo BRANCO */
-        border-top: 1px solid #e5e7eb; /* Borda cinza clara */
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
-    .nav-principal.ativo {
-        display: block;
-    }
-    .nav-principal ul {
-        flex-direction: column;
-        gap: 0;
-    }
-    .nav-principal li {
-        border-bottom: 1px solid #e5e7eb; /* Borda cinza clara */
-    }
-    .nav-principal a {
-        display: block;
-        padding: 1rem;
-        border-bottom: none;
-    }
-    .nav-principal a:hover {
-        background-color: #f9fafb; /* Fundo cinza bem claro no hover */
-    }
+    border-bottom-color: white;
+    opacity: 0.8;
 }
 
 /* --- Navegação Mobile --- */
@@ -201,16 +169,21 @@ a:hover {
         width: 100%;
         background-color: var(--cor-primaria);
         border-top: 1px solid var(--cor-primaria-hover);
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 0.5rem 0;
     }
     .nav-principal.ativo {
-        display: block;
+        display: flex;
     }
     .nav-principal ul {
         flex-direction: column;
         gap: 0;
+        width: 100%;
     }
     .nav-principal li {
         border-bottom: 1px solid var(--cor-primaria-hover);
+        width: 100%;
     }
     .nav-principal a {
         display: block;
@@ -220,19 +193,84 @@ a:hover {
     .nav-principal a:hover {
         background-color: var(--cor-primaria-hover);
     }
+    /* Move o toggle para o menu mobile */
+    .theme-switch-wrapper {
+        padding: 1rem;
+        border-top: 1px solid var(--cor-primaria-hover);
+    }
 }
 
 /* =======================
-   CARD DE NOTÍCIA (Dark Mode)
+   4. BOTÃO DARK MODE
+   ======================== */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+.theme-switch-label {
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.theme-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+.theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+/* Botão ATIVADO (Dark Mode) */
+input:checked + .slider {
+    background-color: var(--texto-link); 
+}
+/* Botão DESATIVADO (Light Mode) */
+input:not(:checked) + .slider {
+    background-color: #777;
+}
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+
+/* =======================
+   5. CARD DE NOTÍCIA
    ======================== */
 .card-noticia {
-    background-color: var(--cor-card); /* Fundo ESCURO */
+    background-color: var(--cor-card); /* Fundo do card usa variável */
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid var(--cor-borda);
     display: flex;
     flex-direction: column;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
 }
 .card-noticia:hover {
     transform: translateY(-5px);
@@ -240,7 +278,7 @@ a:hover {
 }
 .card-noticia a {
     text-decoration: none;
-    color: var(--texto-card-principal); /* Texto CLARO */
+    color: var(--texto-principal);
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -250,12 +288,13 @@ a:hover {
     aspect-ratio: 16 / 9;
     object-fit: cover;
     transition: transform 0.3s ease;
+    border-bottom: 1px solid var(--cor-borda);
 }
 .card-noticia a:hover img {
     transform: scale(1.05);
 }
 .card-conteudo {
-    padding: 1.5rem;
+    padding: 1rem; /* Padding menor */
     flex-grow: 1;
     display: flex;
     flex-direction: column;
@@ -264,7 +303,7 @@ a:hover {
     display: inline-block;
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--texto-link); /* Link azul */
+    color: var(--texto-link); /* Categoria AZUL */
     text-transform: uppercase;
     margin-bottom: 0.5rem;
 }
@@ -273,57 +312,94 @@ a:hover {
     font-weight: 700;
     line-height: 1.3;
     margin: 0 0 0.5rem 0;
-    color: var(--texto-card-principal); /* Texto CLARO */
+    color: var(--texto-principal);
     transition: color 0.2s ease;
 }
 .card-conteudo p {
-    font-size: 1rem;
-    color: var(--texto-card-secundario); /* Texto secundário CLARO */
+    font-size: 0.95rem;
+    color: var(--texto-secundario);
     margin: 0;
     flex-grow: 1;
     line-height: 1.5;
 }
+/* Título fica da cor da categoria no hover */
 .card-noticia a:hover h3, .card-noticia a:hover h4 {
-    color: var(--texto-link); /* manchete colorida no hover */
+    color: var(--texto-link); 
 }
 
+
 /* =======================
-   ESTILOS: HERO GRID (Homepage)
+   6. NOVO GRID G1 (Homepage)
    ======================== */
-.hero-grid {
+.hero-grid-g1 {
     width: 100%;
     margin: 2rem 0;
     display: grid;
-    grid-template-columns: 1fr; /* Mobile: 1 coluna */
+    grid-template-columns: 1fr; /* 1 coluna no mobile */
     gap: 1.5rem;
 }
-@media (min-width: 992px) {
-   .hero-grid {
+
+@media (min-width: 768px) {
+    .hero-grid-g1 {
+        /* 2 colunas no tablet */
+        grid-template-columns: 2fr 1fr;
+        grid-template-areas:
+            "principal lateral"
+            "principal lateral"
+            "secundaria1 secundaria2"
+            "terciaria1 terciaria2";
+    }
+    .card-principal { grid-area: principal; }
+    .card-lateral-1 { grid-area: lateral; }
+    .card-secundaria-1 { grid-area: secundaria1; }
+    .card-secundaria-2 { grid-area: secundaria2; }
+    .card-terciaria-1 { grid-area: terciaria1; }
+    .card-terciaria-2 { grid-area: terciaria2; }
+}
+
+@media (min-width: 1024px) {
+    .hero-grid-g1 {
+        /* Grid G1 no Desktop */
         grid-template-columns: 2fr 1fr 1fr;
         grid-template-rows: auto auto;
         gap: 1.5rem;
         grid-template-areas:
-            "principal sub1 sub2"
-            "principal sub3 sub4";
+            "principal secundaria1 secundaria2"
+            "principal terciaria1 terciaria2";
     }
-   .card-hero-1 { grid-area: principal; }
-   .card-hero-2 { grid-area: sub1; }
-   .card-hero-3 { grid-area: sub2; }
-   .card-hero-4 { grid-area: sub3; }
-   .card-hero-5 { grid-area: sub4; }
-   
-   .card-hero-1 .card-conteudo h3 {
-        font-size: 2.5rem; /* Título maior para o principal */
-        line-height: 1.1;
-    }
-   .card-hero-2 p, .card-hero-3 p,
-   .card-hero-4 p, .card-hero-5 p {
-        display: none; /* Oculta resumo nos cards menores */
-    }
+   .card-principal { grid-area: principal; }
+   .card-secundaria-1 { grid-area: secundaria1; }
+   .card-secundaria-2 { grid-area: secundaria2; }
+   .card-terciaria-1 { grid-area: terciaria1; }
+   .card-terciaria-2 { grid-area: terciaria2; }
 }
 
+/* Estilos dos cards G1 */
+.card-principal .card-conteudo h3 {
+    font-size: 2.5rem;
+    line-height: 1.1;
+    /* Cor será aplicada via JS (vermelho ou azul) */
+}
+.card-principal .card-conteudo p {
+    font-size: 1.1rem;
+    margin-top: 1rem;
+}
+
+/* Cards menores não têm resumo */
+.card-secundaria-1 p, .card-secundaria-2 p,
+.card-terciaria-1 p, .card-terciaria-2 p {
+    display: none; 
+}
+.card-secundaria-1 h4, .card-secundaria-2 h4 {
+    font-size: 1.1rem;
+}
+.card-terciaria-1 h4, .card-terciaria-2 h4 {
+    font-size: 1rem;
+}
+
+
 /* =======================
-   FEED (Últimas Notícias / Categorias)
+   7. FEED (Outras Páginas)
    ======================== */
 .page-title {
     font-size: 2.5rem;
@@ -331,7 +407,7 @@ a:hover {
     border-bottom: 3px solid var(--cor-primaria);
     padding-bottom: 0.5rem;
     margin: 2rem 0;
-    color: var(--texto-principal); /* Título escuro no fundo branco */
+    color: var(--texto-principal);
 }
 .feed-grid {
     display: grid;
@@ -341,23 +417,25 @@ a:hover {
 }
 
 /* =======================
-   ADMIN FORM (Dark Mode)
+   8. ADMIN FORM
    ======================== */
+.page-title-admin {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 2rem;
+    text-align: center;
+    color: var(--texto-principal);
+    border-bottom: 2px solid var(--cor-borda);
+    padding-bottom: 1rem;
+}
 .admin-form {
     max-width: 700px;
     margin: 2rem auto;
-    background-color: var(--cor-card); /* Fundo ESCURO */
-    padding: 2.5rem;
+    background-color: var(--cor-card);
+    padding: 2rem;
     border-radius: 8px;
-    border: 1px solid var(--cor-borda-card);
-}
-.page-title-admin {
-    font-size: 2rem;
-    font-weight: 900;
-    margin-top: 0;
-    margin-bottom: 2rem;
-    color: var(--texto-card-principal); /* Texto CLARO */
-    text-align: center;
+    border: 1px solid var(--cor-borda);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 .admin-form div {
     margin-bottom: 1.5rem;
@@ -366,27 +444,30 @@ a:hover {
     display: block;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--texto-card-principal); /* Texto CLARO */
+    color: var(--texto-principal);
 }
 .admin-form input[type="text"],
+.admin-form input[type="email"],
+.admin-form input[type="password"],
 .admin-form input[type="file"],
 .admin-form select,
 .admin-form textarea {
     width: 100%;
     padding: 0.75rem 1rem;
-    background-color: #111827; /* Fundo do input (gray-900) */
-    border: 1px solid var(--cor-borda-card);
-    color: var(--texto-card-principal); /* Texto CLARO */
+    background-color: var(--cor-fundo);
+    border: 1px solid var(--cor-borda);
+    color: var(--texto-principal);
     border-radius: 6px;
     font-family: var(--fonte-principal);
     font-size: 1rem;
+    box-sizing: border-box; /* Garante que o padding não quebre o layout */
 }
 .admin-form input:focus, 
 .admin-form select:focus, 
 .admin-form textarea:focus {
     outline: none;
     border-color: var(--texto-link);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
 }
 .admin-form textarea {
     min-height: 150px;
@@ -407,7 +488,7 @@ a:hover {
     background-color: var(--cor-primaria-hover);
 }
 .admin-form button:disabled {
-    background-color: var(--cor-borda-card);
+    background-color: var(--cor-borda);
     cursor: not-allowed;
 }
 
@@ -417,7 +498,6 @@ a:hover {
     border-radius: 6px;
     margin-bottom: 1rem;
     font-weight: 600;
-    display: none; /* Oculto por padrão */
 }
 .message.success {
     background-color: #166534; /* green-800 */
@@ -428,12 +508,99 @@ a:hover {
     color: #fee2e2; /* red-100 */
 }
 
-/* Rodapé */
+/* =======================
+   9. ADMIN (GERENCIAMENTO)
+   ======================== */
+#manage-section {
+    max-width: 700px;
+    margin: 3rem auto;
+    background-color: var(--cor-card);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--cor-borda);
+}
+#post-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--cor-borda);
+    border-radius: 6px;
+}
+.post-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--cor-borda);
+}
+.post-item:last-child {
+    border-bottom: none;
+}
+.post-item span {
+    color: var(--texto-principal);
+    font-weight: 600;
+    flex-grow: 1;
+    margin-right: 1rem;
+}
+.delete-post-btn {
+    background-color: #4b5563; /* cinza */
+    color: white;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.delete-post-btn:hover {
+    background-color: var(--cor-primaria); /* Fica vermelho no hover */
+}
+
+
+/* =======================
+   10. RODAPÉ
+   ======================== */
 .site-footer {
-    background-color: var(--cor-primaria);
+    background-color: var(--cor-primaria); /* Vermelho */
     color: white;
     text-align: center;
     padding: 2rem 1rem;
     margin-top: 3rem;
     border-top: 3px solid var(--cor-primaria-hover);
+}
+
+/* =======================
+   11. PÁGINA DO ARTIGO (artigo.html)
+   ======================== */
+/* Todos os estilos do <style> do artigo.html foram movidos para cá */
+#article-container {
+    max-width: 800px; 
+    margin: 2rem auto;
+    background-color: var(--cor-card); /* Fundo branco ou escuro */
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--cor-borda);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: background-color 0.3s ease;
+}
+.article-body {
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: var(--texto-principal); /* Texto principal do tema */
+}
+.article-body p {
+    margin-bottom: 1.5rem;
+}
+.article-image {
+    width: 100%;
+    height: auto;
+    max-height: 500px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.article-meta {
+    font-size: 0.9rem;
+    color: var(--texto-secundario); /* Texto secundário do tema */
+    margin-bottom: 2rem;
 }
