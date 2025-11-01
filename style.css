@@ -52,16 +52,17 @@ a:hover {
 }
 
 /* =======================
-   CABEÇALHO (Header)
+   CABEÇALHO (Header) - Estilo Claro (G1/BBC)
    ======================== */
 .site-header {
-    background-color: var(--cor-primaria);
-    color: white;
-    padding: 0.75rem 0; /* Padding levemente reduzido */
+    background-color: #ffffff; /* Fundo BRANCO */
+    color: var(--texto-principal); /* Texto ESCURO */
+    padding: 1rem 0; /* Mais espaçamento para um look "fino" */
     position: sticky;
     top: 0;
     z-index: 1000;
-    border-bottom: 3px solid var(--cor-primaria-hover);
+    border-bottom: 1px solid #e5e7eb; /* Borda cinza clara */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03); /* Sombra sutil */
 }
 .header-container {
     display: flex;
@@ -73,20 +74,21 @@ a:hover {
 }
 .logo h1 {
     margin: 0;
-    font-size: 1.8rem;
+    font-size: 1.6rem; /* Tamanho elegante */
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: -1px;
 }
 .logo a {
-    color: white;
+    color: var(--cor-primaria); /* Logo em VERMELHO */
     text-decoration: none;
+    transition: opacity 0.2s ease;
 }
-/* Estilo da Imagem da Logo */
-.logo-img {
-    height: 80px;
-    width: auto;
+.logo a:hover {
+    opacity: 0.8;
 }
+
+/* Removemos a classe .logo-img que não é mais necessária */
 
 .nav-toggle {
     display: none;
@@ -99,7 +101,7 @@ a:hover {
     display: block;
     width: 25px;
     height: 3px;
-    background-color: white;
+    background-color: #111827; /* Hamburger ESCURO */
     position: relative;
     transition: background-color 0.2s ease;
 }
@@ -108,7 +110,7 @@ a:hover {
     position: absolute;
     width: 100%;
     height: 3px;
-    background-color: white;
+    background-color: #111827; /* Hamburger ESCURO */
     left: 0;
     transition: transform 0.3s ease;
 }
@@ -137,7 +139,7 @@ a:hover {
     gap: 1.5rem;
 }
 .nav-principal a {
-    color: white;
+    color: var(--texto-principal); /* Links ESCUROS */
     text-decoration: none;
     font-weight: 700;
     font-size: 1rem;
@@ -147,8 +149,43 @@ a:hover {
 }
 .nav-principal a:hover,
 .nav-principal a.ativo {
-    border-bottom-color: white;
-    opacity: 0.8;
+    color: var(--cor-primaria); /* Cor primária (vermelho) no hover/ativo */
+    border-bottom-color: var(--cor-primaria); 
+}
+
+/* --- Navegação Mobile (Estilo Claro) --- */
+@media (max-width: 768px) {
+    .nav-toggle {
+        display: block;
+    }
+    .nav-principal {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: #ffffff; /* Fundo BRANCO */
+        border-top: 1px solid #e5e7eb; /* Borda cinza clara */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .nav-principal.ativo {
+        display: block;
+    }
+    .nav-principal ul {
+        flex-direction: column;
+        gap: 0;
+    }
+    .nav-principal li {
+        border-bottom: 1px solid #e5e7eb; /* Borda cinza clara */
+    }
+    .nav-principal a {
+        display: block;
+        padding: 1rem;
+        border-bottom: none;
+    }
+    .nav-principal a:hover {
+        background-color: #f9fafb; /* Fundo cinza bem claro no hover */
+    }
 }
 
 /* --- Navegação Mobile --- */
