@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             navPrincipal.classList.toggle('ativo');
 
-            
+
             const hamburger = navToggle.querySelector('.hamburger');
             hamburger.classList.toggle('ativo');
         });
@@ -111,3 +111,104 @@ document.addEventListener('DOMContentLoaded', () => {
         applyTheme('dark');
     }
 });
+
+/* ============================================================
+   SCRAPING COM GROQ - SOLUÇÃO SIMPLIFICADA SEM ERROS SQL
+   Adicione apenas 2 funções ao seu main.js
+   ============================================================ */
+
+// 1️⃣ FUNÇÃO PARA REESCREVER COM GROQ (Simples e Direta)
+async function reescreverComGroq(texto) {
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer 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",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "mixtral-8x7b-32768",
+        messages: [{
+          role: "user",
+          content: `Reescreva este texto mantendo significado mas mudando palavras. Seja breve:\n\n${texto.substring(0, 500)}`
+        }],
+        temperature: 0.6,
+        max_tokens: 250
+      })
+    });
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error("Erro Groq:", error);
+    return texto;
+  }
+}
+
+// 2️⃣ FUNÇÃO PARA SCRAPING DO RSS DO G1 (Simples e Direta)
+async function scrapingG1Direto() {
+  try {
+    alert("⏳ Buscando notícias do G1... Aguarde...");
+    
+    // Fetch RSS do G1
+    const response = await fetch("https://g1.globo.com/feed.rss");
+    const rssText = await response.text();
+    
+    // Parse simples
+    const articles = [];
+    const itemRegex = /<item>(.*?)<\/item>/gs;
+    for (const match of rssText.matchAll(itemRegex)) {
+      const item = match[1];
+      
+      const titleMatch = item.match(/<title>(.*?)<\/title>/);
+      const linkMatch = item.match(/<link>(.*?)<\/link>/);
+      const descMatch = item.match(/<description>(.*?)<\/description>/);
+      
+      if (titleMatch && linkMatch) {
+        articles.push({
+          title: titleMatch[1].replace(/<[^>]*>/g, ""),
+          link: linkMatch[1],
+          description: descMatch ? descMatch[1].replace(/<[^>]*>/g, "") : ""
+        });
+      }
+    }
+    
+    if (articles.length === 0) {
+      alert("❌ Nenhum artigo encontrado");
+      return;
+    }
+    
+    alert(`✓ Encontrados ${articles.length} artigos. Reescrevendo...`);
+    
+    // Reescrever primeiros 5 artigos
+    let adicionados = 0;
+    for (let i = 0; i < Math.min(5, articles.length); i++) {
+      const article = articles[i];
+      
+      // Reescrever
+      const novoTitulo = await reescreverComGroq(article.title);
+      const novoResumo = await reescreverComGroq(article.description.substring(0, 300));
+      
+      // Inserir na tabela noticias
+      const { error } = await supabase.from('noticias').insert({
+        titulo: novoTitulo,
+        resumo: novoResumo,
+        conteudo: novoResumo,
+        categoria: "Notícias",
+        data_publicacao: new Date().toISOString()
+      });
+      
+      if (!error) {
+        adicionados++;
+        console.log(`✓ Publicado: ${novoTitulo.substring(0, 50)}`);
+      }
+    }
+    
+    alert(`✅ ${adicionados} notícias publicadas com sucesso!`);
+    location.reload();
+    
+  } catch (error) {
+    alert("❌ Erro: " + error.message);
+    console.error(error);
+  }
+}
