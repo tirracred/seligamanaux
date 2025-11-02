@@ -9,104 +9,101 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
-
-
-<body>
-    
-    <header class="site-header">
-        <div class="header-container">
+<body class="dark-mode"> <header class="site-header">
+        <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1rem;">
             <div class="logo">
                 <a href="/"><h1>SeligaManaux (ADMIN)</h1></a>
             </div>
-
-
+            <button id="logout-button" style="display: none; background-color: #6b7280; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                Sair
+            </button>
         </div>
     </header>
     
     <main class="container">
 
-        <form id="login-form" class="admin-form">
+        <form id="login-form" class="admin-form" style="display: block;">
             <h1 class="page-title-admin">Login do Administrador</h1>
-
-
             <div id="login-feedback-message" class="message" style="display: none;"></div>
-
             <div>
                 <label for="admin-email">Email</label>
                 <input type="email" id="admin-email" required>
             </div>
-
             <div>
                 <label for="admin-password">Senha</label>
                 <input type="password" id="admin-password" required>
             </div>
-
             <button type="submit" id="login-button">ENTRAR</button>
             <p id="loading-login" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Entrando...</p>
         </form>
 
+        <div id="admin-panel-container" style="display: none;">
 
-        <form id="news-form" class="admin-form" style="display: none;">
-            <h1 class="page-title-admin">Publicar Nova Notícia</h1>
-
-
-            <div id="feedback-message" class="message" style="display: none;"></div>
-
-            <div>
-                <label for="news-title">Título</label>
-                <input type="text" id="news-title" required>
-            </div>
-            
-            <div>
-                <label for="news-category">Categoria</label>
-                <select id="news-category" required>
-                    <option value="">Selecione...</option>
-                    <option value="Manaus e Região">Manaus e Região</option>
-                    <option value="Política">Política</option>
-                    <option value="Esportes">Esportes</option>
-                    <option value="Economia">Economia</option>
-                    <option value="Geral">Geral</option>
-                </select>
-            </div>
-
-            <div>
-                <label for="news-headline-color">Cor da Manchete</label>
-                <select id="news-headline-color" required>
-                    <option value="blue">Azul (Padrão)</option>
-                    <option value="red">Vermelho (Destaque)</option>
-                </select>
-            </div>
-
-            <div>
-                <label for="news-content">Conteúdo</label>
-                <textarea id="news-content" rows="8" required></textarea>
-            </div>
-
-            <div>
-                <label for="news-image">Anexar Foto Principal (Capa)</label>
-                <input type="file" id="news-image" accept="image/*">
-            </div>
-
-            <div>
-                <label for="news-gallery">Adicionar Galeria (até 10 mídias)</label>
-                <input type="file" id="news-gallery" accept="image/*,video/*" multiple>
-                <small style="color: var(--texto-secundario); margin-top: 5px; display: block;">
-                    Segure Ctrl (ou Cmd) para selecionar múltiplos arquivos.
-                </small>
-            </div>
-            
-            <button type="submit" id="submit-button">PUBLICAR AGORA</button>
-            <p id="loading-submit" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Publicando... Aguarde.</p>
-        </form>
-
-
-
-        <section id="manage-section" style="display: none;">
-             <h1 class="page-title-admin">Gerenciar Notícias</h1>
-             <p id="loading-manage" style="text-align: center; color: var(--texto-secundario);">Carregando notícias...</p>
-             <div id="post-list-container">
+            <section id="scrape-section" class="admin-form">
+                <h1 class="page-title-admin" style="margin-top: 0; padding-top: 0;">Buscar Notícias (IA)</h1>
+                <p style="color: var(--texto-secundario); margin-bottom: 1.5rem; text-align: center;">
+                    Buscar, reescrever e publicar as 5 notícias mais recentes da fonte.
+                </p>
+                <div class="botoes-scrape" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <button type="button" class="scrape-btn" data-source="g1_am">Buscar G1 (AM)</button>
+                    <button type="button" class="scrape-btn" data-source="holanda">Buscar P. do Holanda</button>
+                    <button type="button" class="scrape-btn" data-source="18horas">Buscar 18 Horas</button>
+                    <button type="button" class="scrape-btn" data-source="agencia_am">Buscar Ag. Amazonas</button>
                 </div>
-        </section>
+                <div id="scrape-message" class="message" style="display: none; margin-top: 1.5rem;"></div>
+            </section>
+            
+            <form id="news-form" class="admin-form">
+                <h1 class="page-title-admin">Publicar Notícia Manualmente</h1>
+                <div id="feedback-message" class="message" style="display: none;"></div>
+                <div>
+                    <label for="news-title">Título</label>
+                    <input type="text" id="news-title" required>
+                </div>
+                <div>
+                    <label for="news-category">Categoria</label>
+                    <select id="news-category" required>
+                        <option value="">Selecione...</option>
+                        <option value="Manaus e Região">Manaus e Região</option>
+                        <option value="Política">Política</option>
+                        <option value="Esportes">Esportes</option>
+                        <option value="Economia">Economia</option>
+                        <option value="Geral">Geral</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="news-headline-color">Cor da Manchete</label>
+                    <select id="news-headline-color" required>
+                        <option value="blue">Azul (Padrão)</option>
+                        <option value="red">Vermelho (Destaque)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="news-content">Conteúdo</label>
+                    <textarea id="news-content" rows="8" required></textarea>
+                </div>
+                <div>
+                    <label for="news-image">Anexar Foto Principal (Capa)</label>
+                    <input type="file" id="news-image" accept="image/*">
+                </div>
+                <div>
+                    <label for="news-gallery">Adicionar Galeria (até 10 mídias)</label>
+                    <input type="file" id="news-gallery" accept="image/*,video/*" multiple>
+                    <small style="color: var(--texto-secundario); margin-top: 5px; display: block;">
+                        Segure Ctrl (ou Cmd) para selecionar múltiplos arquivos.
+                    </small>
+                </div>
+                <button type="submit" id="submit-button">PUBLICAR AGORA</button>
+                <p id="loading-submit" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Publicando... Aguarde.</p>
+            </form>
+
+            <section id="manage-section" class="admin-form">
+                 <h1 class="page-title-admin">Gerenciar Notícias</h1>
+                 <p id="loading-manage" style="text-align: center; color: var(--texto-secundario);">Carregando notícias...</p>
+                 <div id="post-list-container">
+                    </div>
+            </section>
+        </div>
 
     </main>
 
@@ -116,40 +113,44 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             
-            // --- REFERÊNCIAS DOS ELEMENTOS ---
+            // --- REFERÊNCIAS GLOBAIS ---
             const loginForm = document.getElementById('login-form');
-            const newsForm = document.getElementById('news-form');
-            const manageSection = document.getElementById('manage-section');
-            const loginButton = document.getElementById('login-button');
-            const loadingLogin = document.getElementById('loading-login');
+            const adminPanel = document.getElementById('admin-panel-container');
+            const logoutButton = document.getElementById('logout-button');
             const loginFeedback = document.getElementById('login-feedback-message');
             
+            if (!supabase) {
+                loginFeedback.innerText = 'Erro fatal: Supabase não inicializado. Verifique main.js';
+                loginFeedback.className = 'message error';
+                loginFeedback.style.display = 'block';
+                return;
+            }
 
-
-            const submitButton = document.getElementById('submit-button');
-            const loadingSubmit = document.getElementById('loading-submit');
-            const feedbackMessage = document.getElementById('feedback-message');
+            // --- 1. LÓGICA DE AUTENTICAÇÃO (MELHORADA) ---
             
-            const newsTitle = document.getElementById('news-title');
-            const newsCategory = document.getElementById('news-category');
-            const newsHeadlineColor = document.getElementById('news-headline-color');
-            const newsContent = document.getElementById('news-content');
-            const newsImageInput = document.getElementById('news-image');
-            const newsGalleryInput = document.getElementById('news-gallery'); // Novo campo
+            // Verifica o estado do login QUANDO A PÁGINA CARREGA
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (session) {
+                    // Usuário ESTÁ logado
+                    loginForm.style.display = 'none';
+                    adminPanel.style.display = 'block';
+                    logoutButton.style.display = 'block';
+                    // Carrega os posts gerenciáveis assim que o usuário é confirmado
+                    loadManagedPosts();
+                } else {
+                    // Usuário NÃO está logado
+                    loginForm.style.display = 'block';
+                    adminPanel.style.display = 'none';
+                    logoutButton.style.display = 'none';
+                }
+            });
 
-
-
-            const loadingManage = document.getElementById('loading-manage');
-            const postListContainer = document.getElementById('post-list-container');
-            postListContainer.addEventListener('click', handleDeleteClick);
-
-            // --- LÓGICA DE LOGIN ---
-            loginForm.addEventListener('submit', handleLogin);
-
-            async function handleLogin(event) {
+            // Evento de submit do Login
+            loginForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                if (!supabase) return showLoginMessage('Erro: Supabase não inicializado', 'error');
-
+                const loginButton = document.getElementById('login-button');
+                const loadingLogin = document.getElementById('loading-login');
+                
                 loginButton.disabled = true;
                 loadingLogin.style.display = 'block';
                 loginFeedback.style.display = 'none';
@@ -158,26 +159,9 @@
                 const password = document.getElementById('admin-password').value;
 
                 try {
-                    const { data, error } = await supabase.auth.signInWithPassword({
-                        email: email,
-                        password: password,
-                    });
-
+                    const { error } = await supabase.auth.signInWithPassword({ email, password });
                     if (error) throw error;
-
-
-
-                    loginForm.style.display = 'none';
-                    newsForm.style.display = 'block';
-                    manageSection.style.display = 'block';
-
-
-                    
-
-
-
-                    await loadManagedPosts();
-
+                    // O onAuthStateChange vai cuidar de mostrar o painel
                 } catch (err) {
                     console.error("Erro de login:", err);
                     showLoginMessage(`Erro: ${err.message}`, 'error');
@@ -185,69 +169,110 @@
                     loginButton.disabled = false;
                     loadingLogin.style.display = 'none';
                 }
-            }
+            });
+
+            // Evento de clique no Logout
+            logoutButton.addEventListener('click', async () => {
+                await supabase.auth.signOut();
+                // O onAuthStateChange vai cuidar de esconder o painel
+            });
 
 
-            // --- LÓGICA DE PUBLICAÇÃO DE NOTÍCIAS ---
-            newsForm.addEventListener('submit', handleFormSubmit);
+            // --- 2. LÓGICA DE SCRAPING (A PARTE QUE FALTAVA) ---
+            const scrapeMessage = document.getElementById('scrape-message');
+            const scrapeButtons = document.querySelectorAll('.scrape-btn');
 
-            async function handleFormSubmit(event) {
+            scrapeButtons.forEach(button => {
+                button.addEventListener('click', async () => {
+                    const source = button.dataset.source;
+                    if (!source) return;
+
+                    scrapeButtons.forEach(btn => btn.disabled = true);
+                    scrapeMessage.textContent = `Buscando notícias de '${source}'... Isso pode levar 30 segundos.`;
+                    scrapeMessage.className = 'message';
+                    scrapeMessage.style.display = 'block';
+
+                    try {
+                        const { data, error } = await supabase.functions.invoke('scrape-and-rewrite', {
+                            body: { source: source },
+                        });
+
+                        if (error) throw error;
+                        
+                        scrapeMessage.textContent = data.message || 'Sucesso! Notícias publicadas.';
+                        scrapeMessage.className = 'message success';
+                        // Recarrega a lista de posts para mostrar os novos
+                        await loadManagedPosts();
+
+                    } catch (error) {
+                        console.error("Erro ao chamar Edge Function:", error);
+                        scrapeMessage.textContent = `Erro: ${error.message || 'Falha ao chamar a função.'}`;
+                        scrapeMessage.className = 'message error';
+                    } finally {
+                        scrapeButtons.forEach(btn => btn.disabled = false);
+                        setTimeout(() => { scrapeMessage.style.display = 'none'; }, 4000);
+                    }
+                });
+            });
+
+            
+            // --- 3. LÓGICA DE PUBLICAÇÃO MANUAL (O seu código original) ---
+            const newsForm = document.getElementById('news-form');
+            const submitButton = document.getElementById('submit-button');
+            const loadingSubmit = document.getElementById('loading-submit');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const newsTitle = document.getElementById('news-title');
+            const newsCategory = document.getElementById('news-category');
+            const newsHeadlineColor = document.getElementById('news-headline-color');
+            const newsContent = document.getElementById('news-content');
+            const newsImageInput = document.getElementById('news-image');
+            const newsGalleryInput = document.getElementById('news-gallery');
+
+            newsForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                
-                if (!supabase) {
-                    showMessage('Erro: Falha na conexão com o banco de dados.', 'error');
-                    return;
-                }
                 
                 submitButton.disabled = true;
                 loadingSubmit.style.display = 'block';
                 feedbackMessage.style.display = 'none';
 
                 try {
-                    // 1. Upload da Imagem Principal (Capa)
+                    // 1. Upload Imagem Principal
                     const mainImageFile = newsImageInput.files[0];
                     let mainImageUrl = null;
                     if (mainImageFile) {
                         mainImageUrl = await uploadMedia(mainImageFile);
                     }
 
-                    // 2. Upload da Galeria (ATUALIZADO)
-                    const galleryFiles = Array.from(newsGalleryInput.files).slice(0, 10); // Limita a 10 arquivos
+                    // 2. Upload Galeria
+                    const galleryFiles = Array.from(newsGalleryInput.files).slice(0, 10);
                     let galleryUrls = [];
                     if (galleryFiles.length > 0) {
-                        // Faz o upload de todos os arquivos da galeria em paralelo
                         const uploadPromises = galleryFiles.map(file => uploadMedia(file));
                         galleryUrls = await Promise.all(uploadPromises);
                     }
 
-                    // 3. Monta o objeto da notícia
+                    // 3. Monta o objeto
                     const newPost = {
                         title: newsTitle.value,
                         content: newsContent.value,
                         category: newsCategory.value,
-                        image_url: mainImageUrl, // URL da imagem principal
+                        image_url: mainImageUrl,
                         headline_color: newsHeadlineColor.value,
-                        gallery_urls: galleryUrls.length > 0 ? galleryUrls : null // Salva o array de URLs
+                        gallery_urls: galleryUrls.length > 0 ? galleryUrls : null
                     };
 
-                    // 4. Insere no banco de dados
-                    const { error } = await supabase
-                        .from(DB_TABLE)
-                        .insert(newPost);
-
+                    // 4. Insere no DB
+                    const { error } = await supabase.from(DB_TABLE).insert(newPost);
                     if (error) throw error;
 
-                    showMessage('Sucesso! Notícia publicada.', 'success');
+                    showMessage('Sucesso! Notícia publicada manualmente.', 'success');
                     newsForm.reset();
-                    
-
-
-                    await loadManagedPosts();
+                    await loadManagedPosts(); // Recarrega a lista
 
                 } catch (err) {
                     console.error("Erro ao publicar:", err);
                     if (err.message.includes("permission denied")) {
-                         showMessage('Erro: Você não tem permissão para publicar. Verifique as regras RLS no Supabase.', 'error');
+                         showMessage('Erro: Permissão negada. Verifique as regras RLS no Supabase.', 'error');
                     } else {
                          showMessage(`Erro: ${err.message}`, 'error');
                     }
@@ -255,12 +280,12 @@
                     submitButton.disabled = false;
                     loadingSubmit.style.display = 'none';
                 }
-            }
+            });
 
-            // Função auxiliar de Upload (não mudou)
+            // Função de Upload
             async function uploadMedia(file) {
                 if (!file) return null;
-                const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`; // Limpa o nome do arquivo
+                const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
                 
                 const { data, error } = await supabase.storage
                     .from(STORAGE_BUCKET)
@@ -275,13 +300,18 @@
                 return publicUrlData.publicUrl;
             }
 
-            // --- FUNÇÕES DE GERENCIAMENTO (COM CORREÇÃO DO BOTÃO APAGAR) ---
+            
+            // --- 4. LÓGICA DE GERENCIAMENTO (O seu código original) ---
+            const loadingManage = document.getElementById('loading-manage');
+            const postListContainer = document.getElementById('post-list-container');
+            
+            postListContainer.addEventListener('click', handleDeleteClick);
 
             async function loadManagedPosts() {
                 loadingManage.style.display = 'block';
                 postListContainer.innerHTML = '';
 
-                if (!supabase) return;
+                
 
                 const { data: posts, error } = await supabase
                     .from(DB_TABLE)
@@ -295,6 +325,7 @@
                     postListContainer.innerHTML = `<p style="color: red; padding: 1rem;">Erro ao carregar posts.</p>`;
                     return;
                 }
+
 
                 if (posts.length === 0) {
                      postListContainer.innerHTML = `<p style="color: var(--texto-secundario); padding: 1rem;">Nenhum post publicado.</p>`;
@@ -318,25 +349,24 @@
                 const button = event.target;
                 const postId = button.dataset.id;
                 
-                if (!confirm("Tem certeza que deseja apagar este post? Esta ação não pode ser desfeita.")) {
-                    return;
-                }
+                if (!confirm("Tem certeza que deseja apagar este post?")) return;
 
                 button.disabled = true;
                 button.innerText = 'Apagando...';
 
                 try {
-                    // *** CORREÇÃO APLICADA AQUI ***
-                    // O erro de digitação `error }_` foi removido.
+
+
                     const { error } = await supabase
                         .from(DB_TABLE)
                         .delete()
                         .eq('id', postId);
                     
                     if (error) {
-                        // Se o erro for de RLS (permissão negada), avisa o usuário.
+
+
                         if (error.message.includes("permission denied")) {
-                            throw new Error("Permissão negada. Verifique as regras RLS (DELETE) no Supabase.");
+                            throw new Error("Permissão negada. Verifique as regras RLS (DELETE).");
                         }
                         throw error;
                     }
@@ -352,11 +382,12 @@
                 }
             }
 
-
-            // --- Funções de Feedback ---
+            // --- 5. Funções de Feedback ---
             function showMessage(text, type) {
                 feedbackMessage.innerText = text;
                 feedbackMessage.className = `message ${type}`;
+
+
                 feedbackMessage.style.display = 'block';
 
 
@@ -370,28 +401,12 @@
             }
         });
 
-   
+
    </script>
 
-<section id="scraping-simple-section" style="max-width: 1000px; margin: 3rem auto; padding: 0 1rem;">
-  
-  <div class="page-title-admin">📰 Scraping & Publicação Automática</div>
-  
-  <div style="background-color: var(--cor-card); border: 1px solid var(--cor-borda); border-radius: 8px; padding: 2rem; margin-bottom: 2rem;">
-    
-    <h3 style="color: var(--texto-principal); margin-top: 0;">🚀 Buscar Notícias do G1 + Reescrever com IA</h3>
-    
-    <p style="color: var(--texto-secundario);">Clique no botão para buscar 5 notícias do G1, reescrever com IA e publicar automaticamente!</p>
-    
-    <button 
-      onclick="scrapingG1Direto()" 
-      style="background-color: #b91c1c; color: white; padding: 1.2rem 2rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1.1rem; width: 100%;">
-      ⬇️ Buscar e Publicar Notícias Agora
-    </button>
-    
-  </div>
-  
-</section>
+
+
+
 
 
 </body>
@@ -403,6 +418,10 @@
 
 
 
+
+
+
 </html>
+
 
 
