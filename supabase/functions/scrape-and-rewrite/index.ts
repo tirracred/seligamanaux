@@ -168,10 +168,10 @@ Deno.serve(async (req) => {
   };
 
   // Inserir os dados usando o cliente admin
-  const { data, error }_ = await supabaseAdmin
-   .from("noticias") // Usando sua tabela principal
-   .insert(dadosNoticia)
-   .select(); 
+ const { data, error } = await supabaseAdmin // <--- CORRIGIDO
+ .from("noticias") // Usando sua tabela principal
+ .insert(dadosNoticia)
+ .select();
 
   if (error) {
     console.error("Supabase insert error:", error);
