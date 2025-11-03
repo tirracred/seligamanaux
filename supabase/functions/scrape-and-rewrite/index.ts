@@ -3,15 +3,19 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // Importa o createClient da biblioteca supabase-js v2
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Interface para os dados da notícia (SEM CATEGORIA)
-interface NoticiaData {
+// Interface para a tabela NOTICIAS_SCRAPED (colunas corretas)
+interface NoticiaScrapedData {
+  titulo_original: string;
+  titulo_reescrito: string;
+  resumo_original?: string;
+  resumo_reescrito?: string;
   url_original: string;
-  titulo_original?: string;
-  conteudo_original?: string;
-  titulo_reescrito?: string;
-  conteudo_reescrito?: string;
-  is_public: boolean;
-  user_id: string; 
+  fonte: string;
+  status: string;
+  data_coleta: string;
+  data_publicacao?: string;
+  imagem_url?: string;
+  categoria: string;
 }
 
 // Interface para a resposta da API de IA
@@ -20,7 +24,7 @@ interface GrokResponse {
   conteudo: string;
 }
 
-// CORS Headers - DEVE estar disponível para todas as responses
+// CORS Headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -28,10 +32,11 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
-// --- FUNÇÃO DE PARSING HTML SIMPLES COM REGEX ---
-function extractContentWithRegex(html: string): { titulo: string; conteudo: string } {
+// --- FUNÇÃO DE PARSING HTML COM REGEX ---
+function extractContentWithRegex(html: string): { titulo: string; conteudo: string; resumo: string } {
   let titulo = "Título não encontrado";
   let conteudo = "Conteúdo não encontrado";
+  let resumo = "";
 
   try {
     // Extrai título da tag h1
@@ -40,13 +45,16 @@ function extractContentWithRegex(html: string): { titulo: string; conteudo: stri
       titulo = tituloMatch[1].replace(/<[^>]*>/g, '').trim();
     }
 
-    // Tenta extrair conteúdo de diferentes seletores comuns de sites de notícia
+    // Seletores para diferentes tipos de sites de notícia
     const contentSelectors = [
+      // G1 e sites Globo
+      /<div[^>]*class="[^"]*content-text[^"]*"[^>]*>(.*?)<\/div>/is,
+      /<div[^>]*class="[^"]*mc-article-body[^"]*"[^>]*>(.*?)<\/div>/is,
+      // Sites gerais
       /<article[^>]*>(.*?)<\/article>/is,
-      /<div[^>]*class="[^"]*article[^"]*"[^>]*>(.*?)<\/div>/is,
-      /<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)<\/div>/is,
+      /<div[^>]*class="[^"]*post-content[^"]*"[^>]*>(.*?)<\/div>/is,
+      /<div[^>]*class="[^"]*entry-content[^"]*"[^>]*>(.*?)<\/div>/is,
       /<main[^>]*>(.*?)<\/main>/is,
-      /<div[^>]*id="[^"]*content[^"]*"[^>]*>(.*?)<\/div>/is,
     ];
 
     let extractedContent = '';
@@ -54,6 +62,7 @@ function extractContentWithRegex(html: string): { titulo: string; conteudo: stri
       const match = html.match(selector);
       if (match && match[1]) {
         extractedContent = match[1];
+        console.log('Conteúdo extraído com seletor específico');
         break;
       }
     }
@@ -68,47 +77,53 @@ function extractContentWithRegex(html: string): { titulo: string; conteudo: stri
         .trim();
     }
 
-    // Se não conseguiu extrair via seletores específicos, pega todos os parágrafos
-    if (conteudo === "Conteúdo não encontrado" || conteudo.length < 50) {
+    // Fallback: Se não conseguiu extrair, pega todos os parágrafos
+    if (conteudo === "Conteúdo não encontrado" || conteudo.length < 100) {
       const paragraphs = html.match(/<p[^>]*>(.*?)<\/p>/gis);
       if (paragraphs && paragraphs.length > 0) {
         conteudo = paragraphs
           .map(p => p.replace(/<[^>]*>/g, '').trim())
-          .filter(p => p.length > 20)
+          .filter(p => p.length > 30)
+          .slice(0, 15) // Primeiros 15 parágrafos
           .join(' ');
       }
     }
 
+    // Cria resumo: primeiros 300 caracteres do conteúdo
+    if (conteudo && conteudo !== "Conteúdo não encontrado") {
+      resumo = conteudo.substring(0, 300) + (conteudo.length > 300 ? "..." : "");
+    }
+
     console.log('Título extraído:', titulo);
-    console.log('Conteúdo extraído (primeiros 300 chars):', conteudo.substring(0, 300));
+    console.log('Conteúdo extraído (tamanho):', conteudo.length);
+    console.log('Resumo criado (tamanho):', resumo.length);
 
   } catch (error) {
     console.error('Erro na extração de conteúdo:', error);
   }
 
-  return { titulo, conteudo };
+  return { titulo, conteudo, resumo };
 }
 
-// --- FUNÇÃO DE REESCRITA COM IA (GROK) - CORRIGIDA ---
+// --- FUNÇÃO DE REESCRITA COM IA (GROK) ---
 async function rewriteWithGrok(titulo: string, conteudo: string): Promise<GrokResponse> {
   const GROK_API_KEY = Deno.env.get("GROK_API_KEY"); 
   if (!GROK_API_KEY) {
     console.error("GROK_API_KEY não está definida nos segredos da Função.");
     return {
-      titulo: `${titulo}`,
-      conteudo: `${conteudo}`,
+      titulo: titulo,
+      conteudo: conteudo,
     };
   }
 
-  // PROMPT MAIS CLARO E ESPECÍFICO
-  const prompt = `Você é um jornalista para o site "SeligaManaux" de Manaus.
-Reescreva a notícia abaixo de forma clara e objetiva.
-Retorne apenas um objeto JSON válido com "titulo" e "conteudo".
+  const prompt = `Reescreva esta notícia para o site "SeligaManaux" de Manaus.
+Use linguagem clara, direta e focada no interesse dos manauaras.
 
-Título original: ${titulo}
-Conteúdo: ${conteudo.substring(0, 1500)}
+Título: ${titulo}
+Texto: ${conteudo.substring(0, 2000)}
 
-Responda apenas com JSON válido, sem explicações extras.`;
+Responda APENAS com JSON válido:
+{"titulo": "novo título", "conteudo": "novo conteúdo"}`;
 
   try {
     console.log('Enviando para Grok API...');
@@ -119,43 +134,53 @@ Responda apenas com JSON válido, sem explicações extras.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192", // Modelo mais estável
+        model: "llama-3.1-8b-instant",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.3, // Menos criativo, mais consistente
-        max_tokens: 1000, // Limite menor para evitar erros
+        temperature: 0.2,
+        max_tokens: 800,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Erro na API Grok: ${response.status} ${response.statusText}`, errorText);
+      console.error(`Erro na API Grok: ${response.status}`, errorText);
       throw new Error(`Erro na API Grok: ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('Resposta da Grok recebida');
+    let content = data.choices[0].message.content.trim();
     
-    let content = data.choices[0].message.content;
+    // Remove markdown se houver
+    if (content.startsWith('```json')) {
+      content = content.replace(/```json\n?/, '').replace(/\n?```$/, '');
+    }
     
-    // Tenta parsear como JSON
     try {
       const jsonResponse = JSON.parse(content);
-      return jsonResponse as GrokResponse;
+      if (jsonResponse.titulo && jsonResponse.conteudo) {
+        console.log('Reescrita pela IA concluída com sucesso');
+        return jsonResponse as GrokResponse;
+      } else {
+        throw new Error('JSON não contém titulo e conteudo');
+      }
     } catch (parseError) {
       console.error('Erro ao parsear JSON da Grok:', parseError);
-      // Fallback: retorna título e conteúdo originais
-      return {
-        titulo: titulo,
-        conteudo: conteudo,
-      };
+      return { titulo: titulo, conteudo: conteudo };
     }
 
   } catch (error) {
     console.error("Erro ao reescrever com Grok:", error);
-    return {
-      titulo: titulo,
-      conteudo: conteudo,
-    };
+    return { titulo: titulo, conteudo: conteudo };
+  }
+}
+
+// --- FUNÇÃO PARA EXTRAIR DOMÍNIO ---
+function extractDomain(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname;
+  } catch {
+    return "Fonte desconhecida";
   }
 }
 
@@ -163,39 +188,25 @@ Responda apenas com JSON válido, sem explicações extras.`;
 Deno.serve(async (req) => {
   console.log(`${req.method} ${req.url}`);
 
-  // 1. RESPOSTA IMEDIATA PARA OPTIONS (CORS PREFLIGHT)
+  // CORS PREFLIGHT
   if (req.method === 'OPTIONS') {
-    console.log('Respondendo ao preflight CORS');
-    return new Response('ok', { 
-      status: 200,
-      headers: corsHeaders 
-    });
+    return new Response('ok', { status: 200, headers: corsHeaders });
   }
 
-  // 2. APENAS ACEITA POST
   if (req.method !== 'POST') {
-    return new Response('Método não permitido', { 
-      status: 405, 
-      headers: corsHeaders 
-    });
+    return new Response('Método não permitido', { status: 405, headers: corsHeaders });
   }
 
   try {
-    // 3. VALIDAÇÃO DE AUTENTICAÇÃO
+    // AUTENTICAÇÃO
     const authHeader = req.headers.get("Authorization");
-    console.log('Auth header presente:', !!authHeader);
-    
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Sem cabeçalho de autorização" }), 
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
     }
 
-    // Criação dos clientes Supabase
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -213,16 +224,11 @@ Deno.serve(async (req) => {
       console.error('Erro de autenticação:', userError);
       return new Response(
         JSON.stringify({ error: "Usuário não autenticado" }), 
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
     }
 
-    console.log('Usuário autenticado:', user.id);
-
-    // 4. PARSE DO BODY E VALIDAÇÃO DA URL
+    // PARSE DA URL
     let targetUrl: string;
     try {
       const body = await req.json();
@@ -230,132 +236,136 @@ Deno.serve(async (req) => {
       if (!targetUrl) {
         return new Response(
           JSON.stringify({ error: "JSON body deve conter 'url'" }), 
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
         );
       }
     } catch (e) {
       return new Response(
         JSON.stringify({ error: `Corpo da requisição inválido: ${e.message}` }), 
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
     }
 
     console.log('URL alvo:', targetUrl);
 
-    // 5. SCRAPING DA PÁGINA
-    const SCRAPER_API_KEY = Deno.env.get("SCRAPER_API_KEY"); 
-    const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
-    
-    const urlToFetch = SCRAPER_API_KEY
-      ? `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(targetUrl)}`
-      : targetUrl;
-    
-    const fetchHeaders = SCRAPER_API_KEY ? {} : { "User-Agent": userAgent };
-
-    console.log('Fazendo scraping de:', urlToFetch);
-
-    let htmlContent: string;
+    // VALIDAÇÃO DE URL
     try {
-      const response = await fetch(urlToFetch, { headers: fetchHeaders });
-      if (!response.ok) {
-        throw new Error(`Falha ao buscar: ${response.status} ${response.statusText}`);
-      }
-      htmlContent = await response.text();
-      console.log('HTML recebido, tamanho:', htmlContent.length);
-    } catch (error) {
-      console.error("Erro no scraping:", error);
+      new URL(targetUrl); // Valida se é uma URL válida
+    } catch {
       return new Response(
-        JSON.stringify({ error: `Erro durante scraping: ${error.message}` }), 
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: "URL fornecida é inválida" }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
     }
 
-    // 6. EXTRAÇÃO DE CONTEÚDO
-    const { titulo, conteudo } = extractContentWithRegex(htmlContent);
+    // SCRAPING
+    const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     
-    if (titulo === "Título não encontrado" || conteudo === "Conteúdo não encontrado") {
-      console.warn('Dificuldade na extração de conteúdo');
+    console.log('Fazendo scraping de:', targetUrl);
+
+    let htmlContent: string;
+    try {
+      const response = await fetch(targetUrl, { 
+        headers: { "User-Agent": userAgent },
+        signal: AbortSignal.timeout(30000) // Timeout de 30 segundos
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      htmlContent = await response.text();
+      console.log('HTML recebido, tamanho:', htmlContent.length);
+      
+    } catch (error) {
+      console.error("Erro no scraping:", error);
+      return new Response(
+        JSON.stringify({ 
+          error: `Erro ao acessar a URL: ${error.message}. Verifique se a URL está correta e o site está funcionando.` 
+        }), 
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+      );
     }
 
-    // 7. REESCRITA COM IA
+    // EXTRAÇÃO DE CONTEÚDO
+    const { titulo, conteudo, resumo } = extractContentWithRegex(htmlContent);
+    
+    if (titulo === "Título não encontrado" || conteudo === "Conteúdo não encontrado") {
+      return new Response(
+        JSON.stringify({ 
+          error: "Não foi possível extrair conteúdo desta página. A estrutura do site pode não ser compatível." 
+        }), 
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+      );
+    }
+
+    // REESCRITA COM IA
     const { titulo: tituloReescrito, conteudo: conteudoReescrito } = await rewriteWithGrok(titulo, conteudo);
 
-    // 8. SALVAMENTO NO BANCO DE DADOS (SEM CATEGORIA)
-    const dadosNoticia: NoticiaData = {
-      url_original: targetUrl,
+    // Cria resumo reescrito (primeiros 300 chars do conteúdo reescrito)
+    const resumoReescrito = conteudoReescrito.substring(0, 300) + (conteudoReescrito.length > 300 ? "..." : "");
+
+    // PREPARAR DADOS PARA NOTICIAS_SCRAPED
+    const dadosNoticia: NoticiaScrapedData = {
       titulo_original: titulo,
-      conteudo_original: conteudo,
       titulo_reescrito: tituloReescrito,
-      conteudo_reescrito: conteudoReescrito,
-      is_public: true, 
-      user_id: user.id,
+      resumo_original: resumo,
+      resumo_reescrito: resumoReescrito,
+      url_original: targetUrl,
+      fonte: extractDomain(targetUrl),
+      status: 'processado',
+      data_coleta: new Date().toISOString(),
+      categoria: 'Geral'
     };
 
-    console.log('Salvando no banco de dados...');
+    console.log('Salvando na tabela noticias_scraped...');
+    
+    // INSERIR NA TABELA CORRETA: noticias_scraped
     const { data, error } = await supabaseAdmin
-      .from("noticias") 
+      .from("noticias_scraped") // ← TABELA CORRETA
       .insert(dadosNoticia)
       .select(); 
 
     if (error) {
       console.error("Erro ao inserir no Supabase:", error);
-      if (error.code === '23505') { // Violação de unique constraint
+      if (error.code === '23505') {
         return new Response(
           JSON.stringify({ 
             success: false,
             message: "Notícia já existe no banco de dados." 
           }),
-          { 
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }}
         );
       }
       return new Response(
         JSON.stringify({ error: `Erro no banco: ${error.message}` }), 
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }}
       );
     }
 
-    // 9. SUCESSO
-    console.log('Processo concluído com sucesso');
+    // SUCESSO
+    console.log('Processo concluído com sucesso. ID:', data[0]?.id);
     return new Response(
       JSON.stringify({
         success: true,
         message: "Scrape, reescrita e salvamento concluídos com sucesso!",
         data: {
+          id: data[0]?.id,
           titulo_original: titulo,
           titulo_reescrito: tituloReescrito,
+          fonte: extractDomain(targetUrl),
           url_original: targetUrl,
-          id: data[0]?.id
+          status: 'processado'
         },
       }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }}
     );
 
   } catch (error) {
     console.error('Erro geral na função:', error);
     return new Response(
-      JSON.stringify({ 
-        error: `Erro interno: ${error.message}` 
-      }), 
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
+      JSON.stringify({ error: `Erro interno: ${error.message}` }), 
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }}
     );
   }
 });
