@@ -34,16 +34,12 @@
         .noticia-actions button { width: auto; padding: 8px 16px; margin: 0; }
         .hidden { display: none; }
         .loading { text-align: center; color: #888; padding: 20px; }
-        .tabs { display: flex; margin-bottom: 20px; }
-        .tab { padding: 12px 24px; background: #404040; color: #fff; border: none; cursor: pointer; border-radius: 4px 4px 0 0; margin-right: 5px; }
-        .tab.active { background: #dc2626; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
         .source-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
         .status-processado { background: #059669; color: white; }
         .status-pendente { background: #f59e0b; color: white; }
         .status-publicado { background: #7c3aed; color: white; }
+        .noticia-image { width: 100%; max-height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -54,7 +50,7 @@
         <div class="auth-section">
             <div id="loginForm">
                 <h3>Login</h3>
-                <input type="email" id="email" placeholder="Email" required>
+                <input type="email" id="email" placeholder="Email" value="tirra@tirracred.com.br">
                 <input type="password" id="password" placeholder="Senha" required>
                 <button onclick="login()">Entrar</button>
                 <p id="loginStatus"></p>
@@ -65,15 +61,8 @@
             </div>
         </div>
 
-        <!-- Abas -->
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('scraped')">Notícias Scraped</button>
-            <button class="tab" onclick="showTab('published')">Notícias Publicadas</button>
-            <button class="tab" onclick="showTab('manual')">Criar Manual</button>
-        </div>
-
-        <!-- Aba: Notícias Scraped -->
-        <div id="scraped" class="tab-content active">
+        <!-- Seção de Busca Automática -->
+        <div id="adminPanel" class="hidden">
             <div class="scraped-section">
                 <h3>🤖 Buscar Notícias Automáticas</h3>
                 <p>Buscar, reescrever e salvar notícias dos principais portais de Manaus/Amazonas.</p>
@@ -83,7 +72,6 @@
                     <button class="scrape-button" onclick="scrapePortal('https://portaldoholanda.com.br/amazonas', 'Portal do Holanda')">🌐 Buscar Portal do Holanda</button>
                     <button class="scrape-button" onclick="scrapePortal('https://www.acritica.com/', 'A Crítica')">📄 Buscar A Crítica</button>
                     <button class="scrape-button" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia')">🌿 Buscar Portal Amazônia</button>
-                    <button class="scrape-button" onclick="scrapePortal('https://www.cenariomt.com.br/', 'Cenário MT')">📻 Buscar Cenário MT</button>
                 </div>
 
                 <div id="scrapeStatus" class="loading hidden">Buscando notícias... Aguarde.</div>
@@ -98,42 +86,39 @@
                     <div class="loading">Carregando notícias scraped...</div>
                 </div>
             </div>
-        </div>
 
-        <!-- Aba: Notícias Publicadas -->
-        <div id="published" class="tab-content">
-            <div class="admin-section">
-                <h3>📰 Notícias Publicadas</h3>
-                <button onclick="loadPublishedNoticias()">🔄 Recarregar Publicadas</button>
-                <div id="publishedNoticias" class="noticias-container">
-                    <div class="loading">Carregando notícias publicadas...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Aba: Criar Manual -->
-        <div id="manual" class="tab-content">
+            <!-- Seção de Criação Manual -->
             <div class="admin-section">
                 <h3>✍️ Criar Notícia Manual</h3>
                 <div class="form-group">
-                    <label for="manualTitle">Título:</label>
-                    <input type="text" id="manualTitle" placeholder="Título da notícia">
+                    <label for="title">Título:</label>
+                    <input type="text" id="title" placeholder="Título da notícia">
                 </div>
                 <div class="form-group">
-                    <label for="manualContent">Conteúdo:</label>
-                    <textarea id="manualContent" rows="10" placeholder="Conteúdo da notícia"></textarea>
+                    <label for="content">Conteúdo:</label>
+                    <textarea id="content" rows="10" placeholder="Conteúdo da notícia"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="manualCategory">Categoria:</label>
-                    <select id="manualCategory">
+                    <label for="category">Categoria:</label>
+                    <select id="category">
                         <option value="Geral">Geral</option>
                         <option value="Política">Política</option>
                         <option value="Economia">Economia</option>
                         <option value="Esportes">Esportes</option>
                         <option value="Cultura">Cultura</option>
+                        <option value="Amazonas">Amazonas</option>
                     </select>
                 </div>
-                <button onclick="publishManualNoticia()">📝 Publicar Notícia Manual</button>
+                <button onclick="publishNoticia()">📝 Publicar Notícia</button>
+            </div>
+
+            <!-- Lista de Notícias Publicadas -->
+            <div class="admin-section">
+                <h3>📰 Notícias Publicadas</h3>
+                <button onclick="loadNoticias()">🔄 Recarregar Publicadas</button>
+                <div id="noticias" class="noticias-container">
+                    <div class="loading">Carregando notícias publicadas...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -145,17 +130,6 @@
             'https://xtnqypmezntjcidglblc.supabase.co',
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
         );
-
-        // Controle de Abas
-        function showTab(tabName) {
-            // Oculta todas as abas
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            
-            // Mostra a aba selecionada
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-        }
 
         // Funções de Autenticação
         async function login() {
@@ -173,12 +147,14 @@
 
                 document.getElementById('loginForm').classList.add('hidden');
                 document.getElementById('userInfo').classList.remove('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
                 document.getElementById('userEmail').textContent = data.user.email;
                 statusEl.textContent = 'Login realizado com sucesso!';
                 statusEl.style.color = 'green';
 
-                // Carrega notícias scraped automaticamente
+                // Carrega ambas as listas
                 loadScrapedNoticias();
+                loadNoticias();
 
             } catch (error) {
                 statusEl.textContent = 'Erro: ' + error.message;
@@ -190,6 +166,7 @@
             await supabaseClient.auth.signOut();
             document.getElementById('loginForm').classList.remove('hidden');
             document.getElementById('userInfo').classList.add('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
             document.getElementById('loginStatus').textContent = '';
         }
 
@@ -198,8 +175,10 @@
             if (session) {
                 document.getElementById('loginForm').classList.add('hidden');
                 document.getElementById('userInfo').classList.remove('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
                 document.getElementById('userEmail').textContent = session.user.email;
                 loadScrapedNoticias();
+                loadNoticias();
             }
         });
 
@@ -229,9 +208,9 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    statusEl.textContent = `✅ Sucesso! Notícia do ${sourceName} coletada e salva.`;
+                    const count = data.stats?.processadas_com_sucesso || 1;
+                    statusEl.textContent = `✅ Sucesso! ${count} notícias coletadas do ${sourceName}.`;
                     statusEl.style.color = 'green';
-                    // Recarrega as notícias scraped
                     setTimeout(() => loadScrapedNoticias(), 1000);
                 } else {
                     statusEl.textContent = `❌ Erro: ${data.error || data.message}`;
@@ -244,10 +223,7 @@
                 console.error('Erro:', error);
             }
 
-            // Oculta o status após 5 segundos
-            setTimeout(() => {
-                statusEl.classList.add('hidden');
-            }, 5000);
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
         }
 
         // Carregar notícias scraped (tabela noticias_scraped)
@@ -266,19 +242,21 @@
                 if (error) throw error;
 
                 if (data.length === 0) {
-                    container.innerHTML = '<div class="loading">Nenhuma notícia scraped encontrada.</div>';
+                    container.innerHTML = '<div class="loading">Nenhuma notícia scraped encontrada. Use os botões acima para buscar notícias automaticamente.</div>';
                     return;
                 }
 
                 container.innerHTML = data.map(noticia => `
                     <div class="noticia-card scraped-card">
+                        ${noticia.imagem_url ? `<img src="${noticia.imagem_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">` : ''}
                         <div class="noticia-title">${noticia.titulo_reescrito || noticia.titulo_original}</div>
                         <div class="noticia-content">${(noticia.resumo_reescrito || noticia.resumo_original || '').substring(0, 200)}...</div>
                         <div class="noticia-meta">
                             <span class="status-badge status-${noticia.status}">${noticia.status}</span>
                             <br>
                             <strong>Fonte:</strong> ${noticia.fonte}<br>
-                            <strong>Coletado:</strong> ${new Date(noticia.data_coleta).toLocaleString('pt-BR')}<br>
+                            <strong>Categoria:</strong> ${noticia.categoria}<br>
+                            <strong>Coletado:</strong> ${new Date(noticia.data_coleta || noticia.created_at).toLocaleString('pt-BR')}<br>
                             <strong>URL:</strong> <a href="${noticia.url_original}" target="_blank" style="color: #059669;">Ver original</a>
                         </div>
                         <div class="noticia-actions">
@@ -294,17 +272,16 @@
             }
         }
 
-        // Carregar notícias publicadas (tabela noticias)
-        async function loadPublishedNoticias() {
-            const container = document.getElementById('publishedNoticias');
+        // Carregar notícias publicadas (tabela noticias) - FUNÇÃO ORIGINAL
+        async function loadNoticias() {
+            const container = document.getElementById('noticias');
             container.innerHTML = '<div class="loading">Carregando notícias publicadas...</div>';
 
             try {
                 const { data, error } = await supabaseClient
                     .from('noticias')
                     .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(20);
+                    .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
@@ -315,6 +292,7 @@
 
                 container.innerHTML = data.map(noticia => `
                     <div class="noticia-card">
+                        ${noticia.image_url ? `<img src="${noticia.image_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">` : ''}
                         <div class="noticia-title">${noticia.title}</div>
                         <div class="noticia-content">${(noticia.content || '').substring(0, 200)}...</div>
                         <div class="noticia-meta">
@@ -330,7 +308,7 @@
 
             } catch (error) {
                 container.innerHTML = `<div class="loading" style="color: red;">Erro ao carregar: ${error.message}</div>`;
-                console.error('Erro ao carregar notícias publicadas:', error);
+                console.error('Erro ao carregar notícias:', error);
             }
         }
 
@@ -370,6 +348,7 @@
 
                 alert('Notícia publicada com sucesso!');
                 loadScrapedNoticias();
+                loadNoticias();
                 
             } catch (error) {
                 alert('Erro ao publicar: ' + error.message);
@@ -396,11 +375,11 @@
             }
         }
 
-        // Publicar notícia manual
-        async function publishManualNoticia() {
-            const title = document.getElementById('manualTitle').value;
-            const content = document.getElementById('manualContent').value;
-            const category = document.getElementById('manualCategory').value;
+        // Publicar notícia manual - FUNÇÃO ORIGINAL
+        async function publishNoticia() {
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            const category = document.getElementById('category').value;
 
             if (!title || !content) {
                 alert('Preencha título e conteúdo!');
@@ -418,26 +397,23 @@
 
                 if (error) throw error;
 
-                alert('Notícia manual publicada!');
-                document.getElementById('manualTitle').value = '';
-                document.getElementById('manualContent').value = '';
-                
-                // Mostra aba de publicadas
-                showTab('published');
-                loadPublishedNoticias();
+                alert('Notícia publicada!');
+                document.getElementById('title').value = '';
+                document.getElementById('content').value = '';
+                loadNoticias();
 
             } catch (error) {
                 alert('Erro ao publicar: ' + error.message);
             }
         }
 
-        // Funções auxiliares para notícias publicadas
+        // Funções auxiliares para notícias publicadas - ORIGINAIS
         function editNoticia(id) {
             alert('Função de edição ainda não implementada. ID: ' + id);
         }
 
         async function deleteNoticia(id) {
-            if (!confirm('Excluir esta notícia publicada?')) return;
+            if (!confirm('Excluir esta notícia?')) return;
 
             try {
                 const { error } = await supabaseClient
@@ -448,14 +424,18 @@
                 if (error) throw error;
 
                 alert('Notícia excluída!');
-                loadPublishedNoticias();
+                loadNoticias();
             } catch (error) {
                 alert('Erro ao excluir: ' + error.message);
             }
         }
     </script>
 
+
 </body>
 
 
+
 </html>
+
+
