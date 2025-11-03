@@ -14,16 +14,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Supabase CLI
-        # ESTA É A LINHA CORRIGIDA:
-        uses: supabase/setup-supabase-cli-action@v1
-        with:
-          version: latest
-
+      # ESTA É A AÇÃO CORRETA E SIMPLES
       - name: Deploy Supabase Function
-        env:
-
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-        run: |
-          supabase functions deploy scrape-and-rewrite --project-id $SUPABASE_PROJECT_ID --no-verify-jwt
+        uses: supabase/functions-deploy-action@v1
+        with:
+          # Pega os segredos que você configurou no GitHub
+          project_id: ${{ secrets.SUPABASE_PROJECT_ID }}
+          token: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          
+          # Especifica qual função fazer o deploy
+          function_name: scrape-and-rewrite
+          
+          # A flag que estávamos usando no terminal
+          no_verify_jwt: true
