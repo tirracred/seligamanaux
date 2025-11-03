@@ -16,8 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Supabase CLI
-        uses: supabase/cli@main  # <--- CORRIGIDO
-        with:
+        uses: supabase/cli@v1  # <--- CORRIGIDO (DE VOLTA AO ORIGINAL)        with:
           version: latest
 
       - name: Deploy Supabase Function
