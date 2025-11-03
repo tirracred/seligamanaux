@@ -24,38 +24,26 @@
         .danger-button:hover { background: #dc2626; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .noticias-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; }
-        .noticia-card { background: #333; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626; position: relative; }
+        .noticias-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .noticia-card { background: #333; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626; }
         .scraped-card { background: #1f2937; border-left: 4px solid #059669; }
-        .published-card { background: #1e293b; border-left: 4px solid #7c3aed; }
-        .noticia-title { font-weight: bold; margin-bottom: 10px; color: #fff; font-size: 16px; }
-        .noticia-content { color: #ccc; margin-bottom: 10px; max-height: 120px; overflow: hidden; font-size: 14px; line-height: 1.4; }
-        .noticia-meta { font-size: 12px; color: #888; margin-bottom: 15px; }
-        .noticia-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .noticia-actions button { width: auto; padding: 8px 12px; margin: 0; font-size: 12px; }
+        .noticia-title { font-weight: bold; margin-bottom: 10px; color: #fff; }
+        .noticia-content { color: #ccc; margin-bottom: 10px; max-height: 100px; overflow: hidden; }
+        .noticia-meta { font-size: 12px; color: #888; margin-bottom: 10px; }
+        .noticia-actions { display: flex; gap: 10px; }
+        .noticia-actions button { width: auto; padding: 8px 16px; margin: 0; }
         .hidden { display: none; }
         .loading { text-align: center; color: #888; padding: 20px; }
-        .tabs { display: flex; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab { padding: 12px 20px; background: #404040; color: #fff; border: none; cursor: pointer; border-radius: 4px 4px 0 0; margin-right: 5px; margin-bottom: 5px; }
+        .tabs { display: flex; margin-bottom: 20px; }
+        .tab { padding: 12px 24px; background: #404040; color: #fff; border: none; cursor: pointer; border-radius: 4px 4px 0 0; margin-right: 5px; }
         .tab.active { background: #dc2626; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .source-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-right: 8px; }
+        .source-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
         .status-processado { background: #059669; color: white; }
         .status-pendente { background: #f59e0b; color: white; }
         .status-publicado { background: #7c3aed; color: white; }
-        .type-badge { position: absolute; top: 10px; right: 10px; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
-        .type-scraped { background: #059669; color: white; }
-        .type-manual { background: #7c3aed; color: white; }
-        .filter-section { background: #374151; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .filter-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
-        .filter-button { padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
-        .filter-button.active { background: #dc2626; }
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .stat-card { background: #374151; padding: 15px; border-radius: 8px; text-align: center; }
-        .stat-number { font-size: 24px; font-weight: bold; color: #10b981; }
-        .stat-label { font-size: 12px; color: #9ca3af; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -66,8 +54,8 @@
         <div class="auth-section">
             <div id="loginForm">
                 <h3>Login</h3>
-                <input type="email" id="email" placeholder="Email" value="tirra@tirracred.com.br">
-                <input type="password" id="password" placeholder="Senha">
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Senha" required>
                 <button onclick="login()">Entrar</button>
                 <p id="loginStatus"></p>
             </div>
@@ -77,67 +65,49 @@
             </div>
         </div>
 
-        <!-- Estatísticas -->
-        <div id="statsSection" class="stats hidden">
-            <div class="stat-card">
-                <div id="statScraped" class="stat-number">0</div>
-                <div class="stat-label">Scraped Pendentes</div>
-            </div>
-            <div class="stat-card">
-                <div id="statPublished" class="stat-number">0</div>
-                <div class="stat-label">Publicadas</div>
-            </div>
-            <div class="stat-card">
-                <div id="statToday" class="stat-number">0</div>
-                <div class="stat-label">Hoje</div>
-            </div>
-        </div>
-
         <!-- Abas -->
         <div class="tabs">
-            <button class="tab active" onclick="showTab('manage')">📋 Gerenciar Notícias</button>
-            <button class="tab" onclick="showTab('scrape')">🤖 Buscar Automático</button>
-            <button class="tab" onclick="showTab('manual')">✍️ Criar Manual</button>
+            <button class="tab active" onclick="showTab('scraped')">Notícias Scraped</button>
+            <button class="tab" onclick="showTab('published')">Notícias Publicadas</button>
+            <button class="tab" onclick="showTab('manual')">Criar Manual</button>
         </div>
 
-        <!-- Aba: Gerenciar Notícias (PRINCIPAL) -->
-        <div id="manage" class="tab-content active">
-            <!-- Filtros -->
-            <div class="filter-section">
-                <h3>🎛️ Filtros</h3>
-                <div class="filter-buttons">
-                    <button class="filter-button active" onclick="setFilter('all')">📰 Todas</button>
-                    <button class="filter-button" onclick="setFilter('scraped')">🤖 Scraped Pendentes</button>
-                    <button class="filter-button" onclick="setFilter('published')">📢 Publicadas</button>
-                    <button class="filter-button" onclick="setFilter('today')">📅 Hoje</button>
-                </div>
-                <button onclick="loadAllNoticias()" style="background: #059669; margin-top: 10px;">🔄 Recarregar Todas</button>
-            </div>
-
-            <!-- Lista Unificada de Notícias -->
-            <div class="admin-section">
-                <h3 id="noticiasTitle">📋 Todas as Notícias</h3>
-                <div id="allNoticias" class="noticias-container">
-                    <div class="loading">Carregando notícias...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Aba: Buscar Automático -->
-        <div id="scrape" class="tab-content">
+        <!-- Aba: Notícias Scraped -->
+        <div id="scraped" class="tab-content active">
             <div class="scraped-section">
                 <h3>🤖 Buscar Notícias Automáticas</h3>
                 <p>Buscar, reescrever e salvar notícias dos principais portais de Manaus/Amazonas.</p>
                 
                 <div class="source-buttons">
-                    <button class="scrape-button" onclick="scrapePortal('https://g1.globo.com/am/amazonas/', 'G1 Amazonas')">📰 G1 Amazonas</button>
-                    <button class="scrape-button" onclick="scrapePortal('https://portaldoholanda.com.br/amazonas', 'Portal do Holanda')">🌐 Portal do Holanda</button>
-                    <button class="scrape-button" onclick="scrapePortal('https://www.acritica.com/', 'A Crítica')">📄 A Crítica</button>
-                    <button class="scrape-button" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia')">🌿 Portal Amazônia</button>
-                    <button class="scrape-button" onclick="scrapePortal('https://www.cenariomt.com.br/', 'Cenário MT')">📻 Cenário RT</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://g1.globo.com/am/amazonas/', 'G1 Amazonas')">📰 Buscar G1 Amazonas</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://portaldoholanda.com.br/amazonas', 'Portal do Holanda')">🌐 Buscar Portal do Holanda</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://www.acritica.com/', 'A Crítica')">📄 Buscar A Crítica</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia')">🌿 Buscar Portal Amazônia</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://www.cenariomt.com.br/', 'Cenário MT')">📻 Buscar Cenário MT</button>
                 </div>
 
                 <div id="scrapeStatus" class="loading hidden">Buscando notícias... Aguarde.</div>
+            </div>
+
+            <!-- Lista de Notícias Scraped para Publicação -->
+            <div class="admin-section">
+                <h3>📋 Notícias Scraped Pendentes</h3>
+                <p>Notícias coletadas automaticamente que estão aguardando publicação.</p>
+                <button onclick="loadScrapedNoticias()" style="background: #059669;">🔄 Recarregar Scraped</button>
+                <div id="scrapedNoticias" class="noticias-container">
+                    <div class="loading">Carregando notícias scraped...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba: Notícias Publicadas -->
+        <div id="published" class="tab-content">
+            <div class="admin-section">
+                <h3>📰 Notícias Publicadas</h3>
+                <button onclick="loadPublishedNoticias()">🔄 Recarregar Publicadas</button>
+                <div id="publishedNoticias" class="noticias-container">
+                    <div class="loading">Carregando notícias publicadas...</div>
+                </div>
             </div>
         </div>
 
@@ -161,7 +131,6 @@
                         <option value="Economia">Economia</option>
                         <option value="Esportes">Esportes</option>
                         <option value="Cultura">Cultura</option>
-                        <option value="Amazonas">Amazonas</option>
                     </select>
                 </div>
                 <button onclick="publishManualNoticia()">📝 Publicar Notícia Manual</button>
@@ -177,20 +146,15 @@
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
         );
 
-        let currentFilter = 'all';
-        let allNoticiasData = { scraped: [], published: [] };
-
         // Controle de Abas
         function showTab(tabName) {
+            // Oculta todas as abas
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             
+            // Mostra a aba selecionada
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
-
-            if (tabName === 'manage') {
-                loadAllNoticias();
-            }
         }
 
         // Funções de Autenticação
@@ -209,12 +173,12 @@
 
                 document.getElementById('loginForm').classList.add('hidden');
                 document.getElementById('userInfo').classList.remove('hidden');
-                document.getElementById('statsSection').classList.remove('hidden');
                 document.getElementById('userEmail').textContent = data.user.email;
                 statusEl.textContent = 'Login realizado com sucesso!';
                 statusEl.style.color = 'green';
 
-                loadAllNoticias();
+                // Carrega notícias scraped automaticamente
+                loadScrapedNoticias();
 
             } catch (error) {
                 statusEl.textContent = 'Erro: ' + error.message;
@@ -226,7 +190,6 @@
             await supabaseClient.auth.signOut();
             document.getElementById('loginForm').classList.remove('hidden');
             document.getElementById('userInfo').classList.add('hidden');
-            document.getElementById('statsSection').classList.add('hidden');
             document.getElementById('loginStatus').textContent = '';
         }
 
@@ -235,178 +198,10 @@
             if (session) {
                 document.getElementById('loginForm').classList.add('hidden');
                 document.getElementById('userInfo').classList.remove('hidden');
-                document.getElementById('statsSection').classList.remove('hidden');
                 document.getElementById('userEmail').textContent = session.user.email;
-                loadAllNoticias();
+                loadScrapedNoticias();
             }
         });
-
-        // FUNÇÃO PRINCIPAL: Carregar TODAS as notícias (scraped + published)
-        async function loadAllNoticias() {
-            const container = document.getElementById('allNoticias');
-            container.innerHTML = '<div class="loading">Carregando todas as notícias...</div>';
-
-            try {
-                // Carrega notícias scraped
-                const { data: scrapedData, error: scrapedError } = await supabaseClient
-                    .from('noticias_scraped')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (scrapedError) throw scrapedError;
-
-                // Carrega notícias publicadas
-                const { data: publishedData, error: publishedError } = await supabaseClient
-                    .from('noticias')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (publishedError) throw publishedError;
-
-                // Armazena os dados
-                allNoticiasData = {
-                    scraped: scrapedData || [],
-                    published: publishedData || []
-                };
-
-                // Atualiza estatísticas
-                updateStats();
-
-                // Aplica filtro atual
-                applyFilter();
-
-            } catch (error) {
-                container.innerHTML = `<div class="loading" style="color: red;">Erro ao carregar: ${error.message}</div>`;
-                console.error('Erro ao carregar notícias:', error);
-            }
-        }
-
-        // Função para aplicar filtros
-        function setFilter(filterType) {
-            currentFilter = filterType;
-            
-            // Atualiza botões de filtro
-            document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            applyFilter();
-        }
-
-        function applyFilter() {
-            const container = document.getElementById('allNoticias');
-            const title = document.getElementById('noticiasTitle');
-            
-            let filteredData = [];
-            let titleText = '';
-
-            const today = new Date().toISOString().split('T')[0];
-
-            switch (currentFilter) {
-                case 'scraped':
-                    filteredData = allNoticiasData.scraped.filter(n => n.status === 'processado');
-                    titleText = '🤖 Notícias Scraped Pendentes';
-                    break;
-                
-                case 'published':
-                    filteredData = allNoticiasData.published.map(n => ({...n, type: 'published'}));
-                    titleText = '📢 Notícias Publicadas';
-                    break;
-                
-                case 'today':
-                    const todayScraped = allNoticiasData.scraped.filter(n => n.created_at?.startsWith(today));
-                    const todayPublished = allNoticiasData.published.filter(n => n.created_at?.startsWith(today)).map(n => ({...n, type: 'published'}));
-                    filteredData = [...todayScraped, ...todayPublished];
-                    titleText = '📅 Notícias de Hoje';
-                    break;
-                
-                default: // 'all'
-                    const scrapedWithType = allNoticiasData.scraped.map(n => ({...n, type: 'scraped'}));
-                    const publishedWithType = allNoticiasData.published.map(n => ({...n, type: 'published'}));
-                    filteredData = [...scrapedWithType, ...publishedWithType];
-                    titleText = '📋 Todas as Notícias';
-            }
-
-            title.textContent = `${titleText} (${filteredData.length})`;
-
-            if (filteredData.length === 0) {
-                container.innerHTML = '<div class="loading">Nenhuma notícia encontrada para este filtro.</div>';
-                return;
-            }
-
-            // Ordena por data (mais recente primeiro)
-            filteredData.sort((a, b) => new Date(b.created_at || b.data_coleta) - new Date(a.created_at || a.data_coleta));
-
-            // Renderiza as notícias
-            container.innerHTML = filteredData.map(noticia => {
-                const isScraped = noticia.type === 'scraped' || noticia.titulo_original;
-                const isPublished = noticia.type === 'published' || noticia.title;
-                
-                if (isScraped) {
-                    return renderScrapedCard(noticia);
-                } else if (isPublished) {
-                    return renderPublishedCard(noticia);
-                }
-                return '';
-            }).join('');
-        }
-
-        // Renderizar card de notícia scraped
-        function renderScrapedCard(noticia) {
-            const statusClass = `status-${noticia.status}`;
-            return `
-                <div class="noticia-card scraped-card">
-                    <div class="type-badge type-scraped">SCRAPED</div>
-                    <div class="noticia-title">${noticia.titulo_reescrito || noticia.titulo_original}</div>
-                    <div class="noticia-content">${(noticia.resumo_reescrito || noticia.resumo_original || '').substring(0, 200)}...</div>
-                    <div class="noticia-meta">
-                        <span class="status-badge ${statusClass}">${noticia.status}</span>
-                        <br>
-                        <strong>Fonte:</strong> ${noticia.fonte}<br>
-                        <strong>Categoria:</strong> ${noticia.categoria}<br>
-                        <strong>Coletado:</strong> ${new Date(noticia.data_coleta || noticia.created_at).toLocaleString('pt-BR')}<br>
-                        <strong>URL:</strong> <a href="${noticia.url_original}" target="_blank" style="color: #059669;">Ver original</a>
-                    </div>
-                    <div class="noticia-actions">
-                        ${noticia.status === 'processado' ? `<button class="publish-button" onclick="publishScrapedNoticia(${noticia.id})">📰 Publicar</button>` : ''}
-                        <button onclick="viewNoticia('scraped', ${noticia.id})">👁️ Ver</button>
-                        <button class="danger-button" onclick="deleteScrapedNoticia(${noticia.id})">🗑️ Excluir</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Renderizar card de notícia publicada
-        function renderPublishedCard(noticia) {
-            return `
-                <div class="noticia-card published-card">
-                    <div class="type-badge type-manual">PUBLICADA</div>
-                    <div class="noticia-title">${noticia.title}</div>
-                    <div class="noticia-content">${(noticia.content || '').substring(0, 200)}...</div>
-                    <div class="noticia-meta">
-                        <strong>Categoria:</strong> ${noticia.category}<br>
-                        <strong>Publicado:</strong> ${new Date(noticia.created_at).toLocaleString('pt-BR')}
-                    </div>
-                    <div class="noticia-actions">
-                        <button onclick="viewNoticia('published', ${noticia.id})">👁️ Ver</button>
-                        <button onclick="editNoticia(${noticia.id})">✏️ Editar</button>
-                        <button class="danger-button" onclick="deleteNoticia(${noticia.id})">🗑️ Excluir</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Atualizar estatísticas
-        function updateStats() {
-            const scrapedPending = allNoticiasData.scraped.filter(n => n.status === 'processado').length;
-            const published = allNoticiasData.published.length;
-            const today = new Date().toISOString().split('T')[0];
-            const todayCount = [...allNoticiasData.scraped, ...allNoticiasData.published]
-                .filter(n => (n.created_at || n.data_coleta)?.startsWith(today)).length;
-
-            document.getElementById('statScraped').textContent = scrapedPending;
-            document.getElementById('statPublished').textContent = published;
-            document.getElementById('statToday').textContent = todayCount;
-        }
 
         // Função para fazer scrape de um portal
         async function scrapePortal(url, sourceName) {
@@ -434,9 +229,10 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    statusEl.textContent = `✅ Sucesso! ${data.stats?.processadas_com_sucesso || 1} notícias coletadas do ${sourceName}.`;
+                    statusEl.textContent = `✅ Sucesso! Notícia do ${sourceName} coletada e salva.`;
                     statusEl.style.color = 'green';
-                    setTimeout(() => loadAllNoticias(), 1000);
+                    // Recarrega as notícias scraped
+                    setTimeout(() => loadScrapedNoticias(), 1000);
                 } else {
                     statusEl.textContent = `❌ Erro: ${data.error || data.message}`;
                     statusEl.style.color = 'red';
@@ -448,18 +244,111 @@
                 console.error('Erro:', error);
             }
 
-            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+            // Oculta o status após 5 segundos
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 5000);
         }
 
-        // Publicar notícia scraped (move para noticias)
+        // Carregar notícias scraped (tabela noticias_scraped)
+        async function loadScrapedNoticias() {
+            const container = document.getElementById('scrapedNoticias');
+            container.innerHTML = '<div class="loading">Carregando notícias scraped...</div>';
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('noticias_scraped')
+                    .select('*')
+                    .eq('status', 'processado')
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="loading">Nenhuma notícia scraped encontrada.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.map(noticia => `
+                    <div class="noticia-card scraped-card">
+                        <div class="noticia-title">${noticia.titulo_reescrito || noticia.titulo_original}</div>
+                        <div class="noticia-content">${(noticia.resumo_reescrito || noticia.resumo_original || '').substring(0, 200)}...</div>
+                        <div class="noticia-meta">
+                            <span class="status-badge status-${noticia.status}">${noticia.status}</span>
+                            <br>
+                            <strong>Fonte:</strong> ${noticia.fonte}<br>
+                            <strong>Coletado:</strong> ${new Date(noticia.data_coleta).toLocaleString('pt-BR')}<br>
+                            <strong>URL:</strong> <a href="${noticia.url_original}" target="_blank" style="color: #059669;">Ver original</a>
+                        </div>
+                        <div class="noticia-actions">
+                            <button class="publish-button" onclick="publishScrapedNoticia(${noticia.id})">📰 Publicar</button>
+                            <button class="danger-button" onclick="deleteScrapedNoticia(${noticia.id})">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                container.innerHTML = `<div class="loading" style="color: red;">Erro ao carregar: ${error.message}</div>`;
+                console.error('Erro ao carregar notícias scraped:', error);
+            }
+        }
+
+        // Carregar notícias publicadas (tabela noticias)
+        async function loadPublishedNoticias() {
+            const container = document.getElementById('publishedNoticias');
+            container.innerHTML = '<div class="loading">Carregando notícias publicadas...</div>';
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('noticias')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="loading">Nenhuma notícia publicada encontrada.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.map(noticia => `
+                    <div class="noticia-card">
+                        <div class="noticia-title">${noticia.title}</div>
+                        <div class="noticia-content">${(noticia.content || '').substring(0, 200)}...</div>
+                        <div class="noticia-meta">
+                            <strong>Categoria:</strong> ${noticia.category}<br>
+                            <strong>Publicado:</strong> ${new Date(noticia.created_at).toLocaleString('pt-BR')}
+                        </div>
+                        <div class="noticia-actions">
+                            <button onclick="editNoticia(${noticia.id})">✏️ Editar</button>
+                            <button class="danger-button" onclick="deleteNoticia(${noticia.id})">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                container.innerHTML = `<div class="loading" style="color: red;">Erro ao carregar: ${error.message}</div>`;
+                console.error('Erro ao carregar notícias publicadas:', error);
+            }
+        }
+
+        // Publicar notícia scraped (move da tabela noticias_scraped para noticias)
         async function publishScrapedNoticia(scrapedId) {
             if (!confirm('Publicar esta notícia no site?')) return;
 
             try {
-                const scraped = allNoticiasData.scraped.find(n => n.id === scrapedId);
-                if (!scraped) throw new Error('Notícia não encontrada');
+                // 1. Busca a notícia scraped
+                const { data: scraped, error: fetchError } = await supabaseClient
+                    .from('noticias_scraped')
+                    .select('*')
+                    .eq('id', scrapedId)
+                    .single();
 
-                // Insere na tabela noticias
+                if (fetchError) throw fetchError;
+
+                // 2. Insere na tabela noticias (publicada)
                 const { error: insertError } = await supabaseClient
                     .from('noticias')
                     .insert({
@@ -471,7 +360,7 @@
 
                 if (insertError) throw insertError;
 
-                // Atualiza status da scraped
+                // 3. Atualiza status da scraped para 'publicado'
                 const { error: updateError } = await supabaseClient
                     .from('noticias_scraped')
                     .update({ status: 'publicado' })
@@ -480,7 +369,7 @@
                 if (updateError) throw updateError;
 
                 alert('Notícia publicada com sucesso!');
-                loadAllNoticias();
+                loadScrapedNoticias();
                 
             } catch (error) {
                 alert('Erro ao publicar: ' + error.message);
@@ -501,7 +390,7 @@
                 if (error) throw error;
 
                 alert('Notícia scraped excluída!');
-                loadAllNoticias();
+                loadScrapedNoticias();
             } catch (error) {
                 alert('Erro ao excluir: ' + error.message);
             }
@@ -533,32 +422,16 @@
                 document.getElementById('manualTitle').value = '';
                 document.getElementById('manualContent').value = '';
                 
-                showTab('manage');
-                loadAllNoticias();
+                // Mostra aba de publicadas
+                showTab('published');
+                loadPublishedNoticias();
 
             } catch (error) {
                 alert('Erro ao publicar: ' + error.message);
             }
         }
 
-        // Funções auxiliares
-        function viewNoticia(type, id) {
-            const noticia = type === 'scraped' 
-                ? allNoticiasData.scraped.find(n => n.id === id)
-                : allNoticiasData.published.find(n => n.id === id);
-            
-            if (noticia) {
-                const title = type === 'scraped' 
-                    ? (noticia.titulo_reescrito || noticia.titulo_original)
-                    : noticia.title;
-                const content = type === 'scraped'
-                    ? (noticia.resumo_reescrito || noticia.resumo_original)
-                    : noticia.content;
-                
-                alert(`TÍTULO: ${title}\n\nCONTEÚDO:\n${content}`);
-            }
-        }
-
+        // Funções auxiliares para notícias publicadas
         function editNoticia(id) {
             alert('Função de edição ainda não implementada. ID: ' + id);
         }
@@ -575,37 +448,14 @@
                 if (error) throw error;
 
                 alert('Notícia excluída!');
-                loadAllNoticias();
+                loadPublishedNoticias();
             } catch (error) {
                 alert('Erro ao excluir: ' + error.message);
             }
         }
     </script>
 
-
-
-
-
-
-
-
 </body>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 </html>
