@@ -194,8 +194,10 @@
 
                     try {
                         const { data, error } = await supabase.functions.invoke('scrape-and-rewrite', {
-                            body: { source: source },
-                        });
+                        body: {
+                            urlParaScrape: "https://www.g1.com.br" // <--- OU QUALQUER URL QUE VOCÊ QUEIRA RASPAGEM
+                        }
+                        })
 
                         if (error) throw error;
                         
@@ -311,7 +313,7 @@
                 loadingManage.style.display = 'block';
                 postListContainer.innerHTML = '';
 
-                
+
 
                 const { data: posts, error } = await supabase
                     .from(DB_TABLE)
