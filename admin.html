@@ -178,44 +178,64 @@
             });
 
 
-            // --- 2. LÓGICA DE SCRAPING (A PARTE QUE FALTAVA) ---
-            const scrapeMessage = document.getElementById('scrape-message');
-            const scrapeButtons = document.querySelectorAll('.scrape-btn');
+          // --- 2. LÓGICA DE SCRAPING (VERSÃO CORRIGIDA) ---
+        const scrapeMessage = document.getElementById('scrape-message');
+        const scrapeButtons = document.querySelectorAll('.scrape-btn');
 
-            scrapeButtons.forEach(button => {
-                button.addEventListener('click', async () => {
-                    const source = button.dataset.source;
-                    if (!source) return;
+        // Mapeia os botões para as URLs reais de scraping
+        const sourceMap = {
+            "g1_am": "https://g1.globo.com/am/amazonas/",
+            "holanda": "https://portaldo-holanda.com.br/amazonas",
+            "18horas": "https://www.portalele-18horas.com.br/",
+            "agencia_am": "https://www.agenciaamazonas.am.gov.br/"
+            // Adicione ou corrija as URLs conforme necessário
+        };
 
-                    scrapeButtons.forEach(btn => btn.disabled = true);
-                    scrapeMessage.textContent = `Buscando notícias de '${source}'... Isso pode levar 30 segundos.`;
-                    scrapeMessage.className = 'message';
+        scrapeButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const source = button.dataset.source;
+                const urlParaRaspar = sourceMap[source]; // Pega a URL correta
+
+                if (!urlParaRaspar) {
+                    scrapeMessage.textContent = `Erro: Fonte '${source}' não definida no sourceMap do admin.html`;
+                    scrapeMessage.className = 'message error';
                     scrapeMessage.style.display = 'block';
+                    return;
+                }
 
-                    try {
-                        const { data, error } = await supabase.functions.invoke('scrape-and-rewrite', {
-                        body: {
-                            urlParaScrape: "https://www.g1.com.br" // <--- OU QUALQUER URL QUE VOCÊ QUEIRA RASPAGEM
-                        }
-                        })
+                scrapeButtons.forEach(btn => btn.disabled = true);
+                scrapeMessage.textContent = `Buscando notícias de '${source}'... Isso pode levar até 30 segundos.`;
+                scrapeMessage.className = 'message';
+                scrapeMessage.style.display = 'block';
 
-                        if (error) throw error;
-                        
-                        scrapeMessage.textContent = data.message || 'Sucesso! Notícias publicadas.';
-                        scrapeMessage.className = 'message success';
-                        // Recarrega a lista de posts para mostrar os novos
-                        await loadManagedPosts();
+                try {
+                    // Chamando a função com o body correto
+                    const { data, error } = await supabase.functions.invoke('scrape-and-rewrite', {
+                       body: {
+                           url: urlParaRaspar // <-- CORRIGIDO: Enviando a URL dinâmica
+                       }
+                    })
 
-                    } catch (error) {
-                        console.error("Erro ao chamar Edge Function:", error);
-                        scrapeMessage.textContent = `Erro: ${error.message || 'Falha ao chamar a função.'}`;
-                        scrapeMessage.className = 'message error';
-                    } finally {
-                        scrapeButtons.forEach(btn => btn.disabled = false);
-                        setTimeout(() => { scrapeMessage.style.display = 'none'; }, 4000);
-                    }
-                });
+                    if (error) throw error;
+                    
+                    // A 'data.message' agora vem da nossa função
+                    scrapeMessage.textContent = data.message || 'Sucesso! Notícias publicadas.';
+                    scrapeMessage.className = 'message success';
+                    
+                    // Recarrega a lista de posts para mostrar os novos
+                    // que agora estarão visíveis por causa do user_id!
+                    await loadManagedPosts();
+
+                } catch (error) {
+                    console.error("Erro ao chamar Edge Function:", error);
+                    scrapeMessage.textContent = `Erro: ${error.message || 'Falha ao chamar a função.'}`;
+                    scrapeMessage.className = 'message error';
+                } finally {
+                    scrapeButtons.forEach(btn => btn.disabled = false);
+                    setTimeout(() => { scrapeMessage.style.display = 'none'; }, 5000);
+                }
             });
+        });
 
             
             // --- 3. LÓGICA DE PUBLICAÇÃO MANUAL (O seu código original) ---
