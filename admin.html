@@ -4,474 +4,585 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - SeligaManaux</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 30px; color: #dc2626; }
+        .auth-section { background: #262626; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .admin-section { background: #262626; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .scraped-section { background: #1f2937; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #059669; }
+        input, textarea, button, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #404040; background: #333; color: #fff; border-radius: 4px; }
+        button { background: #dc2626; cursor: pointer; font-weight: bold; }
+        button:hover { background: #b91c1c; }
+        .scrape-button { background: #059669; }
+        .scrape-button:hover { background: #047857; }
+        .publish-button { background: #7c3aed; }
+        .publish-button:hover { background: #6d28d9; }
+        .danger-button { background: #ef4444; }
+        .danger-button:hover { background: #dc2626; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .noticias-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; }
+        .noticia-card { background: #333; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626; position: relative; }
+        .scraped-card { background: #1f2937; border-left: 4px solid #059669; }
+        .published-card { background: #1e293b; border-left: 4px solid #7c3aed; }
+        .noticia-title { font-weight: bold; margin-bottom: 10px; color: #fff; font-size: 16px; }
+        .noticia-content { color: #ccc; margin-bottom: 10px; max-height: 120px; overflow: hidden; font-size: 14px; line-height: 1.4; }
+        .noticia-meta { font-size: 12px; color: #888; margin-bottom: 15px; }
+        .noticia-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .noticia-actions button { width: auto; padding: 8px 12px; margin: 0; font-size: 12px; }
+        .hidden { display: none; }
+        .loading { text-align: center; color: #888; padding: 20px; }
+        .tabs { display: flex; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 12px 20px; background: #404040; color: #fff; border: none; cursor: pointer; border-radius: 4px 4px 0 0; margin-right: 5px; margin-bottom: 5px; }
+        .tab.active { background: #dc2626; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .source-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-right: 8px; }
+        .status-processado { background: #059669; color: white; }
+        .status-pendente { background: #f59e0b; color: white; }
+        .status-publicado { background: #7c3aed; color: white; }
+        .type-badge { position: absolute; top: 10px; right: 10px; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
+        .type-scraped { background: #059669; color: white; }
+        .type-manual { background: #7c3aed; color: white; }
+        .filter-section { background: #374151; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .filter-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-button { padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .filter-button.active { background: #dc2626; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: #374151; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 24px; font-weight: bold; color: #10b981; }
+        .stat-label { font-size: 12px; color: #9ca3af; text-transform: uppercase; }
+    </style>
 </head>
-<body class="dark-mode"> <header class="site-header">
-        <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1rem;">
-            <div class="logo">
-                <a href="/"><h1>SeligaManaux (ADMIN)</h1></a>
+<body>
+    <div class="container">
+        <h1>SeligaManaux - Admin</h1>
+
+        <!-- Seção de Autenticação -->
+        <div class="auth-section">
+            <div id="loginForm">
+                <h3>Login</h3>
+                <input type="email" id="email" placeholder="Email" value="tirra@tirracred.com.br">
+                <input type="password" id="password" placeholder="Senha">
+                <button onclick="login()">Entrar</button>
+                <p id="loginStatus"></p>
             </div>
-            <button id="logout-button" style="display: none; background-color: #6b7280; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                Sair
-            </button>
+            <div id="userInfo" class="hidden">
+                <p>Usuário logado: <span id="userEmail"></span></p>
+                <button onclick="logout()">Sair</button>
+            </div>
         </div>
-    </header>
-    
-    <main class="container">
 
-        <form id="login-form" class="admin-form" style="display: block;">
-            <h1 class="page-title-admin">Login do Administrador</h1>
-            <div id="login-feedback-message" class="message" style="display: none;"></div>
-            <div>
-                <label for="admin-email">Email</label>
-                <input type="email" id="admin-email" required>
+        <!-- Estatísticas -->
+        <div id="statsSection" class="stats hidden">
+            <div class="stat-card">
+                <div id="statScraped" class="stat-number">0</div>
+                <div class="stat-label">Scraped Pendentes</div>
             </div>
-            <div>
-                <label for="admin-password">Senha</label>
-                <input type="password" id="admin-password" required>
+            <div class="stat-card">
+                <div id="statPublished" class="stat-number">0</div>
+                <div class="stat-label">Publicadas</div>
             </div>
-            <button type="submit" id="login-button">ENTRAR</button>
-            <p id="loading-login" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Entrando...</p>
-        </form>
+            <div class="stat-card">
+                <div id="statToday" class="stat-number">0</div>
+                <div class="stat-label">Hoje</div>
+            </div>
+        </div>
 
-        <div id="admin-panel-container" style="display: none;">
+        <!-- Abas -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('manage')">📋 Gerenciar Notícias</button>
+            <button class="tab" onclick="showTab('scrape')">🤖 Buscar Automático</button>
+            <button class="tab" onclick="showTab('manual')">✍️ Criar Manual</button>
+        </div>
 
-            <section id="scrape-section" class="admin-form">
-                <h1 class="page-title-admin" style="margin-top: 0; padding-top: 0;">Buscar Notícias (IA)</h1>
-                <p style="color: var(--texto-secundario); margin-bottom: 1.5rem; text-align: center;">
-                    Buscar, reescrever e publicar as 5 notícias mais recentes da fonte.
-                </p>
-                <div class="botoes-scrape" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <button type="button" class="scrape-btn" data-source="g1_am">Buscar G1 (AM)</button>
-                    <button type="button" class="scrape-btn" data-source="holanda">Buscar P. do Holanda</button>
-                    <button type="button" class="scrape-btn" data-source="18horas">Buscar 18 Horas</button>
-                    <button type="button" class="scrape-btn" data-source="agencia_am">Buscar Ag. Amazonas</button>
+        <!-- Aba: Gerenciar Notícias (PRINCIPAL) -->
+        <div id="manage" class="tab-content active">
+            <!-- Filtros -->
+            <div class="filter-section">
+                <h3>🎛️ Filtros</h3>
+                <div class="filter-buttons">
+                    <button class="filter-button active" onclick="setFilter('all')">📰 Todas</button>
+                    <button class="filter-button" onclick="setFilter('scraped')">🤖 Scraped Pendentes</button>
+                    <button class="filter-button" onclick="setFilter('published')">📢 Publicadas</button>
+                    <button class="filter-button" onclick="setFilter('today')">📅 Hoje</button>
                 </div>
-                <div id="scrape-message" class="message" style="display: none; margin-top: 1.5rem;"></div>
-            </section>
-            
-            <form id="news-form" class="admin-form">
-                <h1 class="page-title-admin">Publicar Notícia Manualmente</h1>
-                <div id="feedback-message" class="message" style="display: none;"></div>
-                <div>
-                    <label for="news-title">Título</label>
-                    <input type="text" id="news-title" required>
+                <button onclick="loadAllNoticias()" style="background: #059669; margin-top: 10px;">🔄 Recarregar Todas</button>
+            </div>
+
+            <!-- Lista Unificada de Notícias -->
+            <div class="admin-section">
+                <h3 id="noticiasTitle">📋 Todas as Notícias</h3>
+                <div id="allNoticias" class="noticias-container">
+                    <div class="loading">Carregando notícias...</div>
                 </div>
-                <div>
-                    <label for="news-category">Categoria</label>
-                    <select id="news-category" required>
-                        <option value="">Selecione...</option>
-                        <option value="Manaus e Região">Manaus e Região</option>
-                        <option value="Política">Política</option>
-                        <option value="Esportes">Esportes</option>
-                        <option value="Economia">Economia</option>
+            </div>
+        </div>
+
+        <!-- Aba: Buscar Automático -->
+        <div id="scrape" class="tab-content">
+            <div class="scraped-section">
+                <h3>🤖 Buscar Notícias Automáticas</h3>
+                <p>Buscar, reescrever e salvar notícias dos principais portais de Manaus/Amazonas.</p>
+                
+                <div class="source-buttons">
+                    <button class="scrape-button" onclick="scrapePortal('https://g1.globo.com/am/amazonas/', 'G1 Amazonas')">📰 G1 Amazonas</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://portaldoholanda.com.br/amazonas', 'Portal do Holanda')">🌐 Portal do Holanda</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://www.acritica.com/', 'A Crítica')">📄 A Crítica</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia')">🌿 Portal Amazônia</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://www.cenariomt.com.br/', 'Cenário MT')">📻 Cenário RT</button>
+                </div>
+
+                <div id="scrapeStatus" class="loading hidden">Buscando notícias... Aguarde.</div>
+            </div>
+        </div>
+
+        <!-- Aba: Criar Manual -->
+        <div id="manual" class="tab-content">
+            <div class="admin-section">
+                <h3>✍️ Criar Notícia Manual</h3>
+                <div class="form-group">
+                    <label for="manualTitle">Título:</label>
+                    <input type="text" id="manualTitle" placeholder="Título da notícia">
+                </div>
+                <div class="form-group">
+                    <label for="manualContent">Conteúdo:</label>
+                    <textarea id="manualContent" rows="10" placeholder="Conteúdo da notícia"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="manualCategory">Categoria:</label>
+                    <select id="manualCategory">
                         <option value="Geral">Geral</option>
+                        <option value="Política">Política</option>
+                        <option value="Economia">Economia</option>
+                        <option value="Esportes">Esportes</option>
+                        <option value="Cultura">Cultura</option>
+                        <option value="Amazonas">Amazonas</option>
                     </select>
                 </div>
-                <div>
-                    <label for="news-headline-color">Cor da Manchete</label>
-                    <select id="news-headline-color" required>
-                        <option value="blue">Azul (Padrão)</option>
-                        <option value="red">Vermelho (Destaque)</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="news-content">Conteúdo</label>
-                    <textarea id="news-content" rows="8" required></textarea>
-                </div>
-                <div>
-                    <label for="news-image">Anexar Foto Principal (Capa)</label>
-                    <input type="file" id="news-image" accept="image/*">
-                </div>
-                <div>
-                    <label for="news-gallery">Adicionar Galeria (até 10 mídias)</label>
-                    <input type="file" id="news-gallery" accept="image/*,video/*" multiple>
-                    <small style="color: var(--texto-secundario); margin-top: 5px; display: block;">
-                        Segure Ctrl (ou Cmd) para selecionar múltiplos arquivos.
-                    </small>
-                </div>
-                <button type="submit" id="submit-button">PUBLICAR AGORA</button>
-                <p id="loading-submit" style="display: none; text-align: center; margin-top: 1rem; color: var(--texto-link);">Publicando... Aguarde.</p>
-            </form>
-
-            <section id="manage-section" class="admin-form">
-                 <h1 class="page-title-admin">Gerenciar Notícias</h1>
-                 <p id="loading-manage" style="text-align: center; color: var(--texto-secundario);">Carregando notícias...</p>
-                 <div id="post-list-container">
-                    </div>
-            </section>
+                <button onclick="publishManualNoticia()">📝 Publicar Notícia Manual</button>
+            </div>
         </div>
-
-    </main>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="main.js"></script>
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        // Inicialização do Supabase
+        const { createClient } = supabase;
+        const supabaseClient = createClient(
+            'https://xtnqypmezntjcidglblc.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
+        );
+
+        let currentFilter = 'all';
+        let allNoticiasData = { scraped: [], published: [] };
+
+        // Controle de Abas
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             
-            // --- REFERÊNCIAS GLOBAIS ---
-            const loginForm = document.getElementById('login-form');
-            const adminPanel = document.getElementById('admin-panel-container');
-            const logoutButton = document.getElementById('logout-button');
-            const loginFeedback = document.getElementById('login-feedback-message');
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'manage') {
+                loadAllNoticias();
+            }
+        }
+
+        // Funções de Autenticação
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const statusEl = document.getElementById('loginStatus');
+
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('userInfo').classList.remove('hidden');
+                document.getElementById('statsSection').classList.remove('hidden');
+                document.getElementById('userEmail').textContent = data.user.email;
+                statusEl.textContent = 'Login realizado com sucesso!';
+                statusEl.style.color = 'green';
+
+                loadAllNoticias();
+
+            } catch (error) {
+                statusEl.textContent = 'Erro: ' + error.message;
+                statusEl.style.color = 'red';
+            }
+        }
+
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('userInfo').classList.add('hidden');
+            document.getElementById('statsSection').classList.add('hidden');
+            document.getElementById('loginStatus').textContent = '';
+        }
+
+        // Verificar se já está logado
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('userInfo').classList.remove('hidden');
+                document.getElementById('statsSection').classList.remove('hidden');
+                document.getElementById('userEmail').textContent = session.user.email;
+                loadAllNoticias();
+            }
+        });
+
+        // FUNÇÃO PRINCIPAL: Carregar TODAS as notícias (scraped + published)
+        async function loadAllNoticias() {
+            const container = document.getElementById('allNoticias');
+            container.innerHTML = '<div class="loading">Carregando todas as notícias...</div>';
+
+            try {
+                // Carrega notícias scraped
+                const { data: scrapedData, error: scrapedError } = await supabaseClient
+                    .from('noticias_scraped')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (scrapedError) throw scrapedError;
+
+                // Carrega notícias publicadas
+                const { data: publishedData, error: publishedError } = await supabaseClient
+                    .from('noticias')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (publishedError) throw publishedError;
+
+                // Armazena os dados
+                allNoticiasData = {
+                    scraped: scrapedData || [],
+                    published: publishedData || []
+                };
+
+                // Atualiza estatísticas
+                updateStats();
+
+                // Aplica filtro atual
+                applyFilter();
+
+            } catch (error) {
+                container.innerHTML = `<div class="loading" style="color: red;">Erro ao carregar: ${error.message}</div>`;
+                console.error('Erro ao carregar notícias:', error);
+            }
+        }
+
+        // Função para aplicar filtros
+        function setFilter(filterType) {
+            currentFilter = filterType;
             
-            if (!supabase) {
-                loginFeedback.innerText = 'Erro fatal: Supabase não inicializado. Verifique main.js';
-                loginFeedback.className = 'message error';
-                loginFeedback.style.display = 'block';
+            // Atualiza botões de filtro
+            document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            applyFilter();
+        }
+
+        function applyFilter() {
+            const container = document.getElementById('allNoticias');
+            const title = document.getElementById('noticiasTitle');
+            
+            let filteredData = [];
+            let titleText = '';
+
+            const today = new Date().toISOString().split('T')[0];
+
+            switch (currentFilter) {
+                case 'scraped':
+                    filteredData = allNoticiasData.scraped.filter(n => n.status === 'processado');
+                    titleText = '🤖 Notícias Scraped Pendentes';
+                    break;
+                
+                case 'published':
+                    filteredData = allNoticiasData.published.map(n => ({...n, type: 'published'}));
+                    titleText = '📢 Notícias Publicadas';
+                    break;
+                
+                case 'today':
+                    const todayScraped = allNoticiasData.scraped.filter(n => n.created_at?.startsWith(today));
+                    const todayPublished = allNoticiasData.published.filter(n => n.created_at?.startsWith(today)).map(n => ({...n, type: 'published'}));
+                    filteredData = [...todayScraped, ...todayPublished];
+                    titleText = '📅 Notícias de Hoje';
+                    break;
+                
+                default: // 'all'
+                    const scrapedWithType = allNoticiasData.scraped.map(n => ({...n, type: 'scraped'}));
+                    const publishedWithType = allNoticiasData.published.map(n => ({...n, type: 'published'}));
+                    filteredData = [...scrapedWithType, ...publishedWithType];
+                    titleText = '📋 Todas as Notícias';
+            }
+
+            title.textContent = `${titleText} (${filteredData.length})`;
+
+            if (filteredData.length === 0) {
+                container.innerHTML = '<div class="loading">Nenhuma notícia encontrada para este filtro.</div>';
                 return;
             }
 
-            // --- 1. LÓGICA DE AUTENTICAÇÃO (MELHORADA) ---
-            
-            // Verifica o estado do login QUANDO A PÁGINA CARREGA
-            supabase.auth.onAuthStateChange((event, session) => {
-                if (session) {
-                    // Usuário ESTÁ logado
-                    loginForm.style.display = 'none';
-                    adminPanel.style.display = 'block';
-                    logoutButton.style.display = 'block';
-                    // Carrega os posts gerenciáveis assim que o usuário é confirmado
-                    loadManagedPosts();
-                } else {
-                    // Usuário NÃO está logado
-                    loginForm.style.display = 'block';
-                    adminPanel.style.display = 'none';
-                    logoutButton.style.display = 'none';
-                }
-            });
+            // Ordena por data (mais recente primeiro)
+            filteredData.sort((a, b) => new Date(b.created_at || b.data_coleta) - new Date(a.created_at || a.data_coleta));
 
-            // Evento de submit do Login
-            loginForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const loginButton = document.getElementById('login-button');
-                const loadingLogin = document.getElementById('loading-login');
+            // Renderiza as notícias
+            container.innerHTML = filteredData.map(noticia => {
+                const isScraped = noticia.type === 'scraped' || noticia.titulo_original;
+                const isPublished = noticia.type === 'published' || noticia.title;
                 
-                loginButton.disabled = true;
-                loadingLogin.style.display = 'block';
-                loginFeedback.style.display = 'none';
-
-                const email = document.getElementById('admin-email').value;
-                const password = document.getElementById('admin-password').value;
-
-                try {
-                    const { error } = await supabase.auth.signInWithPassword({ email, password });
-                    if (error) throw error;
-                    // O onAuthStateChange vai cuidar de mostrar o painel
-                } catch (err) {
-                    console.error("Erro de login:", err);
-                    showLoginMessage(`Erro: ${err.message}`, 'error');
-                } finally {
-                    loginButton.disabled = false;
-                    loadingLogin.style.display = 'none';
+                if (isScraped) {
+                    return renderScrapedCard(noticia);
+                } else if (isPublished) {
+                    return renderPublishedCard(noticia);
                 }
-            });
+                return '';
+            }).join('');
+        }
 
-            // Evento de clique no Logout
-            logoutButton.addEventListener('click', async () => {
-                await supabase.auth.signOut();
-                // O onAuthStateChange vai cuidar de esconder o painel
-            });
+        // Renderizar card de notícia scraped
+        function renderScrapedCard(noticia) {
+            const statusClass = `status-${noticia.status}`;
+            return `
+                <div class="noticia-card scraped-card">
+                    <div class="type-badge type-scraped">SCRAPED</div>
+                    <div class="noticia-title">${noticia.titulo_reescrito || noticia.titulo_original}</div>
+                    <div class="noticia-content">${(noticia.resumo_reescrito || noticia.resumo_original || '').substring(0, 200)}...</div>
+                    <div class="noticia-meta">
+                        <span class="status-badge ${statusClass}">${noticia.status}</span>
+                        <br>
+                        <strong>Fonte:</strong> ${noticia.fonte}<br>
+                        <strong>Categoria:</strong> ${noticia.categoria}<br>
+                        <strong>Coletado:</strong> ${new Date(noticia.data_coleta || noticia.created_at).toLocaleString('pt-BR')}<br>
+                        <strong>URL:</strong> <a href="${noticia.url_original}" target="_blank" style="color: #059669;">Ver original</a>
+                    </div>
+                    <div class="noticia-actions">
+                        ${noticia.status === 'processado' ? `<button class="publish-button" onclick="publishScrapedNoticia(${noticia.id})">📰 Publicar</button>` : ''}
+                        <button onclick="viewNoticia('scraped', ${noticia.id})">👁️ Ver</button>
+                        <button class="danger-button" onclick="deleteScrapedNoticia(${noticia.id})">🗑️ Excluir</button>
+                    </div>
+                </div>
+            `;
+        }
 
+        // Renderizar card de notícia publicada
+        function renderPublishedCard(noticia) {
+            return `
+                <div class="noticia-card published-card">
+                    <div class="type-badge type-manual">PUBLICADA</div>
+                    <div class="noticia-title">${noticia.title}</div>
+                    <div class="noticia-content">${(noticia.content || '').substring(0, 200)}...</div>
+                    <div class="noticia-meta">
+                        <strong>Categoria:</strong> ${noticia.category}<br>
+                        <strong>Publicado:</strong> ${new Date(noticia.created_at).toLocaleString('pt-BR')}
+                    </div>
+                    <div class="noticia-actions">
+                        <button onclick="viewNoticia('published', ${noticia.id})">👁️ Ver</button>
+                        <button onclick="editNoticia(${noticia.id})">✏️ Editar</button>
+                        <button class="danger-button" onclick="deleteNoticia(${noticia.id})">🗑️ Excluir</button>
+                    </div>
+                </div>
+            `;
+        }
 
-          // --- 2. LÓGICA DE SCRAPING (VERSÃO CORRIGIDA) ---
-        const scrapeMessage = document.getElementById('scrape-message');
-        const scrapeButtons = document.querySelectorAll('.scrape-btn');
+        // Atualizar estatísticas
+        function updateStats() {
+            const scrapedPending = allNoticiasData.scraped.filter(n => n.status === 'processado').length;
+            const published = allNoticiasData.published.length;
+            const today = new Date().toISOString().split('T')[0];
+            const todayCount = [...allNoticiasData.scraped, ...allNoticiasData.published]
+                .filter(n => (n.created_at || n.data_coleta)?.startsWith(today)).length;
 
-        // Mapeia os botões para as URLs reais de scraping
-        const sourceMap = {
-            "g1_am": "https://g1.globo.com/am/amazonas/",
-            "holanda": "https://portaldo-holanda.com.br/amazonas",
-            "18horas": "https://www.portalele-18horas.com.br/",
-            "agencia_am": "https://www.agenciaamazonas.am.gov.br/"
-            // Adicione ou corrija as URLs conforme necessário
-        };
+            document.getElementById('statScraped').textContent = scrapedPending;
+            document.getElementById('statPublished').textContent = published;
+            document.getElementById('statToday').textContent = todayCount;
+        }
 
-        scrapeButtons.forEach(button => {
-            button.addEventListener('click', async () => {
-                const source = button.dataset.source;
-                const urlParaRaspar = sourceMap[source]; // Pega a URL correta
+        // Função para fazer scrape de um portal
+        async function scrapePortal(url, sourceName) {
+            const statusEl = document.getElementById('scrapeStatus');
+            statusEl.classList.remove('hidden');
+            statusEl.textContent = `Buscando notícias do ${sourceName}... Aguarde.`;
 
-                if (!urlParaRaspar) {
-                    scrapeMessage.textContent = `Erro: Fonte '${source}' não definida no sourceMap do admin.html`;
-                    scrapeMessage.className = 'message error';
-                    scrapeMessage.style.display = 'block';
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) {
+                    alert('Você precisa estar logado para usar esta função');
                     return;
                 }
 
-                scrapeButtons.forEach(btn => btn.disabled = true);
-                scrapeMessage.textContent = `Buscando notícias de '${source}'... Isso pode levar até 30 segundos.`;
-                scrapeMessage.className = 'message';
-                scrapeMessage.style.display = 'block';
-
-                try {
-                    // Chamando a função com o body correto
-                    const { data, error } = await supabase.functions.invoke('scrape-and-rewrite', {
-                       body: {
-                           url: urlParaRaspar // <-- CORRIGIDO: Enviando a URL dinâmica
-                       }
-                    })
-
-                    if (error) throw error;
-                    
-                    // A 'data.message' agora vem da nossa função
-                    scrapeMessage.textContent = data.message || 'Sucesso! Notícias publicadas.';
-                    scrapeMessage.className = 'message success';
-                    
-                    // Recarrega a lista de posts para mostrar os novos
-                    // que agora estarão visíveis por causa do user_id!
-                    await loadManagedPosts();
-
-                } catch (error) {
-                    console.error("Erro ao chamar Edge Function:", error);
-                    scrapeMessage.textContent = `Erro: ${error.message || 'Falha ao chamar a função.'}`;
-                    scrapeMessage.className = 'message error';
-                } finally {
-                    scrapeButtons.forEach(btn => btn.disabled = false);
-                    setTimeout(() => { scrapeMessage.style.display = 'none'; }, 5000);
-                }
-            });
-        });
-
-            
-            // --- 3. LÓGICA DE PUBLICAÇÃO MANUAL (O seu código original) ---
-            const newsForm = document.getElementById('news-form');
-            const submitButton = document.getElementById('submit-button');
-            const loadingSubmit = document.getElementById('loading-submit');
-            const feedbackMessage = document.getElementById('feedback-message');
-            const newsTitle = document.getElementById('news-title');
-            const newsCategory = document.getElementById('news-category');
-            const newsHeadlineColor = document.getElementById('news-headline-color');
-            const newsContent = document.getElementById('news-content');
-            const newsImageInput = document.getElementById('news-image');
-            const newsGalleryInput = document.getElementById('news-gallery');
-
-            newsForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                
-                submitButton.disabled = true;
-                loadingSubmit.style.display = 'block';
-                feedbackMessage.style.display = 'none';
-
-                try {
-                    // 1. Upload Imagem Principal
-                    const mainImageFile = newsImageInput.files[0];
-                    let mainImageUrl = null;
-                    if (mainImageFile) {
-                        mainImageUrl = await uploadMedia(mainImageFile);
-                    }
-
-                    // 2. Upload Galeria
-                    const galleryFiles = Array.from(newsGalleryInput.files).slice(0, 10);
-                    let galleryUrls = [];
-                    if (galleryFiles.length > 0) {
-                        const uploadPromises = galleryFiles.map(file => uploadMedia(file));
-                        galleryUrls = await Promise.all(uploadPromises);
-                    }
-
-                    // 3. Monta o objeto
-                    const newPost = {
-                        title: newsTitle.value,
-                        content: newsContent.value,
-                        category: newsCategory.value,
-                        image_url: mainImageUrl,
-                        headline_color: newsHeadlineColor.value,
-                        gallery_urls: galleryUrls.length > 0 ? galleryUrls : null
-                    };
-
-                    // 4. Insere no DB
-                    const { error } = await supabase.from(DB_TABLE).insert(newPost);
-                    if (error) throw error;
-
-                    showMessage('Sucesso! Notícia publicada manualmente.', 'success');
-                    newsForm.reset();
-                    await loadManagedPosts(); // Recarrega a lista
-
-                } catch (err) {
-                    console.error("Erro ao publicar:", err);
-                    if (err.message.includes("permission denied")) {
-                         showMessage('Erro: Permissão negada. Verifique as regras RLS no Supabase.', 'error');
-                    } else {
-                         showMessage(`Erro: ${err.message}`, 'error');
-                    }
-                } finally {
-                    submitButton.disabled = false;
-                    loadingSubmit.style.display = 'none';
-                }
-            });
-
-            // Função de Upload
-            async function uploadMedia(file) {
-                if (!file) return null;
-                const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-                
-                const { data, error } = await supabase.storage
-                    .from(STORAGE_BUCKET)
-                    .upload(fileName, file);
-
-                if (error) throw new Error(`Erro no upload: ${error.message}`);
-                
-                const { data: publicUrlData } = supabase.storage
-                    .from(STORAGE_BUCKET)
-                    .getPublicUrl(data.path);
-                    
-                return publicUrlData.publicUrl;
-            }
-
-            
-            // --- 4. LÓGICA DE GERENCIAMENTO (O seu código original) ---
-            const loadingManage = document.getElementById('loading-manage');
-            const postListContainer = document.getElementById('post-list-container');
-            
-            postListContainer.addEventListener('click', handleDeleteClick);
-
-            async function loadManagedPosts() {
-                loadingManage.style.display = 'block';
-                postListContainer.innerHTML = '';
-
-
-
-                const { data: posts, error } = await supabase
-                    .from(DB_TABLE)
-                    .select('id, title, created_at')
-                    .order('created_at', { ascending: false });
-                
-                loadingManage.style.display = 'none';
-
-                if (error) {
-                    console.error("Erro ao carregar posts:", error);
-                    postListContainer.innerHTML = `<p style="color: red; padding: 1rem;">Erro ao carregar posts.</p>`;
-                    return;
-                }
-
-
-                if (posts.length === 0) {
-                     postListContainer.innerHTML = `<p style="color: var(--texto-secundario); padding: 1rem;">Nenhum post publicado.</p>`;
-                     return;
-                }
-
-                posts.forEach(post => {
-                    const postEl = document.createElement('div');
-                    postEl.className = 'post-item';
-                    postEl.innerHTML = `
-                        <span>${post.title}</span>
-                        <button class="delete-post-btn" data-id="${post.id}">Apagar</button>
-                    `;
-                    postListContainer.appendChild(postEl);
+                const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
+                    },
+                    body: JSON.stringify({ url: url })
                 });
-            }
 
-            async function handleDeleteClick(event) {
-                if (!event.target.classList.contains('delete-post-btn')) return;
+                const data = await response.json();
 
-                const button = event.target;
-                const postId = button.dataset.id;
-                
-                if (!confirm("Tem certeza que deseja apagar este post?")) return;
-
-                button.disabled = true;
-                button.innerText = 'Apagando...';
-
-                try {
-
-
-                    const { error } = await supabase
-                        .from(DB_TABLE)
-                        .delete()
-                        .eq('id', postId);
-                    
-                    if (error) {
-
-
-                        if (error.message.includes("permission denied")) {
-                            throw new Error("Permissão negada. Verifique as regras RLS (DELETE).");
-                        }
-                        throw error;
-                    }
-
-                    button.closest('.post-item').remove();
-                    showMessage('Post apagado com sucesso.', 'success');
-
-                } catch (err) {
-                    console.error("Erro ao apagar:", err);
-                    showMessage(`Erro ao apagar: ${err.message}`, 'error');
-                    button.disabled = false;
-                    button.innerText = 'Apagar';
+                if (response.ok) {
+                    statusEl.textContent = `✅ Sucesso! ${data.stats?.processadas_com_sucesso || 1} notícias coletadas do ${sourceName}.`;
+                    statusEl.style.color = 'green';
+                    setTimeout(() => loadAllNoticias(), 1000);
+                } else {
+                    statusEl.textContent = `❌ Erro: ${data.error || data.message}`;
+                    statusEl.style.color = 'red';
                 }
+
+            } catch (error) {
+                statusEl.textContent = `❌ Erro na requisição: ${error.message}`;
+                statusEl.style.color = 'red';
+                console.error('Erro:', error);
             }
 
-            // --- 5. Funções de Feedback ---
-            function showMessage(text, type) {
-                feedbackMessage.innerText = text;
-                feedbackMessage.className = `message ${type}`;
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
 
+        // Publicar notícia scraped (move para noticias)
+        async function publishScrapedNoticia(scrapedId) {
+            if (!confirm('Publicar esta notícia no site?')) return;
 
-                feedbackMessage.style.display = 'block';
+            try {
+                const scraped = allNoticiasData.scraped.find(n => n.id === scrapedId);
+                if (!scraped) throw new Error('Notícia não encontrada');
 
+                // Insere na tabela noticias
+                const { error: insertError } = await supabaseClient
+                    .from('noticias')
+                    .insert({
+                        title: scraped.titulo_reescrito,
+                        content: scraped.resumo_reescrito || scraped.resumo_original,
+                        category: scraped.categoria,
+                        image_url: scraped.imagem_url
+                    });
 
-                setTimeout(() => { feedbackMessage.style.display = 'none'; }, 3000);
+                if (insertError) throw insertError;
+
+                // Atualiza status da scraped
+                const { error: updateError } = await supabaseClient
+                    .from('noticias_scraped')
+                    .update({ status: 'publicado' })
+                    .eq('id', scrapedId);
+
+                if (updateError) throw updateError;
+
+                alert('Notícia publicada com sucesso!');
+                loadAllNoticias();
+                
+            } catch (error) {
+                alert('Erro ao publicar: ' + error.message);
+                console.error('Erro:', error);
             }
+        }
+
+        // Excluir notícia scraped
+        async function deleteScrapedNoticia(scrapedId) {
+            if (!confirm('Excluir esta notícia scraped permanentemente?')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('noticias_scraped')
+                    .delete()
+                    .eq('id', scrapedId);
+
+                if (error) throw error;
+
+                alert('Notícia scraped excluída!');
+                loadAllNoticias();
+            } catch (error) {
+                alert('Erro ao excluir: ' + error.message);
+            }
+        }
+
+        // Publicar notícia manual
+        async function publishManualNoticia() {
+            const title = document.getElementById('manualTitle').value;
+            const content = document.getElementById('manualContent').value;
+            const category = document.getElementById('manualCategory').value;
+
+            if (!title || !content) {
+                alert('Preencha título e conteúdo!');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('noticias')
+                    .insert({
+                        title: title,
+                        content: content,
+                        category: category
+                    });
+
+                if (error) throw error;
+
+                alert('Notícia manual publicada!');
+                document.getElementById('manualTitle').value = '';
+                document.getElementById('manualContent').value = '';
+                
+                showTab('manage');
+                loadAllNoticias();
+
+            } catch (error) {
+                alert('Erro ao publicar: ' + error.message);
+            }
+        }
+
+        // Funções auxiliares
+        function viewNoticia(type, id) {
+            const noticia = type === 'scraped' 
+                ? allNoticiasData.scraped.find(n => n.id === id)
+                : allNoticiasData.published.find(n => n.id === id);
             
-            function showLoginMessage(text, type) {
-                loginFeedback.innerText = text;
-                loginFeedback.className = `message ${type}`;
-                loginFeedback.style.display = 'block';
+            if (noticia) {
+                const title = type === 'scraped' 
+                    ? (noticia.titulo_reescrito || noticia.titulo_original)
+                    : noticia.title;
+                const content = type === 'scraped'
+                    ? (noticia.resumo_reescrito || noticia.resumo_original)
+                    : noticia.content;
+                
+                alert(`TÍTULO: ${title}\n\nCONTEÚDO:\n${content}`);
             }
-        });
+        }
 
-        // SCRIPT PARA TESTAR A FUNÇÃO NO ADMIN.HTML
-// Adicione este código no seu admin.html dentro de uma tag <script>
+        function editNoticia(id) {
+            alert('Função de edição ainda não implementada. ID: ' + id);
+        }
 
-async function testarScrapeFuncao() {
-  try {
-    // 1. Primeiro, obter o token do usuário autenticado
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      console.error('Usuário não está autenticado:', sessionError);
-      alert('Você precisa estar logado para usar esta função');
-      return;
-    }
+        async function deleteNoticia(id) {
+            if (!confirm('Excluir esta notícia publicada?')) return;
 
-    console.log('Token obtido:', session.access_token);
+            try {
+                const { error } = await supabaseClient
+                    .from('noticias')
+                    .delete()
+                    .eq('id', id);
 
-    // 2. Chamar a Edge Function com o token correto
-    const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
-      },
-      body: JSON.stringify({
-        url: 'https://g1.globo.com/am/amazonas/noticia/2025/10/03/alguma-noticia-real.ghtml'
-      })
-    });
+                if (error) throw error;
 
-    const data = await response.json();
-    console.log('Resposta da função:', data);
-
-    if (response.ok) {
-      alert('Sucesso! Notícia processada: ' + data.message);
-    } else {
-      alert('Erro: ' + (data.error || data.message || 'Erro desconhecido'));
-    }
-
-  } catch (error) {
-    console.error('Erro na requisição:', error);
-    alert('Erro na requisição: ' + error.message);
-  }
-}
-
-// Para testar, adicione um botão no HTML:
-// <button onclick="testarScrapeFuncao()">Testar Scrape G1</button>
+                alert('Notícia excluída!');
+                loadAllNoticias();
+            } catch (error) {
+                alert('Erro ao excluir: ' + error.message);
+            }
+        }
+    </script>
 
 
-   </script>
 
 
 
@@ -490,7 +601,11 @@ async function testarScrapeFuncao() {
 
 
 
+
+
+
+
+
+
+
 </html>
-
-
-
