@@ -3,7 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // Importa o createClient da biblioteca supabase-js v2
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 // Importa o parser de HTML (lendo do arquivo local que baixamos)
-import { DOMParser } from "../_shared/deno-dom-wasm.ts";
+import { DOMParser } from "https://deno.land/x/deno_dom/deno-dom-wasm.ts";
 
 // Interface para os dados da notícia
 interface NoticiaData {
