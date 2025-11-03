@@ -423,6 +423,53 @@
             }
         });
 
+        // SCRIPT PARA TESTAR A FUNÇÃO NO ADMIN.HTML
+// Adicione este código no seu admin.html dentro de uma tag <script>
+
+async function testarScrapeFuncao() {
+  try {
+    // 1. Primeiro, obter o token do usuário autenticado
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('Usuário não está autenticado:', sessionError);
+      alert('Você precisa estar logado para usar esta função');
+      return;
+    }
+
+    console.log('Token obtido:', session.access_token);
+
+    // 2. Chamar a Edge Function com o token correto
+    const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
+      },
+      body: JSON.stringify({
+        url: 'https://g1.globo.com/am/amazonas/noticia/2025/10/03/alguma-noticia-real.ghtml'
+      })
+    });
+
+    const data = await response.json();
+    console.log('Resposta da função:', data);
+
+    if (response.ok) {
+      alert('Sucesso! Notícia processada: ' + data.message);
+    } else {
+      alert('Erro: ' + (data.error || data.message || 'Erro desconhecido'));
+    }
+
+  } catch (error) {
+    console.error('Erro na requisição:', error);
+    alert('Erro na requisição: ' + error.message);
+  }
+}
+
+// Para testar, adicione um botão no HTML:
+// <button onclick="testarScrapeFuncao()">Testar Scrape G1</button>
+
 
    </script>
 

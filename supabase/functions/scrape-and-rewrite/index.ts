@@ -3,10 +3,9 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // Importa o createClient da biblioteca supabase-js v2
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Interface para os dados da notícia
+// Interface para os dados da notícia (SEM CATEGORIA)
 interface NoticiaData {
   url_original: string;
-  categoria?: string;
   titulo_original?: string;
   conteudo_original?: string;
   titulo_reescrito?: string;
@@ -81,7 +80,7 @@ function extractContentWithRegex(html: string): { titulo: string; conteudo: stri
     }
 
     console.log('Título extraído:', titulo);
-    console.log('Conteúdo extraído (primeiros 200 chars):', conteudo.substring(0, 200));
+    console.log('Conteúdo extraído (primeiros 300 chars):', conteudo.substring(0, 300));
 
   } catch (error) {
     console.error('Erro na extração de conteúdo:', error);
@@ -90,7 +89,7 @@ function extractContentWithRegex(html: string): { titulo: string; conteudo: stri
   return { titulo, conteudo };
 }
 
-// --- FUNÇÃO DE REESCRITA COM IA (GROK) ---
+// --- FUNÇÃO DE REESCRITA COM IA (GROK) - CORRIGIDA ---
 async function rewriteWithGrok(titulo: string, conteudo: string): Promise<GrokResponse> {
   const GROK_API_KEY = Deno.env.get("GROK_API_KEY"); 
   if (!GROK_API_KEY) {
@@ -101,16 +100,15 @@ async function rewriteWithGrok(titulo: string, conteudo: string): Promise<GrokRe
     };
   }
 
-  const prompt = `
-    Você é um jornalista assistente para o portal "SeligaManaux", um site de notícias de Manaus.
-    Sua tarefa é reescrever a seguinte notícia. Não copie o texto, inspire-se nele.
-    O tom deve ser direto, informativo e popular, focado no público manauara.
-    Retorne APENAS um objeto JSON com as chaves "titulo" e "conteudo".
+  // PROMPT MAIS CLARO E ESPECÍFICO
+  const prompt = `Você é um jornalista para o site "SeligaManaux" de Manaus.
+Reescreva a notícia abaixo de forma clara e objetiva.
+Retorne apenas um objeto JSON válido com "titulo" e "conteudo".
 
-    Notícia Original:
-    Título: ${titulo}
-    Conteúdo: ${conteudo.substring(0, 2000)}...
-  `;
+Título original: ${titulo}
+Conteúdo: ${conteudo.substring(0, 1500)}
+
+Responda apenas com JSON válido, sem explicações extras.`;
 
   try {
     console.log('Enviando para Grok API...');
@@ -121,28 +119,42 @@ async function rewriteWithGrok(titulo: string, conteudo: string): Promise<GrokRe
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "mixtral-8x7b-32768",
+        model: "llama3-8b-8192", // Modelo mais estável
         messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.7,
+        temperature: 0.3, // Menos criativo, mais consistente
+        max_tokens: 1000, // Limite menor para evitar erros
       }),
     });
 
     if (!response.ok) {
-      console.error(`Erro na API Grok: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`Erro na API Grok: ${response.status} ${response.statusText}`, errorText);
       throw new Error(`Erro na API Grok: ${response.statusText}`);
     }
 
     const data = await response.json();
-    const jsonResponse = JSON.parse(data.choices[0].message.content);
-    console.log('Resposta da Grok recebida com sucesso');
-    return jsonResponse as GrokResponse;
+    console.log('Resposta da Grok recebida');
+    
+    let content = data.choices[0].message.content;
+    
+    // Tenta parsear como JSON
+    try {
+      const jsonResponse = JSON.parse(content);
+      return jsonResponse as GrokResponse;
+    } catch (parseError) {
+      console.error('Erro ao parsear JSON da Grok:', parseError);
+      // Fallback: retorna título e conteúdo originais
+      return {
+        titulo: titulo,
+        conteudo: conteudo,
+      };
+    }
 
   } catch (error) {
     console.error("Erro ao reescrever com Grok:", error);
     return {
-      titulo: `${titulo}`,
-      conteudo: `${conteudo}`,
+      titulo: titulo,
+      conteudo: conteudo,
     };
   }
 }
@@ -277,10 +289,9 @@ Deno.serve(async (req) => {
     // 7. REESCRITA COM IA
     const { titulo: tituloReescrito, conteudo: conteudoReescrito } = await rewriteWithGrok(titulo, conteudo);
 
-    // 8. SALVAMENTO NO BANCO DE DADOS
+    // 8. SALVAMENTO NO BANCO DE DADOS (SEM CATEGORIA)
     const dadosNoticia: NoticiaData = {
       url_original: targetUrl,
-      categoria: "Geral", 
       titulo_original: titulo,
       conteudo_original: conteudo,
       titulo_reescrito: tituloReescrito,
