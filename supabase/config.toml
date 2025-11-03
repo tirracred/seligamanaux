@@ -1,0 +1,2 @@
+[functions.scrape-and-rewrite]
+verify_jwt = false
