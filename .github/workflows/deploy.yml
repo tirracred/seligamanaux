@@ -3,22 +3,25 @@ name: Deploy Supabase Function
 on:
   push:
     branches:
-      - "main" # Mude para "master" se o seu branch principal tiver esse nome
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # ESTA É A AÇÃO OFICIAL E CORRETA
-      - name: Deploy Supabase Function
-        uses: supabase/github-action@v1.x # Usa a Ação Oficial
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
         with:
-          # O comando que queremos rodar
-          args: |
-            functions deploy scrape-and-rewrite --project-id $SUPABASE_PROJECT_ID --no-verify-jwt
+          version: latest
+      
+      - name: Deploy Edge Function
+        run: supabase functions deploy scrape-and-rewrite --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
