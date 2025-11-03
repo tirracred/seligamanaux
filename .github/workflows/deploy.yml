@@ -1,9 +1,7 @@
 name: Deploy Supabase Function
 
-
 on:
   push:
-
     branches:
       - "main" # Mude para "master" se o seu branch principal tiver esse nome
 
@@ -14,16 +12,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ESTA É A AÇÃO CORRETA E SIMPLES
+      # ESTA É A AÇÃO OFICIAL E CORRETA
       - name: Deploy Supabase Function
-        uses: supabase/functions-deploy-action@v1
+        uses: supabase/github-action@v1.x # Usa a Ação Oficial
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         with:
-          # Pega os segredos que você configurou no GitHub
-          project_id: ${{ secrets.SUPABASE_PROJECT_ID }}
-          token: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          
-          # Especifica qual função fazer o deploy
-          function_name: scrape-and-rewrite
-          
-          # A flag que estávamos usando no terminal
-          no_verify_jwt: true
+          # O comando que queremos rodar
+          args: |
+            functions deploy scrape-and-rewrite --project-id $SUPABASE_PROJECT_ID --no-verify-jwt
