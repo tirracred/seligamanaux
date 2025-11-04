@@ -176,7 +176,40 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
     ],
     category: "Amazônia",
   },
+
+  "d24am.com": {
+  name: "D24AM",
+  baseUrl: "https://d24am.com/amazonas",
+  linkSelectors: [
+    'a[href*="/amazonas/"]',
+    'a[href*="/manaus/"]',
+    'a[href*="/noticias/"]',
+    "article a",
+    "h2 a",
+    "h3 a"
+  ],
+  titleSelectors: [
+    "h1.entry-title",
+    "h1.post-title",
+    "h1",
+    ".article-title"
+  ],
+  contentSelectors: [
+    ".entry-content",
+    ".post-content",
+    "article .content",
+    'div[itemprop="articleBody"]'
+  ],
+  imageSelectors: [
+    'meta[property="og:image"]',
+    ".post-thumbnail img",
+    "article img"
+  ],
+  category: "Amazonas"
+},
 };
+
+
 
 /* =========================
    Filtros anti-promo/institucional
@@ -234,6 +267,46 @@ function looksPromotional(text: string) {
   return /publieditorial|publicidade|assessoria de imprensa|assine|clique aqui|programação|assista ao/i.test(
     x,
   );
+}
+
+function looksPromotional(text: string) {
+  const x = (text || "").toLowerCase();
+  return /publieditorial|publicidade|assessoria de imprensa|assine|clique aqui|programação|assista ao|patrocinado|publipost|oferecimento|oferecido por|parceria/i.test(x);
+}
+
+
+// --- NORMALIZAÇÃO / HIGIENE DE TEXTO ---
+// remove créditos, "Foto:", "Com informações de...", "Leia mais", menções de rede, etc
+function stripSourceArtifacts(t: string): string {
+  return (t || "")
+    .replace(/\s+—\s*Foto:.*?(?=\.|\n|$)/gi, "")
+    .replace(/—\s*Foto.*?$/gim, "")
+    .replace(/^\s*Foto:.*$/gim, "")
+    .replace(/^\s*Crédito:.*$/gim, "")
+    .replace(/^\s*Fonte:.*$/gim, "")
+    .replace(/^\s*Com informações de.*$/gim, "")
+    .replace(/^\s*Leia mais:.*$/gim, "")
+    .replace(/\b(g1|globonews|rede amazônica|rede amaz\u00f4nica)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function normalizeText(t: string) {
+  return (t || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// “barreira anti-cópia”: se estiver muito parecido, pedimos reescrita novamente
+function tooSimilar(a: string, b: string): boolean {
+  const A = new Set(normalizeText(a).split(" "));
+  const B = new Set(normalizeText(b).split(" "));
+  let inter = 0;
+  for (const w of A) if (B.has(w)) inter++;
+  const min = Math.max(1, Math.min(A.size, B.size));
+  return inter / min > 0.80; // >80% das palavras em comum
 }
 
 /* =========================
@@ -529,74 +602,107 @@ function extractContentWithRegex(
 /* =========================
    Reescrita com Groq
    ========================= */
-async function rewriteWithGroq(
-  titulo: string,
-  conteudo: string,
-  fonte: string,
-): Promise<GroqResponse> {
+async function rewriteWithGroq(titulo: string, conteudo: string, fonte: string): Promise<GroqResponse> {
   const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
   if (!GROQ_API_KEY) {
     console.error("GROQ_API_KEY não está definida");
     return { titulo, conteudo };
   }
 
-  const system =
-    "Você é um editor jornalístico. Reescreva em PT-BR, sem publicidade. Tamanho alvo entre 1800 e 4000 caracteres.";
-  const user = `Fonte: ${fonte}
+  // Entrada já higienizada
+  const base = stripSourceArtifacts(conteudo);
+  const MIN_CHARS = 2000;
+  const MAX_CHARS = 4000;
+
+  const system = [
+    "Você é editor sênior do portal SeligaManaux.",
+    "Reescreva a matéria em PT-BR jornalístico, SEM copiar frases do original.",
+    "Proibido reproduzir 12+ palavras consecutivas do texto base.",
+    "Mantenha fatos e dados, mas mude ordem, estruturas e vocabulário.",
+    "Produza entre 2000 e 4000 caracteres.",
+    "Formatação: título forte + parágrafos curtos (2-3 frases). Nada de bullets.",
+    "Não inclua créditos de foto, chamadas de programação, 'leia mais', nem nomes de rede de TV.",
+  ].join(" ");
+
+  function userPrompt(nivel: "normal" | "refaco") {
+    const reforco =
+      nivel === "refaco"
+        ? "Reescreva DE OUTRO JEITO, mude completamente a estrutura. Use sinônimos, variações sintáticas e altere a ordem das informações. Garanta novidade textual clara."
+        : "Reescreva com tom local (Manaus/AM) quando fizer sentido, abrindo com um lide que resuma o essencial em 2-3 frases.";
+
+    return `FONTE: ${fonte}
 TÍTULO ORIGINAL: ${titulo}
-TEXTO ORIGINAL (limpo):
-${conteudo.slice(0, 7000)}
 
-Responda SOMENTE um JSON com as chaves:
-{"titulo": "...", "conteudo": "... (artigo 1800-4000 caracteres)"}
-Se for publieditorial/anúncio, responda exatamente {"titulo":"CONTEÚDO IGNORADO","conteudo":"publieditorial"}.`;
+TEXTO BASE (higienizado):
+${base.slice(0, 7000)}
 
-  async function callGroq(model: string) {
-    const resp = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-          temperature: 0.2,
-          max_tokens: 1400,
-          response_format: { type: "json_object" },
-        }),
-      },
-    );
+TAREFA:
+${reforco}
+
+Entregue APENAS um JSON válido:
+{
+  "titulo": "título novo, chamativo e diferente do original",
+  "conteudo": "artigo final entre ${MIN_CHARS} e ${MAX_CHARS} caracteres, em parágrafos. Sem créditos de foto ou chamadas de programação."
+}
+
+Se o texto base for anúncio/publieditorial, responda exatamente:
+{"titulo":"CONTEÚDO IGNORADO","conteudo":"publieditorial"}`;
+  }
+
+  async function callGroq(model: string, nivel: "normal" | "refaco", temperature = 0.25) {
+    const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userPrompt(nivel) }
+        ],
+        temperature,
+        max_tokens: 1800,
+        response_format: { type: "json_object" }
+      })
+    });
     if (!resp.ok) throw new Error(`Groq API ${resp.status}`);
     const data = await resp.json();
     let content = data?.choices?.[0]?.message?.content || "";
-    if (!content.trim().startsWith("{")) {
-      content = content.match(/{[\s\S]*}/)?.[0] || "{}";
-    }
+    if (!content.trim().startsWith("{")) content = content.match(/{[\s\S]*}/)?.[0] || "{}";
     return JSON.parse(content) as GroqResponse;
   }
 
   try {
-    let out = await callGroq("llama-3.1-70b-versatile");
+    // 1ª tentativa (modelo maior)
+    let out = await callGroq("llama-3.1-70b-versatile", "normal", 0.25);
     if (out?.conteudo === "publieditorial") return out;
 
-    let len = (out?.conteudo || "").replace(/\s+/g, " ").length;
-    if (!out?.titulo || len < 1700) {
-      // 2ª tentativa
-      out = await callGroq("llama-3.1-8b-instant");
-      if (out?.conteudo === "publieditorial") return out;
-      len = (out?.conteudo || "").replace(/\s+/g, " ").length;
-      if (!out?.titulo || len < 1700) throw new Error("Reescrita insuficiente");
+    const len1 = (out?.conteudo || "").replace(/\s+/g, " ").length;
+    if (!out?.titulo || len1 < MIN_CHARS || tooSimilar(base, out.conteudo)) {
+      // 2ª tentativa: refazer com mais “novidade”
+      out = await callGroq("llama-3.1-70b-versatile", "refaco", 0.35);
     }
+
+    // Fallback: 8b
+    let len2 = (out?.conteudo || "").replace(/\s+/g, " ").length;
+    if (!out?.titulo || len2 < MIN_CHARS || tooSimilar(base, out.conteudo)) {
+      out = await callGroq("llama-3.1-8b-instant", "refaco", 0.4);
+      len2 = (out?.conteudo || "").replace(/\s+/g, " ").length;
+      if (!out?.titulo || len2 < MIN_CHARS || tooSimilar(base, out.conteudo)) {
+        throw new Error("Reescrita insuficiente/parecida");
+      }
+    }
+
+    // Limitar teto (evita resposta grande demais)
+    if (out.conteudo.length > MAX_CHARS + 300) {
+      const cut = out.conteudo.slice(0, MAX_CHARS);
+      out.conteudo = cut.slice(0, cut.lastIndexOf("\n\n") > 0 ? cut.lastIndexOf("\n\n") : cut.length);
+    }
+    // última limpeza
+    out.conteudo = stripSourceArtifacts(out.conteudo);
     return out;
-  } catch (error) {
-    console.error("Erro Groq:", error);
-    return { titulo, conteudo };
+  } catch (e) {
+    console.error("Erro Groq:", e);
+    return { titulo, conteudo: base }; // fallback
   }
 }
 
@@ -757,9 +863,48 @@ Deno.serve(async (req) => {
     }
 
     // LINKS
-    const newsLinks = extractNewsLinks(htmlContent, portalConfig, 20).filter(
-      (url) => !existingUrlsSet.has(url),
-    );
+   // Tenta coletar links extras em páginas 2..4 para alguns portais
+function buildPaginationUrls(config: PortalConfig): string[] {
+  const origin = new URL(config.baseUrl).origin;
+  const base = config.baseUrl.replace(/\/+$/, "");
+  const urls: string[] = [];
+
+  for (let i = 2; i <= 4; i++) {
+    if (base.includes("portaldoholanda.com.br")) {
+      urls.push(`${origin}/amazonas?page=${i}`);
+    } else if (base.includes("portalamazonia.com")) {
+      urls.push(`${origin}/noticias/amazonas?page=${i}`);
+      urls.push(`${origin}/noticias/amazonas/page/${i}`);
+    } else if (base.includes("acritica.com")) {
+      urls.push(`${origin}/page/${i}`);
+      urls.push(`${origin}/noticias/page/${i}`);
+    } else if (base.includes("d24am.com")) {
+      urls.push(`${origin}/amazonas/page/${i}`);
+      urls.push(`${origin}/page/${i}`);
+    }
+  }
+  return urls;
+}
+
+let newsLinks = extractNewsLinks(htmlContent, portalConfig, 20);
+
+// Se veio pouco, tenta páginas seguintes
+if (newsLinks.length < 8) {
+  const morePages = buildPaginationUrls(portalConfig);
+  for (const u of morePages) {
+    try {
+      const html = await fetchHtmlPreferAmp(u, userAgent);
+      const extra = extractNewsLinks(html, portalConfig, 20);
+      newsLinks = Array.from(new Set([...newsLinks, ...extra]));
+      if (newsLinks.length >= 20) break;
+    } catch {
+      // ignora erros de páginas inexistentes
+    }
+  }
+}
+
+// remove URLs já processadas
+newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
 
     if (newsLinks.length === 0) {
       return new Response(
@@ -802,6 +947,7 @@ Deno.serve(async (req) => {
           newsHtml,
           portalConfig,
         );
+        
         if (titulo === "Título não encontrado" || conteudo.length < 100) {
           console.log("Conteúdo insuficiente, pulando...");
           continue;
@@ -810,6 +956,8 @@ Deno.serve(async (req) => {
           console.log("Descartado (promo/institucional).");
           continue;
         }
+        // Limpeza final antes de usar/resumir/enviar para IA
+        conteudo = stripSourceArtifacts(conteudo);
 
         const {
           titulo: tituloReescrito,
