@@ -200,9 +200,8 @@ function looksPromotional(text: string) {
   return /publieditorial|publicidade|assessoria de imprensa|assine|clique aqui|programação|assista ao/i.test(x);
 }
 
-if (isBlacklistedTitle(titulo) || looksPromotional(conteudo)) {
-  return { titulo: "CONTEÚDO IGNORADO", conteudo: "", resumo: "", imagem: "" };
-}
+
+
 
 // --- PREFERIR AMP (limpa scripts do G1) ---
 function ampCandidates(u: string) {
@@ -301,6 +300,9 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
   const clean = sanitizeHtml(html).replace(/glb\.cdnConfig[\s\S]*?(?:;|\})/gi, "");
   let titulo = "Título não encontrado";
   let conteudo = "Conteúdo não encontrado";
+  if (isBlacklistedTitle(titulo) || looksPromotional(conteudo)) {
+  return { titulo: "CONTEÚDO IGNORADO", conteudo: "", resumo: "", imagem: "" };
+}
   let resumo = "";
   let imagem = "";
 
