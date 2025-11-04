@@ -1,470 +1,631 @@
-<!doctype html>
-<html lang="pt-br" class="dark">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin | seligamanaux</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    :root { color-scheme: dark; }
-    .brand-red { background-color: #7a0a0a; }
-    .brand-accent { color: #e11d48; }
-    .brand-blue { color: #3b82f6; }
-    .card { background:#0b0b0b; border:1px solid #1f2937; border-radius:12px; }
-    .btn { border-radius:10px; padding:0.55rem 0.9rem; font-weight:600; }
-    .btn-red { background:#b91c1c; color:#fff; }
-    .btn-blue { background:#2563eb; color:#fff; }
-    .btn-green { background:#15803d; color:#fff; }
-    .btn-ghost { background:transparent; border:1px solid #374151; color:#e5e7eb; }
-    .btn:disabled { opacity:.6; cursor:not-allowed; }
-    .chip { border:1px solid #374151; border-radius:9999px; padding:.15rem .55rem; font-size:.75rem; }
-    .grid-news { display:grid; grid-template-columns: 1fr; gap:12px; }
-    @media(min-width:1024px){ .grid-news { grid-template-columns: 1.5fr 1fr; } }
-    .table { width:100%; border-collapse: collapse; }
-    .table th, .table td { border-bottom:1px solid #1f2937; padding:.6rem .5rem; text-align:left; vertical-align:top; }
-    .table tr:hover { background:#0f172a; }
-    .pill { padding:.15rem .5rem; border-radius:9999px; font-size:.75rem; }
-
-    /* line-clamp sem plugin do Tailwind */
-    .line-clamp-1, .line-clamp-2 {
-      display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .line-clamp-1 { -webkit-line-clamp: 1; }
-    .line-clamp-2 { -webkit-line-clamp: 2; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - SeligaManaux</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 30px; color: #dc2626; }
+        .auth-section { background: #262626; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .admin-section { background: #262626; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .scraped-section { background: #1f2937; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #059669; }
+        input, textarea, button, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #404040; background: #333; color: #fff; border-radius: 4px; }
+        button { background: #dc2626; cursor: pointer; font-weight: bold; }
+        button:hover { background: #b91c1c; }
+        .scrape-button { background: #059669; }
+        .scrape-button:hover { background: #047857; }
+        .publish-button { background: #7c3aed; }
+        .publish-button:hover { background: #6d28d9; }
+        .danger-button { background: #ef4444; }
+        .danger-button:hover { background: #dc2626; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .noticias-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .noticia-card { background: #333; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626; }
+        .scraped-card { background: #1f2937; border-left: 4px solid #059669; }
+        .noticia-title { font-weight: bold; margin-bottom: 10px; color: #fff; }
+        .noticia-content { color: #ccc; margin-bottom: 10px; max-height: 100px; overflow: hidden; }
+        .noticia-meta { font-size: 12px; color: #888; margin-bottom: 10px; }
+        .noticia-actions { display: flex; gap: 10px; }
+        .noticia-actions button { width: auto; padding: 8px 16px; margin: 0; }
+        .hidden { display: none; }
+        .loading { text-align: center; color: #888; padding: 20px; }
+        .source-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .status-processado { background: #059669; color: white; }
+        .status-pendente { background: #f59e0b; color: white; }
+        .status-publicado { background: #7c3aed; color: white; }
+        .noticia-image { width: 100%; max-height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 10px; }
+        .error-message { background: #dc2626; color: white; padding: 15px; border-radius: 4px; margin: 10px 0; }
+        .warning-box { background: #f59e0b; color: white; padding: 15px; border-radius: 4px; margin: 10px 0; }
+        .api-config { background: #374151; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
 </head>
-<body class="bg-black text-gray-100">
-  <header class="brand-red text-white">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-      <div class="text-2xl font-bold tracking-wider">seligamanaux</div>
-      <nav class="flex items-center gap-4 text-sm">
-        <span class="hidden md:inline text-gray-200">Administração de conteúdo</span>
-        <span class="chip">Dark mode</span>
-      </nav>
+<body>
+    <div class="container">
+        <h1>SeligaManaux - Admin</h1>
+
+        <div class="warning-box hidden">
+            <h3>🚨 IMPORTANTE: Configure as API Keys</h3>
+            <p>Se você está vendo erro "Invalid API key", precisa atualizar as keys do Supabase no código abaixo.</p>
+        </div>
+
+        <div class="api-config hidden">
+            <h3>🔧 Configuração de API Keys</h3>
+            <p>Vá no <strong>Supabase Dashboard > Settings > API</strong> e copie as keys aqui:</p>
+            <div class="form-group">
+                <label for="supabaseUrl">Supabase URL:</label>
+                <input type="text" id="supabaseUrl" value="https://xtnqypmezntjcidglblc.supabase.co" readonly>
+            </div>
+            <div class="form-group">
+                <label for="anonKey">Anon Key (Publishable):</label>
+                <input type="text" id="anonKey" placeholder="Copie a anon/publishable key do dashboard">
+            </div>
+            <button onclick="updateApiConfig()" style="background: #059669;">💾 Atualizar Configuração</button>
+        </div>
+
+        <div class="auth-section">
+            <div id="loginForm">
+                <h3>Login</h3>
+                <input type="email" id="email" placeholder="Email" value="tirra@tirracred.com.br">
+                <input type="password" id="password" placeholder="Senha" required>
+                <button onclick="login()">Entrar</button>
+                <p id="loginStatus"></p>
+            </div>
+            <div id="userInfo" class="hidden">
+                <p>Usuário logado: <span id="userEmail"></span></p>
+                <button onclick="logout()">Sair</button>
+            </div>
+        </div>
+
+        <div id="adminPanel" class="hidden">
+            <div class="scraped-section">
+                <h3>🤖 Buscar Notícias Automáticas</h3>
+                <p>Buscar, reescrever e salvar notícias dos principais portais de Manaus/Amazonas.</p>
+                
+                <div class="source-buttons">
+                    <button class="scrape-button" onclick="scrapePortal('https://g1.globo.com/am/amazonas/', 'G1 Amazonas')">📰 Buscar G1 Amazonas</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://portaldoholanda.com.br/amazonas', 'Portal do Holanda')">🌐 Buscar Portal do Holanda</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://www.acritica.com/', 'A Crítica')">📄 Buscar A Crítica</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia')">🌿 Buscar Portal Amazônia</button>
+                </div>
+
+                <div id="scrapeStatus" class="loading hidden">Buscando notícias... Aguarde.</div>
+            </div>
+
+            <div class="admin-section">
+                <h3>📋 Notícias Scraped Pendentes</h3>
+                <p>Notícias coletadas automaticamente que estão aguardando publicação.</p>
+                <button onclick="loadScrapedNoticias()" style="background: #059669;">🔄 Recarregar Scraped</button>
+                <div id="scrapedNoticias" class="noticias-container">
+                    <div class="loading">Carregando notícias scraped...</div>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3>✍️ Criar Notícia Manual</h3>
+                <div class="form-group">
+                    <label for="title">Título:</label>
+                    <input type="text" id="title" placeholder="Título da notícia">
+                </div>
+                <div class="form-group">
+                    <label for="content">Conteúdo:</label>
+                    <textarea id="content" rows="10" placeholder="Conteúdo da notícia"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="category">Categoria:</label>
+                    <select id="category">
+                        <option value="Geral">Geral</option>
+                        <option value="Política">Política</option>
+                        <option value="Economia">Economia</option>
+                        <option value="Esportes">Esportes</option>
+                        <option value="Cultura">Cultura</option>
+                        <option value="Amazonas">Amazonas</option>
+                    </select>
+                </div>
+                <button onclick="publishNoticia()">📝 Publicar Notícia</button>
+            </div>
+
+            <div class="admin-section">
+                <h3>📰 Notícias Publicadas</h3>
+                <button onclick="loadNoticias()">🔄 Recarregar Publicadas</button>
+                <div id="noticias" class="noticias-container">
+                    <div class="loading">Carregando notícias publicadas...</div>
+                </div>
+            </div>
+        </div>
     </div>
-  </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-6">
-    <section class="grid-news">
-      <!-- Coluna: Scraper e Ações -->
-      <div class="card p-4">
-        <h2 class="text-xl font-semibold mb-3">
-          Coleta e reescrita <span class="brand-accent">multi-portal</span>
-        </h2>
-        <p class="text-sm text-gray-400 mb-4">
-          Dispare a Edge Function por portal. Enviaremos <code>{ "portalId": "..." , "max": 8-15 }</code> no corpo do POST.
-        </p>
+    <script>
+        // Variáveis globais
+        let supabaseClient = null;
+        let currentSession = null;
 
-        <div class="mb-3 flex items-center gap-2">
-          <label class="text-sm text-gray-300">Qtd. itens por execução</label>
-          <input id="max-items" type="number" min="1" max="15" value="8"
-                 class="bg-black border border-gray-700 rounded px-2 py-1 w-20"/>
-        </div>
+        // Função para atualizar configuração da API (Não é mais necessária, mas mantida)
+        function updateApiConfig() {
+            const supabaseUrl = document.getElementById('supabaseUrl').value;
+            const anonKey = document.getElementById('anonKey').value;
 
-        <div id="portal-buttons" class="flex flex-wrap gap-2 mb-3"></div>
+            if (!supabaseUrl || !anonKey) {
+                alert('Preencha a URL e a Anon Key do Supabase!');
+                return;
+            }
 
-        <div class="text-xs text-gray-500">
-          Dica: se aparecer “Invalid API key”, confira a URL e a Anon Key nas Configurações e teste a conexão.
-        </div>
-      </div>
+            try {
+                // Cria novo cliente Supabase
+                const { createClient } = supabase;
+                supabaseClient = createClient(supabaseUrl, anonKey, {
+                    auth: {
+                        persistSession: true,
+                        autoRefreshToken: true,
+                        detectSessionInUrl: true
+                    }
+                });
 
-      <!-- Coluna: Configurações -->
-      <div class="card p-4">
-        <h2 class="text-xl font-semibold mb-3">
-          Configurações <span class="brand-blue">Supabase</span>
-        </h2>
-        <div class="grid md:grid-cols-1 gap-3">
-          <div>
-            <label class="text-sm text-gray-300">SUPABASE_URL</label>
-            <input id="cfg-url" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
-                   placeholder="https://xxxxx.supabase.co"/>
-          </div>
-          <div>
-            <label class="text-sm text-gray-300">SUPABASE_ANON_KEY</label>
-            <input id="cfg-key" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
-                   placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
-          </div>
-          <div>
-            <label class="text-sm text-gray-300">EDGE_FN_URL (POST)</label>
-            <input id="cfg-edge" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
-                   placeholder="/functions/v1/scraper" />
-          </div>
-          <div class="flex gap-2">
-            <button class="btn btn-green" onclick="saveConfig()">Salvar</button>
-            <button class="btn btn-blue" onclick="testConnection()">Testar conexão</button>
-            <button class="btn btn-ghost" onclick="clearConfig()">Limpar</button>
-          </div>
-          <div id="cfg-status" class="text-sm text-gray-400"></div>
-        </div>
-      </div>
-    </section>
+                // Salva no localStorage para próximas sessões
+                localStorage.setItem('supabase_url', supabaseUrl);
+                localStorage.setItem('supabase_anon_key', anonKey);
 
-    <!-- Filtros e Lista -->
-    <section class="card p-4 mt-6">
-      <div class="flex flex-col md:flex-row md:items-end gap-3 mb-4">
-        <div class="flex-1">
-          <label class="text-sm text-gray-300">Busca por título</label>
-          <input id="search" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
-                 placeholder="Digite parte do título reescrito..." />
-        </div>
-        <div>
-          <label class="text-sm text-gray-300">Status</label>
-          <select id="filter-status" class="bg-black border border-gray-700 rounded px-3 py-2">
-            <option value="todos">Todos</option>
-            <option value="gerado">Gerado</option>
-            <option value="ignorado">Ignorado</option>
-            <option value="aprovado">Aprovado</option>
-            <option value="rejeitado">Rejeitado</option>
-            <option value="publicado">Publicado</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-sm text-gray-300">Itens por página</label>
-          <select id="page-size" class="bg-black border border-gray-700 rounded px-3 py-2">
-            <option>10</option>
-            <option selected>20</option>
-            <option>50</option>
-          </select>
-        </div>
-        <div>
-          <button class="btn btn-blue" onclick="reload()">Aplicar</button>
-        </div>
-      </div>
+                alert('✅ Configuração atualizada! Agora faça login.');
+                
+                // Se já está logado, reconecta
+                if (currentSession) {
+                    loadScrapedNoticias();
+                    loadNoticias();
+                }
 
-      <div class="overflow-x-auto">
-        <table class="table text-sm" id="table-news">
-          <thead class="text-gray-300">
-            <tr>
-              <th style="width:28%">Título</th>
-              <th style="width:14%">Fonte</th>
-              <th style="width:12%">Coleta</th>
-              <th style="width:10%">Status</th>
-              <th style="width:10%">Tamanho</th>
-              <th style="width:26%">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-news"></tbody>
-        </table>
-      </div>
-
-      <div class="mt-4 flex items-center justify-between">
-        <div id="pager-info" class="text-xs text-gray-400">—</div>
-        <div class="flex gap-2">
-          <button class="btn btn-ghost" onclick="prevPage()">Anterior</button>
-          <button class="btn btn-ghost" onclick="nextPage()">Próxima</button>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="bg-white text-black">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-      <div class="font-semibold">seligamanaux</div>
-      <div class="text-sm">Admin • Conteúdo • Publicação</div>
-    </div>
-  </footer>
-
-  <!-- Supabase JS v2 (browser) -->
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
-    // ---------- Portais (botões gerados dinamicamente) ----------
-    const PORTAIS = [
-      { id: "g1-am", label: "G1 Amazonas" },
-      { id: "portaldoholanda", label: "Portal do Holanda" },
-      { id: "acritica", label: "A Crítica" },
-      { id: "portalamazonia", label: "Portal Amazônia" },
-    ];
-
-    // ---------- Estado ----------
-    let supabase = null;
-    let currentPage = 1;
-    let total = 0;
-
-    // ---------- DOM ----------
-    const elButtons = document.getElementById("portal-buttons");
-    const elMax = document.getElementById("max-items");
-    const elCfgUrl = document.getElementById("cfg-url");
-    const elCfgKey = document.getElementById("cfg-key");
-    const elCfgEdge = document.getElementById("cfg-edge");
-    const elCfgStatus = document.getElementById("cfg-status");
-    const elSearch = document.getElementById("search");
-    const elFilterStatus = document.getElementById("filter-status");
-    const elPageSize = document.getElementById("page-size");
-    const elTbody = document.getElementById("tbody-news");
-    const elPagerInfo = document.getElementById("pager-info");
-
-    // ---------- Config persistida ----------
-    function loadConfig() {
-      elCfgUrl.value = localStorage.getItem("SB_URL") || "";
-      elCfgKey.value = localStorage.getItem("SB_ANON") || "";
-      elCfgEdge.value = localStorage.getItem("EDGE_FN") || "/functions/v1/scraper";
-      initSupabase();
-    }
-
-    function saveConfig() {
-      localStorage.setItem("SB_URL", elCfgUrl.value.trim());
-      localStorage.setItem("SB_ANON", elCfgKey.value.trim());
-      localStorage.setItem("EDGE_FN", elCfgEdge.value.trim());
-      initSupabase();
-      toast("Configurações salvas.");
-    }
-
-    function clearConfig() {
-      localStorage.removeItem("SB_URL");
-      localStorage.removeItem("SB_ANON");
-      localStorage.removeItem("EDGE_FN");
-      elCfgUrl.value = "";
-      elCfgKey.value = "";
-      elCfgEdge.value = "/functions/v1/scraper";
-      supabase = null;
-      toast("Configurações limpas.");
-    }
-
-    function initSupabase() {
-      const url = elCfgUrl.value.trim();
-      const key = elCfgKey.value.trim();
-      if (!url || !key) {
-        elCfgStatus.textContent = "Configure SUPABASE_URL e ANON_KEY.";
-        return;
-      }
-      try {
-        supabase = createClient(url, key, { auth: { persistSession: false } });
-        elCfgStatus.textContent = "Cliente Supabase inicializado.";
-      } catch (e) {
-        elCfgStatus.textContent = "Falha ao inicializar Supabase: " + e;
-      }
-    }
-
-    async function testConnection() {
-      if (!supabase) { initSupabase(); }
-      if (!supabase) { return toast("Configuração incompleta."); }
-      const { error } = await supabase
-        .from("noticias_scraped")
-        .select("id", { count: "exact", head: true })
-        .limit(1);
-      elCfgStatus.textContent = error ? ("Erro: " + error.message) : "Conexão OK.";
-      toast(error ? ("Erro: " + error.message) : "Conexão OK.");
-    }
-
-    // ---------- Botões de Portais ----------
-    function renderPortalButtons() {
-      elButtons.innerHTML = "";
-      PORTAIS.forEach(p => {
-        const b = document.createElement("button");
-        b.className = "btn btn-red";
-        b.textContent = p.label;
-        b.onclick = () => scrapePortal(p.id, p.label, b);
-        elButtons.appendChild(b);
-      });
-    }
-
-    async function scrapePortal(portalId, label, btn) {
-      const edgeUrl = elCfgEdge.value.trim() || "/functions/v1/scraper";
-      const max = Math.min(Math.max(parseInt(elMax.value || "8", 10), 1), 15);
-      btn.disabled = true;
-      const prev = btn.textContent;
-      btn.textContent = `Processando ${label}...`;
-      try {
-        const res = await fetch(edgeUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ portalId, max })
-        });
-
-        let data = null;
-        try { data = await res.json(); } catch { /* resposta não-JSON */ }
-
-        if (!res.ok) {
-          const errMsg = (data && data.error) ? data.error : `HTTP ${res.status}`;
-          throw new Error(errMsg);
+            } catch (error) {
+                alert('❌ Erro ao configurar Supabase: ' + error.message);
+                console.error('Erro de configuração:', error);
+            }
         }
 
-        toast(`${label}: ${data?.processed ?? 0} itens processados.`);
-        reload();
-      } catch (e) {
-        toast(`Falha ao processar ${label}: ${e?.message || e}`, true);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = prev;
-      }
-    }
+        // Inicialização com configuração salva ou padrão
+        function initSupabase() {
+            const savedUrl = localStorage.getItem('supabase_url') || 'https://xtnqypmezntjcidglblc.supabase.co';
+            // Anon key fixa
+            const savedKey = localStorage.getItem('supabase_anon_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODEwMDksImV4cCI6MjA3NzU1NzAwOX0.fz__YKaMuEWjoXVansGZnLgUhsdsg7J1tLCriMhV8Ls';
 
-    // ---------- Listagem ----------
-    function getPageSize() { return parseInt(elPageSize.value || "20", 10); }
+            if (savedKey) {
+                document.getElementById('anonKey').value = savedKey;
+                
+                try {
+                    // -------------------------------------------------------------------
+                    // PONTO ONDE O ERRO OCORRIA
+                    // -------------------------------------------------------------------
+                    const { createClient } = supabase; // <-- 'supabase' não estava definido
+                    supabaseClient = createClient(savedUrl, savedKey, {
+                        auth: {
+                            persistSession: true,
+                            autoRefreshToken: true,
+                            detectSessionInUrl: true
+                        }
+                    });
 
-    async function loadItems() {
-      if (!supabase) { initSupabase(); }
-      if (!supabase) return;
+                    console.log('Supabase inicializado com configuração fixa');
+                    
+                    // Verifica se já está logado
+                    supabaseClient.auth.onAuthStateChange((event, session) => {
+                        console.log('Auth state changed:', event, session?.user?.email || 'No user');
+                        
+                        if (session) {
+                            currentSession = session;
+                            document.getElementById('loginForm').classList.add('hidden');
+                            document.getElementById('userInfo').classList.remove('hidden');
+                            document.getElementById('adminPanel').classList.remove('hidden');
+                            document.getElementById('userEmail').textContent = session.user.email;
+                            loadScrapedNoticias();
+                            loadNoticias();
+                        } else {
+                            currentSession = null;
+                            document.getElementById('loginForm').classList.remove('hidden');
+                            document.getElementById('userInfo').classList.add('hidden');
+                            document.getElementById('adminPanel').classList.add('hidden');
+                        }
+                    });
+                    
+                } catch (error) {
+                    console.error('Erro na inicialização:', error); // <-- Este erro deve sumir agora
+                }
+            } else {
+                console.log('Erro: Anon key não encontrada.');
+            }
+        }
 
-      const pageSize = getPageSize();
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
+        // Funções de Autenticação
+        async function login() {
+            if (!supabaseClient) {
+                // Este era o alerta que você viu
+                alert('⚠️ Erro: Cliente Supabase não foi inicializado.'); 
+                return;
+            }
 
-      let q = supabase
-        .from("noticias_scraped")
-        .select("id,titulo_reescrito,conteudo_reescrito,url_original,fonte,categoria,status,data_coleta", { count: "exact" })
-        .order("data_coleta", { ascending: false })
-        .range(from, to);
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const statusEl = document.getElementById('loginStatus');
 
-      const term = (elSearch.value || "").trim();
-      if (term) q = q.ilike("titulo_reescrito", `%${term}%`);
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
 
-      const f = elFilterStatus.value;
-      if (f && f !== "todos") q = q.eq("status", f);
+                if (error) throw error;
 
-      const { data, count, error } = await q;
-      if (error) {
-        elTbody.innerHTML = `<tr><td colspan="6" class="text-red-400">${escapeHtml(error.message)}</td></tr>`;
-        elPagerInfo.textContent = "—";
-        return;
-      }
-      total = count || 0;
-      renderRows(data || []);
-      renderPager();
-    }
+                currentSession = data.session;
+                statusEl.textContent = 'Login realizado com sucesso!';
+                statusEl.style.color = 'green';
 
-    function renderRows(rows) {
-      elTbody.innerHTML = "";
-      rows.forEach(r => {
-        const tr = document.createElement("tr");
+            } catch (error) {
+                statusEl.textContent = 'Erro: ' + error.message;
+                statusEl.style.color = 'red';
+                console.error('Erro de login:', error);
+            }
+        }
 
-        const tTitulo = document.createElement("td");
-        tTitulo.innerHTML = `
-          <div class="line-clamp-2 font-medium">${escapeHtml(r.titulo_reescrito || "(sem título)")}</div>
-          <div class="text-xs text-gray-400 line-clamp-1">${escapeHtml(r.url_original || "")}</div>
-        `;
+        async function logout() {
+            if (supabaseClient) {
+                await supabaseClient.auth.signOut();
+            }
+            currentSession = null;
+            document.getElementById('loginStatus').textContent = '';
+        }
 
-        const tFonte = document.createElement("td");
-        tFonte.textContent = `${r.fonte || "-"} • ${r.categoria || "-"}`;
+        // Função para fazer scrape de um portal
+        async function scrapePortal(url, sourceName) {
+            if (!supabaseClient || !currentSession) {
+                alert('Faça login primeiro!');
+                return;
+            }
 
-        const tData = document.createElement("td");
-        tData.textContent = r.data_coleta
-          ? new Date(r.data_coleta).toLocaleString("pt-BR")
-          : "-";
+            const statusEl = document.getElementById('scrapeStatus');
+            statusEl.classList.remove('hidden');
+            statusEl.textContent = `Buscando notícias do ${sourceName}... Aguarde. (Isso pode levar até 1 minuto)`;
 
-        const tStatus = document.createElement("td");
-        tStatus.innerHTML = `
-          <select class="bg-black border border-gray-700 rounded px-2 py-1 text-xs">
-            ${["gerado","ignorado","aprovado","rejeitado","publicado"].map(s => `
-              <option value="${s}" ${r.status===s?"selected":""}>${s}</option>
-            `).join("")}
-          </select>
-        `;
-        const sel = tStatus.querySelector("select");
-        sel.onchange = () => updateStatus(r.id, sel.value);
+            try {
+                const anonKey = document.getElementById('anonKey').value;
+                
+                const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`,
+                        'Content-Type': 'application/json',
+                        'apikey': anonKey
+                    },
+                    body: JSON.stringify({ url: url })
+                });
 
-        const tTam = document.createElement("td");
-        const len = (r.conteudo_reescrito || "").length;
-        tTam.textContent = len ? `${len.toLocaleString("pt-BR")} chars` : "-";
+                const data = await response.json();
 
-        const tAcoes = document.createElement("td");
-        tAcoes.className = "flex flex-wrap gap-2";
-        tAcoes.appendChild(makeLink("Original", r.url_original));
-        tAcoes.appendChild(makeBtn("Copiar título", () => copy(r.titulo_reescrito||"")));
-        tAcoes.appendChild(makeBtn("Copiar conteúdo", () => copy(r.conteudo_reescrito||"")));
-        tAcoes.appendChild(makeBtn("Aprovar", () => updateStatus(r.id, "aprovado"), "btn-green"));
-        tAcoes.appendChild(makeBtn("Publicar", () => updateStatus(r.id, "publicado"), "btn-blue"));
+                if (response.ok) {
+                    const count = data.stats?.processadas_com_sucesso || 0;
+                    const msg = data.message || `Sucesso! ${count} notícias coletadas do ${sourceName}.`;
+                    statusEl.textContent = `✅ ${msg}`;
+                    statusEl.style.color = 'green';
+                    setTimeout(() => loadScrapedNoticias(), 1000);
+                } else {
+                    statusEl.textContent = `❌ Erro: ${data.error || data.message}`;
+                    statusEl.style.color = 'red';
+                    console.error('Erro da API:', data);
+                }
 
-        tr.appendChild(tTitulo);
-        tr.appendChild(tFonte);
-        tr.appendChild(tData);
-        tr.appendChild(tStatus);
-        tr.appendChild(tTam);
-        tr.appendChild(tAcoes);
-        elTbody.appendChild(tr);
-      });
-    }
+            } catch (error) {
+                statusEl.textContent = `❌ Erro na requisição: ${error.message}`;
+                statusEl.style.color = 'red';
+                console.error('Erro:', error);
+            }
 
-    function renderPager() {
-      const pageSize = getPageSize();
-      const pages = Math.max(1, Math.ceil(total / pageSize));
-      currentPage = Math.min(currentPage, pages);
-      elPagerInfo.textContent = `Página ${currentPage} de ${pages} • ${total.toLocaleString("pt-BR")} itens`;
-    }
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
 
-    function prevPage() { if (currentPage > 1) { currentPage--; loadItems(); } }
-    function nextPage() {
-      const pageSize = getPageSize();
-      const pages = Math.max(1, Math.ceil(total / pageSize));
-      if (currentPage < pages) { currentPage++; loadItems(); }
-    }
-    window.prevPage = prevPage;
-    window.nextPage = nextPage;
+        // Carregar notícias scraped
+        async function loadScrapedNoticias() {
+            const container = document.getElementById('scrapedNoticias');
+            container.innerHTML = '<div class="loading">Carregando notícias scraped...</div>';
 
-    function reload() { currentPage = 1; loadItems(); }
-    window.reload = reload;
+            if (!supabaseClient) {
+                container.innerHTML = '<div class="error-message">❌ Supabase não configurado. Erro inesperado.</div>';
+                return;
+            }
 
-    async function updateStatus(id, status) {
-      if (!supabase) return;
-      const patch = { status };
-      if (status === "publicado") patch["data_publicacao"] = new Date().toISOString();
-      const { error } = await supabase.from("noticias_scraped").update(patch).eq("id", id);
-      if (error) { return toast("Erro ao atualizar: " + error.message, true); }
-      toast("Status atualizado: " + status);
-      loadItems();
-    }
+            try {
+                console.log('Carregando notícias scraped...');
+                
+                const { data, error } = await supabaseClient
+                    .from('noticias_scraped')
+                    .select('*')
+                    .eq('status', 'processado')
+                    .order('created_at', { ascending: false })
+                    .limit(20);
 
-    // ---------- Utils ----------
-    function makeLink(label, href) {
-      const a = document.createElement("a");
-      a.href = href || "#";
-      a.target = "_blank"; a.rel = "noopener";
-      a.className = "btn btn-ghost";
-      a.textContent = label;
-      if (!href) a.classList.add("opacity-50","pointer-events-none");
-      return a;
-    }
-    function makeBtn(label, fn, cls="btn-ghost") {
-      const b = document.createElement("button");
-      b.className = "btn " + cls;
-      b.textContent = label;
-      b.onclick = fn;
-      return b;
-    }
-    function copy(text) {
-      navigator.clipboard.writeText(text || "")
-        .then(() => toast("Copiado."))
-        .catch(() => toast("Falha ao copiar.", true));
-    }
-    function escapeHtml(s) {
-      return (s||"").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;" }[m]));
-    }
-    function toast(msg, err=false) {
-      const d = document.createElement("div");
-      d.textContent = msg;
-      d.style.position="fixed"; d.style.right="16px"; d.style.bottom="16px";
-      d.style.background = err ? "#7f1d1d" : "#1e293b"; d.style.color="#fff";
-      d.style.padding="10px 12px"; d.style.borderRadius="10px"; d.style.zIndex=9999;
-      document.body.appendChild(d);
-      setTimeout(()=> d.remove(), 3200);
-    }
+                if (error) {
+                    console.error('Erro detalhado ao carregar scraped:', error);
+                    throw error;
+                }
 
-    // Enter para buscar
-    elSearch.addEventListener("keydown", (e) => { if (e.key === "Enter") reload(); });
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="loading">✅ Nenhuma notícia scraped pendente. Use os botões acima para buscar notícias automaticamente.</div>';
+                    return;
+                }
 
-    // ---------- Boot ----------
-    renderPortalButtons();
-    loadConfig();
-    reload();
+                container.innerHTML = data.map(noticia => {
+                    const imagemHtml = noticia.imagem_url 
+                        ? `<img src="${noticia.imagem_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">`
+                        : '';
+                    
+                    const dataFormatada = noticia.data_coleta || noticia.created_at;
+                    const dataTexto = dataFormatada ? new Date(dataFormatada).toLocaleString('pt-BR') : 'Data não disponível';
+                    
+                    return `
+                        <div class="noticia-card scraped-card">
+                            ${imagemHtml}
+                            <div class="noticia-title">${noticia.titulo_reescrito || noticia.titulo_original || 'Título não disponível'}</div>
+                            <div class="noticia-content">${(noticia.resumo_reescrito || noticia.resumo_original || 'Resumo não disponível').substring(0, 200)}...</div>
+                            <div class="noticia-meta">
+                                <span class="status-badge status-${noticia.status || 'pendente'}">${noticia.status || 'pendente'}</span>
+                                <br>
+                                <strong>Fonte:</strong> ${noticia.fonte || 'Não informada'}<br>
+                                <strong>Categoria:</strong> ${noticia.categoria || 'Geral'}<br>
+                                <strong>Coletado:</strong> ${dataTexto}<br>
+                                ${noticia.url_original ? `<strong>URL:</strong> <a href="${noticia.url_original}" target="_blank" style="color: #059669;">Ver original</a>` : ''}
+                            </div>
+                            <div class="noticia-actions">
+                                <button class="publish-button" onclick="publishScrapedNoticia(${noticia.id})">📰 Publicar</button>
+                                <button class="danger-button" onclick="deleteScrapedNoticia(${noticia.id})">🗑️ Excluir</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
-    // Expor globais necessárias a botões/filtros
-    window.saveConfig = saveConfig;
-    window.clearConfig = clearConfig;
-    window.testConnection = testConnection;
-  </script>
+                console.log(`Carregadas ${data.length} notícias scraped`);
+
+            } catch (error) {
+                console.error('Erro ao carregar notícias scraped:', error);
+                
+                let errorMessage = '⚠️ Erro desconhecido';
+                if (error.code === '42501' || (error.message && error.message.includes('401'))) {
+                    errorMessage = '🔒 Acesso bloqueado (Erro 401)! Verifique se as RLS Policies (Row Level Security) estão ativas para a tabela "noticias_scraped".';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                container.innerHTML = `
+                    <div class="error-message">
+                        ❌ ${errorMessage}
+                        <br><br>
+                        <button onclick="loadScrapedNoticias()" style="background: #059669; margin-top: 10px;">🔄 Tentar Novamente</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Carregar notícias publicadas
+        async function loadNoticias() {
+            const container = document.getElementById('noticias');
+            container.innerHTML = '<div class="loading">Carregando notícias publicadas...</div>';
+
+            if (!supabaseClient) {
+                container.innerHTML = '<div class="error-message">❌ Supabase não configurado.</div>';
+                return;
+            }
+
+            try {
+                console.log('Carregando notícias publicadas...');
+                
+                const { data, error } = await supabaseClient
+                    .from('noticias')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Erro detalhado ao carregar publicadas:', error);
+                    throw error;
+                }
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="loading">✅ Nenhuma notícia publicada encontrada.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.map(noticia => {
+                    const imagemHtml = noticia.image_url 
+                        ? `<img src="${noticia.image_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">`
+                        : '';
+                    
+                    const dataTexto = noticia.created_at ? new Date(noticia.created_at).toLocaleString('pt-BR') : 'Data não disponível';
+                    
+                    return `
+                        <div class="noticia-card">
+                            ${imagemHtml}
+                            <div class="noticia-title">${noticia.title || 'Título não disponível'}</div>
+                            <div class="noticia-content">${(noticia.content || 'Conteúdo não disponível').substring(0, 200)}...</div>
+                            <div class="noticia-meta">
+                                <strong>Categoria:</strong> ${noticia.category || 'Não informada'}<br>
+                                <strong>Publicado:</strong> ${dataTexto}
+                            </div>
+                            <div class="noticia-actions">
+                                <button onclick="editNoticia(${noticia.id})">✏️ Editar</button>
+                                <button class="danger-button" onclick="deleteNoticia(${noticia.id})">🗑️ Excluir</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                console.log(`Carregadas ${data.length} notícias publicadas`);
+
+            } catch (error) {
+                console.error('Erro ao carregar notícias publicadas:', error);
+                
+                let errorMessage = '⚠️ Erro desconhecido';
+                if (error.code === '42501' || (error.message && error.message.includes('401'))) {
+                    errorMessage = '🔒 Acesso bloqueado (Erro 401)! Verifique se as RLS Policies (Row Level Security) estão ativas para a tabela "noticias".';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                container.innerHTML = `
+                    <div class="error-message">
+                        ❌ ${errorMessage}
+                        <br><br>
+                        <button onclick="loadNoticias()" style="background: #dc2626; margin-top: 10px;">🔄 Tentar Novamente</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Publicar notícia scraped (move da tabela noticias_scraped para noticias)
+        async function publishScrapedNoticia(scrapedId) {
+            if (!confirm('Publicar esta notícia no site?')) return;
+
+            if (!supabaseClient) {
+                alert('Configure o Supabase primeiro!');
+                return;
+            }
+
+            try {
+                // 1. Busca a notícia scraped
+                const { data: scraped, error: fetchError } = await supabaseClient
+                    .from('noticias_scraped')
+                    .select('*')
+                    .eq('id', scrapedId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+                
+                const conteudoCompleto = scraped.conteudo_reescrito || scraped.resumo_reescrito || scraped.resumo_original;
+
+                // 2. Insere na tabela noticias (publicada)
+                const { error: insertError } = await supabaseClient
+                    .from('noticias')
+                    .insert({
+                        title: scraped.titulo_reescrito || scraped.titulo_original,
+                        content: conteudoCompleto, 
+                        category: scraped.categoria || 'Geral',
+                        image_url: scraped.imagem_url
+                    });
+
+                if (insertError) throw insertError;
+
+                // 3. Atualiza status da scraped para 'publicado'
+                const { error: updateError } = await supabaseClient
+                    .from('notias_scraped')
+                    .update({ status: 'publicado' })
+                    .eq('id', scrapedId);
+
+                if (updateError) throw updateError;
+
+                alert('Notícia publicada com sucesso!');
+                loadScrapedNoticias();
+                loadNoticias();
+                
+            } catch (error) {
+                alert('Erro ao publicar: ' + error.message);
+                console.error('Erro:', error);
+            }
+        }
+
+        // Excluir notícia scraped
+        async function deleteScrapedNoticia(scrapedId) {
+            if (!confirm('Excluir esta notícia scraped permanentemente?')) return;
+
+            if (!supabaseClient) {
+                alert('Configure o Supabase primeiro!');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('noticias_scraped')
+                    .delete()
+                    .eq('id', scrapedId);
+
+                if (error) throw error;
+
+                alert('Notícia scraped excluída!');
+                loadScrapedNoticias();
+            } catch (error) {
+                alert('Erro ao excluir: ' + error.message);
+                console.error('Erro:', error);
+            }
+        }
+
+        // Publicar notícia manual
+        async function publishNoticia() {
+            if (!supabaseClient) {
+                alert('Configure o Supabase primeiro!');
+                return;
+            }
+
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            const category = document.getElementById('category').value;
+
+            if (!title || !content) {
+                alert('Preencha título e conteúdo!');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('noticias')
+                    .insert({
+                        title: title,
+                        content: content,
+                        category: category
+                    });
+
+                if (error) throw error;
+
+                alert('Notícia publicada!');
+                document.getElementById('title').value = '';
+                document.getElementById('content').value = '';
+                loadNoticias();
+
+            } catch (error) {
+                alert('Erro ao publicar: ' + error.message);
+                console.error('Erro:', error);
+            }
+        }
+
+        // Funções auxiliares para notícias publicadas
+        function editNoticia(id) {
+            alert('Função de edição ainda não implementada. ID: ' + id);
+        }
+
+        async function deleteNoticia(id) {
+            if (!confirm('Excluir esta notícia?')) return;
+
+            if (!supabaseClient) {
+                alert('Configure o Supabase primeiro!');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('noticias')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                alert('Notícia excluída!');
+                loadNoticias();
+            } catch (error) {
+                alert('Erro ao excluir: ' + error.message);
+                console.error('Erro:', error);
+            }
+        }
+
+        // Inicializa quando a página carrega
+        window.addEventListener('DOMContentLoaded', initSupabase);
+    </script>
 
 
 </body>
 
 
-
-
-
-
 </html>
-
-
-
-
-
