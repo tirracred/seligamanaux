@@ -9,7 +9,7 @@ interface NoticiaScrapedData {
   titulo_reescrito: string;
   resumo_original?: string;
   resumo_reescrito?: string;
-  conteudo_reescrito?: string; // <-- ADICIONADO: Para salvar o artigo completo
+  conteudo_reescrito?: string; // Coluna que você adicionou no PASSO 1
   url_original: string;
   fonte: string;
   status: string;
@@ -44,7 +44,7 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
-// Configurações dos portais - CORRIGIDAS
+// Configurações dos portais (Sem alterações)
 const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   'g1.globo.com': {
     name: 'G1 Amazonas',
@@ -352,7 +352,7 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
 }
 
 // -------------------------------------------------------------------
-// MUDANÇA 3: Função de reescrita com IA (Prompt robusto e filtro)
+// MUDANÇA: Função de reescrita (Prompt de 1500-4000)
 // -------------------------------------------------------------------
 async function rewriteWithGrok(titulo: string, conteudo: string, fonte: string): Promise<GrokResponse> {
   const GROK_API_KEY = Deno.env.get("GROK_API_KEY"); 
@@ -361,12 +361,12 @@ async function rewriteWithGrok(titulo: string, conteudo: string, fonte: string):
     return { titulo, conteudo };
   }
 
-  const prompt = `Você é um jornalista sênior e editor-chefe do "SeligaManaux", o principal portal de notícias de Manaus e do Amazonas. Sua missão é reescrever a notícia abaixo, transformando-a em um **artigo robusto e completo**, não um simples resumo.
+  const prompt = `Você é um jornalista sênior e editor-chefe do "SeligaManaux", o principal portal de notícias de Manaus e do Amazonas. Sua missão é reescrever a notícia abaixo, transformando-a em um **artigo robusto e completo**.
 
 **Instruções de Identidade (SeligaManaux):**
 1.  **Tom de Voz:** Direto, vibrante, e com a "boca no trombone". Use uma linguagem que o manauara entende, sem ser vulgar. "Se liga!"
 2.  **Foco Local:** Sempre que possível, traga o impacto da notícia para a realidade de Manaus/Amazonas.
-3.  **Qualidade:** Crie um artigo coeso, com parágrafos bem estruturados (introdução, desenvolvimento, conclusão), não apenas frases reescritas. Queremos um artigo de verdade.
+3.  **Comprimento:** O artigo final deve ser robusto, contendo entre **1500 e 4000 caracteres**. Não entregue resumos.
 
 **Filtro de Conteúdo (IMPORTANTE):**
 Se a "notícia" original for claramente um anúncio, um publieditorial, ou apenas uma propaganda para um programa de TV (ex: "Assista ao Jornal do Amazonas" ou "Veja a programação completa"), **não reescreva**. Em vez disso, responda APENAS com o seguinte JSON:
@@ -377,15 +377,15 @@ Se a "notícia" original for claramente um anúncio, um publieditorial, ou apena
 
 **Notícia Original (Fonte: ${fonte}):**
 Título Original: ${titulo}
-Texto Original (base): ${conteudo.substring(0, 2500)}
+Texto Original (base): ${conteudo.substring(0, 4000)} 
 
 **Sua Tarefa (Se for notícia):**
-Reescreva o texto acima como um artigo completo e original para o SeligaManaux. Mantenha 100% dos fatos, mas mude a estrutura e as palavras.
+Reescreva o texto acima como um artigo completo e original (1500-4000 caracteres) para o SeligaManaux. Mantenha 100% dos fatos, mas mude a estrutura e as palavras.
 
 Responda **APENAS** com um objeto JSON válido, sem nenhum texto antes ou depois:
 {
   "titulo": "Um novo título chamativo, com a cara do SeligaManaux",
-  "conteudo": "O artigo completo reescrito por você, com vários parágrafos, de forma robusta e interessante para o povo manauara."
+  "conteudo": "O artigo completo reescrito por você, com vários parágrafos, de forma robusta e interessante para o povo manauara (mínimo de 1500 caracteres)."
 }`;
 
   try {
@@ -398,8 +398,8 @@ Responda **APENAS** com um objeto JSON válido, sem nenhum texto antes ou depois
       body: JSON.stringify({
         model: "llama-3.1-8b-instant",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.5, // Aumentado para mais criatividade
-        max_tokens: 2048, // Aumentado para artigos mais longos
+        temperature: 0.5,
+        max_tokens: 4096, 
       }),
     });
 
@@ -408,14 +408,23 @@ Responda **APENAS** com um objeto JSON válido, sem nenhum texto antes ou depois
     }
 
     const data = await response.json();
-    let content = data.choices[0].message.content.trim();
     
-    if (content.startsWith('```json')) {
-      content = content.replace(/```json\n?/, '').replace(/\n?```$/, '');
+    // -------------------------------------------------------------------
+    // MUDANÇA (CORREÇÃO ERRO 2): Limpeza da resposta JSON
+    // -------------------------------------------------------------------
+    let content = data.choices[0].message.content;
+    
+    // Procura o JSON dentro da resposta (ignorando "```json" ou "aqui está:")
+    const jsonMatch = content.match(/{[\s\S]*}/);
+    
+    if (!jsonMatch) {
+      throw new Error("Resposta da IA não contém JSON válido. Resposta: " + content);
     }
     
-    const jsonResponse = JSON.parse(content);
-    
+    const jsonString = jsonMatch[0];
+    const jsonResponse = JSON.parse(jsonString); // Parse apenas do JSON limpo
+    // -------------------------------------------------------------------
+
     if (jsonResponse.titulo && jsonResponse.conteudo) {
       // VERIFICA O FILTRO DE PUBLI
       if (jsonResponse.conteudo === "publieditorial") {
@@ -564,7 +573,10 @@ Deno.serve(async (req) => {
     let successCount = 0;
     let errorCount = 0;
 
-    for (const newsUrl of newsLinks.slice(0, 8)) { // Aumentado para 8 notícias
+    // -------------------------------------------------------------------
+    // MUDANÇA: Aumentado para 12 notícias por varredura
+    // -------------------------------------------------------------------
+    for (const newsUrl of newsLinks.slice(0, 12)) { 
       try {
         console.log(`Processando: ${newsUrl}`);
 
@@ -588,10 +600,6 @@ Deno.serve(async (req) => {
           console.log('Conteúdo insuficiente, pulando...');
           continue;
         }
-
-        // -------------------------------------------------------------------
-        // MUDANÇA 4: Verificar filtro de "publi"
-        // -------------------------------------------------------------------
         
         // Reescreve com IA
         const { titulo: tituloReescrito, conteudo: conteudoReescrito } = await rewriteWithGrok(titulo, conteudo, portalConfig.name);
