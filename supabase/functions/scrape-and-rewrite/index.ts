@@ -702,7 +702,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
-
   if (req.method !== "POST") {
     return new Response("Método não permitido", {
       status: 405,
@@ -711,7 +710,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // AUTENTICAÇÃO
+    // AUTENTICAÇÃO (permanece igual ao original)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Sem autorização" }), {
@@ -719,22 +718,16 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
-
-    const {
-      data: { user },
-      error: userError,
-    } = await userClient.auth.getUser();
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Usuário não autenticado" }), {
         status: 401,
@@ -753,15 +746,15 @@ Deno.serve(async (req) => {
     }
     console.log("Processando URL:", targetUrl);
 
-// DETECTA PORTAL
-const portal = detectPortal(targetUrl);
-if (!portal) {
-  return new Response(JSON.stringify({ error: "Portal não suportado" }), {
-    status: 422,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-console.log("Portal detectado:", portal.name);
+    // DETECTA PORTAL
+    const linkConfig = detectPortal(targetUrl);
+    if (!linkConfig) {
+      return new Response(JSON.stringify({ error: "Portal não suportado" }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    console.log("Portal detectado:", linkConfig.name);
 
     // EVITAR DUPLICATAS (últimos 7 dias)
     const { data: existingUrls } = await supabaseAdmin
@@ -772,16 +765,12 @@ console.log("Portal detectado:", portal.name);
         "created_at",
         new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       );
+    const existingUrlsSet = new Set(existingUrls?.map((item) => item.url_original) || []);
+    console.log(`URLs já processadas (7 dias): ${existingUrlsSet.size}`);
 
-    const existingUrlsSet = new Set(
-      existingUrls?.map((item) => item.url_original) || [],
-    );
-    console.log(`URLs já processadas: ${existingUrlsSet.size}`);
-
-    // BAIXA HOME (com fallback de editoria no Portal Amazônia)
+    // BAIXA PÁGINA INICIAL (com fallback para Portal Amazônia)
     const userAgent =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-
     let htmlContent: string;
     try {
       const response = await fetch(targetUrl, {
@@ -800,17 +789,12 @@ console.log("Portal detectado:", portal.name);
     } catch (error: any) {
       console.error("Erro no scraping:", error);
       return new Response(
-        JSON.stringify({
-          error: `Erro ao acessar ${linkConfig.name}: ${error.message}`,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+        JSON.stringify({ error: `Erro ao acessar ${linkConfig.name}: ${error.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Fallback específico Portal Amazônia
+    // Fallback específico para Portal Amazônia (tenta URLs alternativas se conteúdo insuficiente)
     if (linkConfig.name === "Portal Amazônia") {
       if (!htmlContent || htmlContent.length < 15000) {
         const alts = [
@@ -819,65 +803,63 @@ console.log("Portal detectado:", portal.name);
         ];
         for (const alt of alts) {
           try {
-            htmlContent = await fetchHtmlPreferAmp(alt, userAgent);
-            if (htmlContent && htmlContent.length > 15000) break;
+            const altHtml = await fetchHtmlPreferAmp(alt, userAgent);
+            if (altHtml && altHtml.length > 15000) {
+              htmlContent = altHtml;
+              break;
+            }
           } catch {
-            // segue
+            // Ignora erros nas URLs alternativas
           }
         }
       }
     }
 
-    // LINKS
-   // Tenta coletar links extras em páginas 2..4 para alguns portais
-function buildPaginationUrls(config: PortalConfig): string[] {
-  const origin = new URL(config.baseUrl).origin;
-  const base = config.baseUrl.replace(/\/+$/, "");
-  const urls: string[] = [];
-
-  for (let i = 2; i <= 4; i++) {
-    if (base.includes("portaldoholanda.com.br")) {
-      urls.push(`${origin}/amazonas?page=${i}`);
-    } else if (base.includes("portalamazonia.com")) {
-      urls.push(`${origin}/noticias/amazonas?page=${i}`);
-      urls.push(`${origin}/noticias/amazonas/page/${i}`);
-    } else if (base.includes("acritica.com")) {
-      urls.push(`${origin}/page/${i}`);
-      urls.push(`${origin}/noticias/page/${i}`);
-    } else if (base.includes("d24am.com")) {
-      urls.push(`${origin}/amazonas/page/${i}`);
-      urls.push(`${origin}/page/${i}`);
+    // EXTRAI LINKS DE NOTÍCIAS
+    function buildPaginationUrls(config: linkConfig): string[] {
+      const origin = new URL(config.baseUrl).origin;
+      const base = config.baseUrl.replace(/\/+$/, "");
+      const urls: string[] = [];
+      for (let i = 2; i <= 4; i++) {
+        if (base.includes("portaldoholanda.com.br")) {
+          urls.push(`${origin}/amazonas?page=${i}`);
+        } else if (base.includes("portalamazonia.com")) {
+          urls.push(`${origin}/noticias/amazonas?page=${i}`);
+          urls.push(`${origin}/noticias/amazonas/page/${i}`);
+        } else if (base.includes("acritica.com")) {
+          urls.push(`${origin}/page/${i}`);
+          urls.push(`${origin}/noticias/page/${i}`);
+        } else if (base.includes("d24am.com")) {
+          urls.push(`${origin}/amazonas/page/${i}`);
+          urls.push(`${origin}/page/${i}`);
+        }
+      }
+      return urls;
     }
-  }
-  return urls;
-}
 
-let newsLinks = extractNewsLinks(htmlContent, portal, 20);
-
-// Se veio pouco, tenta páginas seguintes
-if (newsLinks.length < 8) {
-const morePages = buildPaginationUrls(portal);
-  for (const u of morePages) {
-    try {
-      const html = await fetchHtmlPreferAmp(u, userAgent);
-const extra = extractNewsLinks(html, portal, 20);
-      newsLinks = Array.from(new Set([...newsLinks, ...extra]));
-      if (newsLinks.length >= 20) break;
-    } catch {
-      // ignora erros de páginas inexistentes
+    let newsLinks = extractNewsLinks(htmlContent, linkConfig, 20);
+    // Se poucos links encontrados, tenta coletar páginas 2..4
+    if (newsLinks.length < 8) {
+      const morePages = buildPaginationUrls(linkConfig);
+      for (const pageUrl of morePages) {
+        try {
+          const html = await fetchHtmlPreferAmp(pageUrl, userAgent);
+          const extraLinks = extractNewsLinks(html, linkConfig, 20);
+          newsLinks = Array.from(new Set([...newsLinks, ...extraLinks]));
+          if (newsLinks.length >= 20) break;
+        } catch {
+          // Ignora erros em páginas de paginação inexistentes
+        }
+      }
     }
-  }
-}
-
-// remove URLs já processadas
-newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
+    // Remove URLs já processadas recentemente
+    newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
 
     if (newsLinks.length === 0) {
       return new Response(
         JSON.stringify({
           success: true,
-          message:
-            `Todas as notícias recentes do ${linkConfig.name} já foram processadas.`,
+          message: `Todas as notícias recentes do ${linkConfig.name} já foram processadas.`,
           stats: {
             total_encontradas: 0,
             processadas_com_sucesso: 0,
@@ -889,91 +871,79 @@ newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
       );
     }
 
-    console.log(
-      `Processando ${newsLinks.length} notícias novas de ${linkConfig.name}`,
-    );
+    console.log(`Processando ${newsLinks.length} notícias novas de ${linkConfig.name}`);
 
-    // PROCESSA
-   const processedNews: Array<{ titulo: string; fonte: string; url: string; imagem: string }> = [];
-let successCount = 0;
-let errorCount = 0;
+    // PROCESSA CADA NOTÍCIA
+    const processedNews: { titulo: string; fonte: string; url: string; imagem: string }[] = [];
+    let successCount = 0;
+    let errorCount = 0;
 
-// use LET newsLinks lá em cima (não const), pois você reatribui newsLinks com paginação/filtragem
-for (const newsUrl of newsLinks.slice(0, 12)) {
-  try {
-    console.log(`Processando: ${newsUrl}`);
+    for (const newsUrl of newsLinks.slice(0, 12)) {
+      try {
+        console.log(`Processando: ${newsUrl}`);
+        const newsHtml = await fetchHtmlPreferAmp(newsUrl, userAgent);
+        const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, linkConfig);
+        if (titulo === "Título não encontrado" || !conteudo || conteudo.length < 120) {
+          console.log(`Conteúdo insuficiente: ${newsUrl} — pulando`);
+          continue;
+        }
+        if (isBlacklistedTitle(titulo) || looksPromotional(conteudo)) {
+          console.log(`Descartado (promo/institucional): ${newsUrl}`);
+          continue;
+        }
+        const conteudoLimpo = stripSourceArtifacts(conteudo);  // higieniza conteúdo
+        const { titulo: tituloReescrito, conteudo: conteudoReescrito } = 
+              await rewriteWithGroq(titulo, conteudoLimpo, linkConfig.name);
+        if (conteudoReescrito === "publieditorial") {
+          console.log(`Publieditorial identificado pela IA: ${newsUrl} — pulando`);
+          continue;
+        }
+        if (!conteudoReescrito || conteudoReescrito.trim().length < 1700) {
+          console.log(`Reescrita vazia/curta em ${newsUrl} — pulando`);
+          continue;
+        }
 
-    // NUNCA reatribua portalConfig (é const do escopo externo). Use uma variável local:
-const cfg = detectPortal(newsUrl) || portal;          // <— usa cfg local
+        const resumoReescrito = conteudoReescrito.slice(0, 300) + 
+                                 (conteudoReescrito.length > 300 ? "..." : "");
+        const noticiaData: NoticiaScrapedData = {
+          titulo_original: titulo,
+          titulo_reescrito: tituloReescrito || titulo,
+          resumo_original: resumo || null,
+          resumo_reescrito: resumoReescrito || null,
+          conteudo_reescrito: conteudoReescrito || conteudoLimpo,
+          url_original: newsUrl,
+          fonte: linkConfig.name,
+          status: "processado",
+          data_coleta: new Date().toISOString(),
+          imagem_url: imagem || null,
+          categoria: linkConfig.category,
+        };
 
-    // Preferir AMP quando disponível (G1 e cia)
-const newsHtml = await fetchHtmlPreferAmp(newsUrl, userAgent);
+        const { error } = await supabaseAdmin.from("noticias_scraped").insert(noticiaData);
+        if (error) {
+          console.error("Erro ao salvar no Supabase:", error);
+          errorCount++;
+          continue;
+        }
 
-    // Extrai
-const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, cfg);
-    if (titulo === "Título não encontrado" || !conteudo || conteudo.length < 120) {
-      console.log(`Conteúdo insuficiente: ${newsUrl}`);
-      continue;
+        // Sucesso ao salvar notícia
+        processedNews.push({
+          titulo: tituloReescrito || titulo,
+          fonte: linkConfig.name,
+          url: newsUrl,
+          imagem: imagem ? "Sim" : "Não",
+        });
+        successCount++;
+        console.log(`✅ Notícia salva: ${titulo.substring(0, 50)}...`);
+        // Intervalo curto para evitar sobrecarga no site de origem
+        await new Promise((r) => setTimeout(r, 1500));
+      } catch (err) {
+        console.error(`Erro ao processar ${newsUrl}:`, err);
+        errorCount++;
+      }
     }
 
-    // Filtros anti-promo/inst
-    if (isBlacklistedTitle(titulo) || looksPromotional(conteudo)) {
-      console.log(`Descartado (promo/institucional): ${newsUrl}`);
-      continue;
-    }
-
-    // Reescrita Groq (2000–4000 + anti-cópia)
-    const { titulo: tituloReescrito, conteudo: conteudoReescrito } =
-      await rewriteWithGroq(titulo, conteudo, linkConfig.name);
-
-    if (conteudoReescrito === "publieditorial") {
-      console.log(`Publieditorial marcado pela IA: ${newsUrl}`);
-      continue;
-    }
-
-    const resumoReescrito =
-      (conteudoReescrito || "").slice(0, 300) + ((conteudoReescrito || "").length > 300 ? "..." : "");
-
-    const noticiaData: NoticiaScrapedData = {
-      titulo_original: titulo,
-      titulo_reescrito: tituloReescrito || titulo,
-      resumo_original: resumo || null,
-      resumo_reescrito: resumoReescrito || null,
-      conteudo_reescrito: conteudoReescrito || conteudo,
-      url_original: newsUrl,
-      fonte: cfg.name,
-      status: "processado",
-      data_coleta: new Date().toISOString(),
-      imagem_url: imagem || null,
-      categoria: cfg.category
-    };
-
-    const { error } = await supabaseAdmin.from("noticias_scraped").insert(noticiaData);
-    if (error) {
-      console.error("Erro ao salvar:", newsUrl, error);
-      errorCount++;
-      continue;
-    }
-
-    processedNews.push({
-      titulo: tituloReescrito || titulo,
-      fonte: linkConfig.name,
-      url: newsUrl,
-      imagem: imagem ? "Sim" : "Não",
-    });
-    successCount++;
-
-    // pausa de cortesia
-    await new Promise((r) => setTimeout(r, 1500));
-
-  } catch (err) {
-    // IMPORTANTE: este catch está DENTRO do for, então newsUrl existe aqui
-    console.error(`Erro ao processar ${newsUrl}:`, err);
-    errorCount++;
-  }
-}
-
-    // RESPOSTA
+    // RESPOSTA FINAL
     return new Response(
       JSON.stringify({
         success: true,
@@ -982,7 +952,7 @@ const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, c
           total_encontradas: newsLinks.length,
           processadas_com_sucesso: successCount,
           erros: errorCount,
-          portal: portal.name,
+          portal: linkConfig.name,
         },
         noticias: processedNews,
       }),
@@ -996,3 +966,4 @@ const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, c
     );
   }
 });
+
