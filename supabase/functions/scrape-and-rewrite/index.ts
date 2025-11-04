@@ -9,7 +9,7 @@ interface NoticiaScrapedData {
   titulo_reescrito: string;
   resumo_original?: string;
   resumo_reescrito?: string;
-  conteudo_reescrito?: string; // Coluna que você adicionou no PASSO 1
+  conteudo_reescrito?: string;
   url_original: string;
   fonte: string;
   status: string;
@@ -44,15 +44,18 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
-// Configurações dos portais (Sem alterações)
+// Configurações dos portais (Ajustado G1 para ser mais específico)
 const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   'g1.globo.com': {
     name: 'G1 Amazonas',
     baseUrl: 'https://g1.globo.com/am/amazonas/',
+    // -------------------------------------------------------------------
+    // MUDANÇA 1: Seletores do G1 mais rigorosos
+    // -------------------------------------------------------------------
     linkSelectors: [
-      'a[href*="/am/amazonas/noticia/"]',
-      'a[href*="/amazonas/noticia/"]',
-      '.feed-post-link[href*="/noticia/"]'
+      'a[href*="/am/amazonas/noticia/"]', // Links específicos de notícias do AM
+      'a.feed-post-link[href*=".ghtml"]', // Links do feed principal que são notícias
+      'a.bstn-hl-link[href*=".ghtml"]' // Links de destaque (headline)
     ],
     titleSelectors: [
       'h1.content-head__title',
@@ -166,7 +169,7 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   }
 };
 
-// --- FUNÇÃO MELHORADA PARA EXTRAIR LINKS --- (Sem alterações)
+// --- FUNÇÃO MELHORADA PARA EXTRAIR LINKS ---
 function extractNewsLinks(html: string, config: PortalConfig, maxLinks = 15): string[] {
   const links: Set<string> = new Set();
   
@@ -204,15 +207,28 @@ function extractNewsLinks(html: string, config: PortalConfig, maxLinks = 15): st
         }
         
         // Filtra URLs válidas de notícias
-        if (url.includes('/noticia') || url.includes('/noticias/')) {
+        if (url.includes('/noticia') || url.includes('/noticias/') || url.endsWith('.ghtml')) {
           links.add(url);
         }
       }
     }
 
-    
+    // -------------------------------------------------------------------
+    // MUDANÇA 2: "Fallback" (Plano B) REMOVIDO
+    // É ele que estava pegando o lixo.
+    // -------------------------------------------------------------------
 
-// --- FUNÇÃO MELHORADA PARA EXTRAIR CONTEÚDO E IMAGEM --- (Sem alterações)
+  } catch (error) {
+    console.error('Erro ao extrair links:', error);
+  }
+
+  const linkArray = Array.from(links);
+  console.log(`Encontrados ${linkArray.length} links (rigorosos) para ${config.name}`);
+  return linkArray;
+}
+
+
+// --- FUNÇÃO MELHORADA PARA EXTRAIR CONTEÚDO E IMAGEM ---
 function extractContentWithRegex(html: string, config: PortalConfig): { titulo: string; conteudo: string; resumo: string; imagem: string } {
   let titulo = "Título não encontrado";
   let conteudo = "Conteúdo não encontrado";
@@ -230,7 +246,11 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
       for (const pattern of patterns) {
         const match = html.match(pattern);
         if (match && match[1]) {
-        titulo = match[1].replace(/<[^>]*>/g, '').replace(/\{[^{}]+\}/g, '').trim();          if (titulo && titulo !== "Título não encontrado") break;
+          // -------------------------------------------------------------------
+          // MUDANÇA 3: Limpeza de lixo (códigos) do Título
+          // -------------------------------------------------------------------
+          titulo = match[1].replace(/<[^>]*>/g, '').replace(/\{[^{}]+\}/g, '').trim();
+          if (titulo && titulo !== "Título não encontrado") break;
         }
       }
       if (titulo !== "Título não encontrado") break;
@@ -246,15 +266,18 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
       for (const pattern of patterns) {
         const match = html.match(pattern);
         if (match && match[1]) {
+          // -------------------------------------------------------------------
+          // MUDANÇA 4: Limpeza de lixo (glb.cdnConfig) do Conteúdo
+          // -------------------------------------------------------------------
           conteudo = match[1]
-            .replace(/<script[^>]*>.*?<\/script>/gis, '')
-        .replace(/<style[^>]*>.*?<\/style>/gis, '')
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/window\.glb\s*=\s*window\.glb\s*\|\|.*?;/gis, '') // remove lixo do g1
-        .replace(/glb\.cdnConfig\s*=\s*glb\.cdnConfig\s*\|\|.*?;/gis, '') // remove lixo do g1
-        .replace(/\{[^{}]+\}/g, '') // remove objetos js
-        .replace(/\s+/g, ' ')
-        .trim();
+            .replace(/<script[^>]*>.*?<\/script>/gis, '') // remove scripts
+            .replace(/<style[^>]*>.*?<\/style>/gis, '') // remove estilos
+            .replace(/<[^>]*>/g, ' ') // remove tags html
+            .replace(/window\.glb\s*=\s*window\.glb\s*\|\|.*?;/gis, '') // remove lixo do g1
+            .replace(/glb\.cdnConfig\s*=\s*glb\.cdnConfig\s*\|\|.*?;/gis, '') // remove lixo do g1
+            .replace(/\{[^{}]+\}/g, '') // remove objetos js
+            .replace(/\s+/g, ' ')
+            .trim();
           
           if (conteudo.length > 100) break;
         }
@@ -262,7 +285,7 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
       if (conteudo.length > 100) break;
     }
 
-    // Extrai imagem
+    // Extrai imagem (sem alterações)
     for (const selector of config.imageSelectors) {
       const patterns = [
         new RegExp(`<img[^>]+class=["'][^"']*${selector.replace(/[.#]/g, '').replace(' img', '')}[^"']*["'][^>]+src=["']([^"']+)["']`, 'i'),
@@ -273,14 +296,10 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
         const match = html.match(pattern);
         if (match && match[1]) {
           let imgUrl = match[1];
-          
-          // Normaliza URL da imagem
           if (imgUrl.startsWith('/')) {
             const baseUrl = new URL(config.baseUrl);
             imgUrl = baseUrl.origin + imgUrl;
           }
-          
-          // Verifica se é uma imagem válida
           if (imgUrl.includes('.jpg') || imgUrl.includes('.jpeg') || imgUrl.includes('.png') || imgUrl.includes('.webp')) {
             imagem = imgUrl;
             break;
@@ -290,7 +309,7 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
       if (imagem) break;
     }
 
-    // Fallback para extração de conteúdo
+    // Fallback para extração de conteúdo (sem alterações)
     if (conteudo === "Conteúdo não encontrado" || conteudo.length < 100) {
       const paragraphs = html.match(/<p[^>]*>(.*?)<\/p>/gis);
       if (paragraphs && paragraphs.length > 0) {
@@ -302,7 +321,7 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
       }
     }
 
-    // Fallback para imagem
+    // Fallback para imagem (sem alterações)
     if (!imagem) {
       const imgMatch = html.match(/<img[^>]+src=["']([^"']+(?:\.jpg|\.jpeg|\.png|\.webp)[^"']*)["']/i);
       if (imgMatch) {
@@ -315,7 +334,7 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
       }
     }
 
-    // Cria resumo
+    // Cria resumo (sem alterações)
     if (conteudo && conteudo !== "Conteúdo não encontrado") {
       resumo = conteudo.substring(0, 300) + (conteudo.length > 300 ? "..." : "");
     }
@@ -329,9 +348,7 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
   return { titulo, conteudo, resumo, imagem };
 }
 
-// -------------------------------------------------------------------
-// MUDANÇA: Função de reescrita (Prompt de 1500-4000)
-// -------------------------------------------------------------------
+// --- FUNÇÃO DE REESCRITA COM IA ---
 async function rewriteWithGrok(titulo: string, conteudo: string, fonte: string): Promise<GrokResponse> {
   const GROK_API_KEY = Deno.env.get("GROK_API_KEY"); 
   if (!GROK_API_KEY) {
@@ -339,15 +356,18 @@ async function rewriteWithGrok(titulo: string, conteudo: string, fonte: string):
     return { titulo, conteudo };
   }
 
+  // -------------------------------------------------------------------
+  // MUDANÇA 5: Prompt da IA atualizado para filtrar o lixo
+  // -------------------------------------------------------------------
   const prompt = `Você é um jornalista sênior e editor-chefe do "SeligaManaux", o principal portal de notícias de Manaus e do Amazonas. Sua missão é reescrever a notícia abaixo, transformando-a em um **artigo robusto e completo**.
 
 **Instruções de Identidade (SeligaManaux):**
-1.  **Tom de Voz:** Direto, vibrante, e objetivo". Use uma linguagem que o amazonense entende, sem ser vulgar. "Se liga!"
+1.  **Tom de Voz:** Direto, vibrante, e com a "boca no trombone". Use uma linguagem que o manauara entende, sem ser vulgar. "Se liga!"
 2.  **Foco Local:** Sempre que possível, traga o impacto da notícia para a realidade de Manaus/Amazonas.
 3.  **Comprimento:** O artigo final deve ser robusto, contendo entre **1500 e 4000 caracteres**. Não entregue resumos.
 
 **Filtro de Conteúdo (IMPORTANTE):**
-Se a "notícia" original for claramente um anúncio, um publieditorial, uma propaganda de programa de TV (ex: "Assista ao Jornal do Amazonas"), conheça a equipe do g1, ou uma página institucional (ex: "Termos de uso", "Equipe do g1", "VC no g1", "Sobre o g1"), **não reescreva**. Em vez disso, responda APENAS com o seguinte JSON:
+Se a "notícia" original for claramente um anúncio, um publieditorial, uma propaganda de programa de TV (ex: "Assista ao Jornal do Amazonas"), ou uma página institucional (ex: "Termos de uso", "Equipe do g1", "VC no g1", "Sobre o g1", "Conheça a história", "Redação Globo Repórter"), **não reescreva**. Em vez disso, responda APENAS com o seguinte JSON:
 {
   "titulo": "CONTEÚDO IGNORADO",
   "conteudo": "publieditorial"
@@ -387,12 +407,8 @@ Responda **APENAS** com um objeto JSON válido, sem nenhum texto antes ou depois
 
     const data = await response.json();
     
-    // -------------------------------------------------------------------
-    // MUDANÇA (CORREÇÃO ERRO 2): Limpeza da resposta JSON
-    // -------------------------------------------------------------------
+    // Limpeza da resposta JSON (sem alterações)
     let content = data.choices[0].message.content;
-    
-    // Procura o JSON dentro da resposta (ignorando "```json" ou "aqui está:")
     const jsonMatch = content.match(/{[\s\S]*}/);
     
     if (!jsonMatch) {
@@ -400,8 +416,7 @@ Responda **APENAS** com um objeto JSON válido, sem nenhum texto antes ou depois
     }
     
     const jsonString = jsonMatch[0];
-    const jsonResponse = JSON.parse(jsonString); // Parse apenas do JSON limpo
-    // -------------------------------------------------------------------
+    const jsonResponse = JSON.parse(jsonString); 
 
     if (jsonResponse.titulo && jsonResponse.conteudo) {
       // VERIFICA O FILTRO DE PUBLI
@@ -451,7 +466,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // AUTENTICAÇÃO
+    // AUTENTICAÇÃO (sem alterações)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Sem autorização" }), 
@@ -475,7 +490,7 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
     }
 
-    // PARSE DA URL
+    // PARSE DA URL (sem alterações)
     const body = await req.json();
     const targetUrl = body.url;
     if (!targetUrl) {
@@ -485,7 +500,7 @@ Deno.serve(async (req) => {
 
     console.log('Processando URL:', targetUrl);
 
-    // DETECTA O PORTAL
+    // DETECTA O PORTAL (sem alterações)
     const portalConfig = detectPortal(targetUrl);
     if (!portalConfig) {
       return new Response(JSON.stringify({ error: "Portal não suportado" }), 
@@ -494,17 +509,17 @@ Deno.serve(async (req) => {
 
     console.log('Portal detectado:', portalConfig.name);
 
-    // BUSCA URLs JÁ PROCESSADAS PARA EVITAR DUPLICATAS
+    // BUSCA URLs JÁ PROCESSADAS (sem alterações)
     const { data: existingUrls } = await supabaseAdmin
       .from('noticias_scraped')
       .select('url_original')
       .eq('fonte', portalConfig.name)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()); // Últimos 7 dias
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()); 
 
     const existingUrlsSet = new Set(existingUrls?.map(item => item.url_original) || []);
     console.log(`URLs já processadas: ${existingUrlsSet.size}`);
 
-    // BUSCA A PÁGINA INICIAL DO PORTAL
+    // BUSCA A PÁGINA INICIAL DO PORTAL (sem alterações)
     const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
     let htmlContent: string;
     
@@ -527,14 +542,14 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
     }
 
-    // EXTRAI LINKS DE NOTÍCIAS (MAIS LINKS PARA EVITAR DUPLICATAS)
-    const newsLinks = extractNewsLinks(htmlContent, portalConfig, 20) // Aumentado para 20
-      .filter(url => !existingUrlsSet.has(url)); // Remove URLs já processadas
+    // EXTRAI LINKS DE NOTÍCIAS (sem alterações)
+    const newsLinks = extractNewsLinks(htmlContent, portalConfig, 20) 
+      .filter(url => !existingUrlsSet.has(url)); 
     
     if (newsLinks.length === 0) {
       return new Response(JSON.stringify({ 
         success: true,
-        message: `Todas as notícias recentes do ${portalConfig.name} já foram processadas.`,
+        message: `Nenhuma notícia NOVA encontrada no ${portalConfig.name} (Modo Rigoroso).`,
         stats: { 
           total_encontradas: 0,
           processadas_com_sucesso: 0,
@@ -546,14 +561,11 @@ Deno.serve(async (req) => {
 
     console.log(`Processando ${newsLinks.length} notícias novas de ${portalConfig.name}`);
 
-    // PROCESSA CADA NOTÍCIA
+    // PROCESSA CADA NOTÍCIA (sem alterações)
     const processedNews = [];
     let successCount = 0;
     let errorCount = 0;
 
-    // -------------------------------------------------------------------
-    // MUDANÇA: Aumentado para 12 notícias por varredura
-    // -------------------------------------------------------------------
     for (const newsUrl of newsLinks.slice(0, 12)) { 
       try {
         console.log(`Processando: ${newsUrl}`);
@@ -590,13 +602,13 @@ Deno.serve(async (req) => {
 
         const resumoReescrito = conteudoReescrito.substring(0, 300) + (conteudoReescrito.length > 300 ? "..." : "");
 
-        // Salva no banco COM IMAGEM e CONTEÚDO COMPLETO
+        // Salva no banco
         const noticiaData: NoticiaScrapedData = {
           titulo_original: titulo,
           titulo_reescrito: tituloReescrito,
           resumo_original: resumo,
           resumo_reescrito: resumoReescrito,
-          conteudo_reescrito: conteudoReescrito, // <-- SALVANDO O ARTIGO COMPLETO
+          conteudo_reescrito: conteudoReescrito, 
           url_original: newsUrl,
           fonte: portalConfig.name,
           status: 'processado',
@@ -632,7 +644,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // RESPOSTA FINAL
+    // RESPOSTA FINAL (sem alterações)
     return new Response(JSON.stringify({
       success: true,
       message: `Processamento do ${portalConfig.name} concluído!`,
