@@ -7,9 +7,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root { color-scheme: dark; }
-    .brand-red { background-color: #7a0a0a; } /* dark-red jornal */
-    .brand-accent { color: #e11d48; }         /* vermelho */
-    .brand-blue { color: #3b82f6; }           /* azul */
+    .brand-red { background-color: #7a0a0a; }
+    .brand-accent { color: #e11d48; }
+    .brand-blue { color: #3b82f6; }
     .card { background:#0b0b0b; border:1px solid #1f2937; border-radius:12px; }
     .btn { border-radius:10px; padding:0.55rem 0.9rem; font-weight:600; }
     .btn-red { background:#b91c1c; color:#fff; }
@@ -21,9 +21,16 @@
     .grid-news { display:grid; grid-template-columns: 1fr; gap:12px; }
     @media(min-width:1024px){ .grid-news { grid-template-columns: 1.5fr 1fr; } }
     .table { width:100%; border-collapse: collapse; }
-    .table th, .table td { border-bottom:1px solid #1f2937; padding:.6rem .5rem; text-align:left; }
+    .table th, .table td { border-bottom:1px solid #1f2937; padding:.6rem .5rem; text-align:left; vertical-align:top; }
     .table tr:hover { background:#0f172a; }
     .pill { padding:.15rem .5rem; border-radius:9999px; font-size:.75rem; }
+
+    /* line-clamp sem plugin do Tailwind */
+    .line-clamp-1, .line-clamp-2 {
+      display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .line-clamp-1 { -webkit-line-clamp: 1; }
+    .line-clamp-2 { -webkit-line-clamp: 2; }
   </style>
 </head>
 <body class="bg-black text-gray-100">
@@ -42,10 +49,10 @@
       <!-- Coluna: Scraper e Ações -->
       <div class="card p-4">
         <h2 class="text-xl font-semibold mb-3">
-          Coleta e reescrita <span class="brand-accent">multi‑portal</span>
+          Coleta e reescrita <span class="brand-accent">multi-portal</span>
         </h2>
         <p class="text-sm text-gray-400 mb-4">
-          Dispare a Edge Function por portal, com corpo JSON { "portalId": "..." } e opcional { "max": 8–15 } para controlar a quantidade de itens processados [web:13].
+          Dispare a Edge Function por portal. Enviaremos <code>{ "portalId": "..." , "max": 8-15 }</code> no corpo do POST.
         </p>
 
         <div class="mb-3 flex items-center gap-2">
@@ -57,7 +64,7 @@
         <div id="portal-buttons" class="flex flex-wrap gap-2 mb-3"></div>
 
         <div class="text-xs text-gray-500">
-          Dica: se aparecer “Invalid API key”, atualize a Anon Key nas Configurações abaixo e salve para refazer a conexão [attached_file:22].
+          Dica: se aparecer “Invalid API key”, confira a URL e a Anon Key nas Configurações e teste a conexão.
         </div>
       </div>
 
@@ -234,7 +241,7 @@
       if (!supabase) { return toast("Configuração incompleta."); }
       const { error } = await supabase
         .from("noticias_scraped")
-        .select("url_original", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .limit(1);
       elCfgStatus.textContent = error ? ("Erro: " + error.message) : "Conexão OK.";
       toast(error ? ("Erro: " + error.message) : "Conexão OK.");
@@ -264,11 +271,19 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ portalId, max })
         });
-        const data = await res.json();
+
+        let data = null;
+        try { data = await res.json(); } catch { /* resposta não-JSON */ }
+
+        if (!res.ok) {
+          const errMsg = (data && data.error) ? data.error : `HTTP ${res.status}`;
+          throw new Error(errMsg);
+        }
+
         toast(`${label}: ${data?.processed ?? 0} itens processados.`);
         reload();
       } catch (e) {
-        toast(`Falha ao processar ${label}: ${e}`, true);
+        toast(`Falha ao processar ${label}: ${e?.message || e}`, true);
       } finally {
         btn.disabled = false;
         btn.textContent = prev;
@@ -293,17 +308,14 @@
         .range(from, to);
 
       const term = (elSearch.value || "").trim();
-      if (term) {
-        q = q.ilike("titulo_reescrito", `%${term}%`);
-      }
+      if (term) q = q.ilike("titulo_reescrito", `%${term}%`);
+
       const f = elFilterStatus.value;
-      if (f && f !== "todos") {
-        q = q.eq("status", f);
-      }
+      if (f && f !== "todos") q = q.eq("status", f);
 
       const { data, count, error } = await q;
       if (error) {
-        elTbody.innerHTML = `<tr><td colspan="6" class="text-red-400">${error.message}</td></tr>`;
+        elTbody.innerHTML = `<tr><td colspan="6" class="text-red-400">${escapeHtml(error.message)}</td></tr>`;
         elPagerInfo.textContent = "—";
         return;
       }
@@ -318,14 +330,18 @@
         const tr = document.createElement("tr");
 
         const tTitulo = document.createElement("td");
-        tTitulo.innerHTML = `<div class="line-clamp-2">${escapeHtml(r.titulo_reescrito || "(sem título)")}</div>
-                             <div class="text-xs text-gray-400 line-clamp-1">${escapeHtml(r.url_original)}</div>`;
+        tTitulo.innerHTML = `
+          <div class="line-clamp-2 font-medium">${escapeHtml(r.titulo_reescrito || "(sem título)")}</div>
+          <div class="text-xs text-gray-400 line-clamp-1">${escapeHtml(r.url_original || "")}</div>
+        `;
 
         const tFonte = document.createElement("td");
         tFonte.textContent = `${r.fonte || "-"} • ${r.categoria || "-"}`;
 
         const tData = document.createElement("td");
-        tData.textContent = r.data_coleta ? new Date(r.data_coleta).toLocaleString() : "-";
+        tData.textContent = r.data_coleta
+          ? new Date(r.data_coleta).toLocaleString("pt-BR")
+          : "-";
 
         const tStatus = document.createElement("td");
         tStatus.innerHTML = `
@@ -340,7 +356,7 @@
 
         const tTam = document.createElement("td");
         const len = (r.conteudo_reescrito || "").length;
-        tTam.textContent = len ? `${len} chars` : "-";
+        tTam.textContent = len ? `${len.toLocaleString("pt-BR")} chars` : "-";
 
         const tAcoes = document.createElement("td");
         tAcoes.className = "flex flex-wrap gap-2";
@@ -364,7 +380,7 @@
       const pageSize = getPageSize();
       const pages = Math.max(1, Math.ceil(total / pageSize));
       currentPage = Math.min(currentPage, pages);
-      elPagerInfo.textContent = `Página ${currentPage} de ${pages} • ${total} itens`;
+      elPagerInfo.textContent = `Página ${currentPage} de ${pages} • ${total.toLocaleString("pt-BR")} itens`;
     }
 
     function prevPage() { if (currentPage > 1) { currentPage--; loadItems(); } }
@@ -382,7 +398,7 @@
     async function updateStatus(id, status) {
       if (!supabase) return;
       const patch = { status };
-      if (status === "publicado") { patch["data_publicacao"] = new Date().toISOString(); }
+      if (status === "publicado") patch["data_publicacao"] = new Date().toISOString();
       const { error } = await supabase.from("noticias_scraped").update(patch).eq("id", id);
       if (error) { return toast("Erro ao atualizar: " + error.message, true); }
       toast("Status atualizado: " + status);
@@ -392,9 +408,11 @@
     // ---------- Utils ----------
     function makeLink(label, href) {
       const a = document.createElement("a");
-      a.href = href; a.target = "_blank"; a.rel = "noopener";
+      a.href = href || "#";
+      a.target = "_blank"; a.rel = "noopener";
       a.className = "btn btn-ghost";
       a.textContent = label;
+      if (!href) a.classList.add("opacity-50","pointer-events-none");
       return a;
     }
     function makeBtn(label, fn, cls="btn-ghost") {
@@ -405,7 +423,9 @@
       return b;
     }
     function copy(text) {
-      navigator.clipboard.writeText(text || "").then(() => toast("Copiado."), () => toast("Falha ao copiar.", true));
+      navigator.clipboard.writeText(text || "")
+        .then(() => toast("Copiado."))
+        .catch(() => toast("Falha ao copiar.", true));
     }
     function escapeHtml(s) {
       return (s||"").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;" }[m]));
@@ -420,6 +440,9 @@
       setTimeout(()=> d.remove(), 3200);
     }
 
+    // Enter para buscar
+    elSearch.addEventListener("keydown", (e) => { if (e.key === "Enter") reload(); });
+
     // ---------- Boot ----------
     renderPortalButtons();
     loadConfig();
@@ -430,6 +453,8 @@
     window.clearConfig = clearConfig;
     window.testConnection = testConnection;
   </script>
+
+
 </body>
 
 
@@ -438,6 +463,7 @@
 
 
 </html>
+
 
 
 
