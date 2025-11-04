@@ -351,7 +351,6 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
 }
 
 // --- FUNÇÃO DE REESCRITA COM IA (MANTIDA IGUAL) ---
-// --- FUNÇÃO DE REESCRITA COM IA - CORRIGIDA PARA JSON ---
 async function rewriteWithGrok(titulo: string, conteudo: string, fonte: string): Promise<GrokResponse> {
   const GROK_API_KEY = Deno.env.get("GROK_API_KEY"); 
   if (!GROK_API_KEY) {
@@ -359,32 +358,18 @@ async function rewriteWithGrok(titulo: string, conteudo: string, fonte: string):
     return { titulo, conteudo };
   }
 
-  // LIMPA O CONTEÚDO ANTES DE ENVIAR PARA GROQ
-  const conteudoLimpo = conteudo
-    .replace(/[\n\r\t]/g, ' ')  // Remove quebras de linha e tabs
-    .replace(/[\u0000-\u001F\u007F]/g, '') // Remove caracteres de controle
-    .replace(/"/g, "'") // Troca aspas duplas por simples
-    .replace(/\\/g, '') // Remove barras invertidas
-    .substring(0, 1500); // Limita tamanho
+  const prompt = `Você é jornalista do "SeligaManaux", portal de notícias de Manaus/Amazonas.
+Reescreva esta notícia de forma clara, objetiva e interessante para manauaras.
+Mantenha os fatos, mas mude as palavras e estrutura.
 
-  const tituloLimpo = titulo
-    .replace(/[\n\r\t]/g, ' ')
-    .replace(/[\u0000-\u001F\u007F]/g, '')
-    .replace(/"/g, "'")
-    .replace(/\\/g, '');
+ORIGINAL (${fonte}):
+Título: ${titulo}
+Texto: ${conteudo.substring(0, 1800)}
 
-  const prompt = `Reescreva esta notícia para o portal SeligaManaux de Manaus.
-Use linguagem clara e direta para manauaras.
-
-Título: ${tituloLimpo}
-Fonte: ${fonte}
-Texto: ${conteudoLimpo}
-
-Responda apenas com JSON limpo sem formatação extra:
-{"titulo": "novo título", "conteudo": "novo conteúdo"}`;
+Responda APENAS com JSON válido:
+{"titulo": "novo título focado em Manaus/Amazonas", "conteudo": "texto reescrito de forma clara e interessante"}`;
 
   try {
-    console.log('Enviando para Groq API...');
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -394,89 +379,32 @@ Responda apenas com JSON limpo sem formatação extra:
       body: JSON.stringify({
         model: "llama-3.1-8b-instant",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.2, // Muito conservador
-        max_tokens: 800,
-        top_p: 0.9
+        temperature: 0.3,
+        max_tokens: 1000,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`Groq API error: ${response.status}`, errorData);
       throw new Error(`Groq API error: ${response.status}`);
     }
 
     const data = await response.json();
     let content = data.choices[0].message.content.trim();
     
-    console.log('Resposta da Groq (raw):', content);
-    
-    // LIMPEZA ROBUSTA DO CONTEÚDO DA GROQ
-    // Remove markdown se houver
-    if (content.includes('```')) {
-      content = content.replace(/```json\n?/g, '').replace(/\n?```/g, '');
+    if (content.startsWith('```json')) {
+      content = content.replace(/```json\n?/, '').replace(/\n?```$/, '');
     }
     
-    // Remove quebras de linha extras
-    content = content.replace(/\n/g, '').replace(/\r/g, '');
-    
-    // Remove caracteres de controle que causam erro no JSON
-    content = content.replace(/[\u0000-\u001F\u007F]/g, '');
-    
-    // Se não começar com {, procura pelo primeiro {
-    if (!content.startsWith('{')) {
-      const jsonStart = content.indexOf('{');
-      if (jsonStart !== -1) {
-        content = content.substring(jsonStart);
-      }
-    }
-    
-    // Se não terminar com }, procura pelo último }
-    if (!content.endsWith('}')) {
-      const jsonEnd = content.lastIndexOf('}');
-      if (jsonEnd !== -1) {
-        content = content.substring(0, jsonEnd + 1);
-      }
-    }
-    
-    console.log('Conteúdo limpo para parse:', content);
-    
-    try {
-      const jsonResponse = JSON.parse(content);
-      if (jsonResponse.titulo && jsonResponse.conteudo) {
-        console.log('JSON parseado com sucesso');
-        return {
-          titulo: jsonResponse.titulo.replace(/[\u0000-\u001F\u007F]/g, ''),
-          conteudo: jsonResponse.conteudo.replace(/[\u0000-\u001F\u007F]/g, '')
-        } as GrokResponse;
-      } else {
-        console.error('JSON não contém titulo e conteudo:', jsonResponse);
-        throw new Error('JSON incompleto');
-      }
-    } catch (parseError) {
-      console.error('Erro ao parsear JSON:', parseError);
-      console.error('Conteúdo que causou erro:', content);
-      
-      // FALLBACK: Extrai título e conteúdo com regex se JSON falhar
-      const tituloMatch = content.match(/"titulo":\s*"([^"]+)"/);
-      const conteudoMatch = content.match(/"conteudo":\s*"([^"]+)"/);
-      
-      if (tituloMatch && conteudoMatch) {
-        return {
-          titulo: tituloMatch[1].replace(/[\u0000-\u001F\u007F]/g, ''),
-          conteudo: conteudoMatch[1].replace(/[\u0000-\u001F\u007F]/g, '')
-        };
-      }
-      
-      // Se tudo falhar, retorna original
-      return { titulo: tituloLimpo, conteudo: conteudoLimpo };
+    const jsonResponse = JSON.parse(content);
+    if (jsonResponse.titulo && jsonResponse.conteudo) {
+      return jsonResponse as GrokResponse;
     }
     
   } catch (error) {
-    console.error("Erro completo da Groq:", error);
-    return { titulo: tituloLimpo, conteudo: conteudoLimpo };
+    console.error("Erro Groq:", error);
   }
-  
+
+  return { titulo, conteudo };
 }
 
 // --- FUNÇÃO PARA DETECTAR PORTAL ---
