@@ -1,3 +1,5 @@
+
+admin-simples-scraped.html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -40,41 +42,17 @@
         .status-pendente { background: #f59e0b; color: white; }
         .status-publicado { background: #7c3aed; color: white; }
         .noticia-image { width: 100%; max-height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 10px; }
-        .error-message { background: #dc2626; color: white; padding: 15px; border-radius: 4px; margin: 10px 0; }
-        .warning-box { background: #f59e0b; color: white; padding: 15px; border-radius: 4px; margin: 10px 0; }
-        .api-config { background: #374151; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>SeligaManaux - Admin</h1>
 
-        <!-- ⚠️ AVISO IMPORTANTE SOBRE API KEYS -->
-        <div class="warning-box">
-            <h3>🚨 IMPORTANTE: Configure as API Keys</h3>
-            <p>Se você está vendo erro "Invalid API key", precisa atualizar as keys do Supabase no código abaixo.</p>
-        </div>
-
-        <!-- Seção de Configuração de API -->
-        <div class="api-config">
-            <h3>🔧 Configuração de API Keys</h3>
-            <p>Vá no <strong>Supabase Dashboard > Settings > API</strong> e copie as keys aqui:</p>
-            <div class="form-group">
-                <label for="supabaseUrl">Supabase URL:</label>
-                <input type="text" id="supabaseUrl" value="https://xtnqypmezntjcidglblc.supabase.co" readonly>
-            </div>
-            <div class="form-group">
-                <label for="anonKey">Anon Key (Publishable):</label>
-                <input type="text" id="anonKey" placeholder="Copie a anon/publishable key do dashboard">
-            </div>
-            <button onclick="updateApiConfig()" style="background: #059669;">💾 Atualizar Configuração</button>
-        </div>
-
-        <!-- Seção de Autenticação -->
+        <!-- Seção de Autenticação ORIGINAL -->
         <div class="auth-section">
             <div id="loginForm">
                 <h3>Login</h3>
-                <input type="email" id="email" placeholder="Email" value="tirra@tirracred.com.br">
+                <input type="email" id="email" placeholder="Email" value="">
                 <input type="password" id="password" placeholder="Senha" required>
                 <button onclick="login()">Entrar</button>
                 <p id="loginStatus"></p>
@@ -85,35 +63,25 @@
             </div>
         </div>
 
-        <!-- Seção de Busca Automática -->
+        <!-- Painel Admin -->
         <div id="adminPanel" class="hidden">
+            
+            <!-- ✅ NOVO: Seção de Notícias Scraped -->
             <div class="scraped-section">
-                <h3>🤖 Buscar Notícias Automáticas</h3>
-                <p>Buscar, reescrever e salvar notícias dos principais portais de Manaus/Amazonas.</p>
-                
+                <h3>🤖 Notícias Scraped Pendentes</h3>
+                <p>Notícias coletadas automaticamente que estão aguardando publicação.</p>
                 <div class="source-buttons">
                     <button class="scrape-button" onclick="scrapePortal('https://g1.globo.com/am/amazonas/', 'G1 Amazonas')">📰 Buscar G1 Amazonas</button>
-                    <button class="scrape-button" onclick="scrapePortal('https://portaldoholanda.com.br/amazonas', 'Portal do Holanda')">🌐 Buscar Portal do Holanda</button>
-                    <button class="scrape-button" onclick="scrapePortal('https://www.acritica.com/', 'A Crítica')">📄 Buscar A Crítica</button>
-                    <button class="scrape-button" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia')">🌿 Buscar Portal Amazônia</button>
                 </div>
-
-                <div id="scrapeStatus" class="loading hidden">Buscando notícias... Aguarde.</div>
-            </div>
-
-            <!-- Lista de Notícias Scraped para Publicação -->
-            <div class="admin-section">
-                <h3>📋 Notícias Scraped Pendentes</h3>
-                <p>Notícias coletadas automaticamente que estão aguardando publicação.</p>
-                <button onclick="loadScrapedNoticias()" style="background: #059669;">🔄 Recarregar Scraped</button>
+                <button onclick="loadScrapedNoticias()" style="background: #059669; margin-top: 10px;">🔄 Recarregar Scraped</button>
                 <div id="scrapedNoticias" class="noticias-container">
                     <div class="loading">Carregando notícias scraped...</div>
                 </div>
             </div>
 
-            <!-- Seção de Criação Manual -->
+            <!-- Seção Original de Criação Manual -->
             <div class="admin-section">
-                <h3>✍️ Criar Notícia Manual</h3>
+                <h3>Criar Nova Notícia</h3>
                 <div class="form-group">
                     <label for="title">Título:</label>
                     <input type="text" id="title" placeholder="Título da notícia">
@@ -130,128 +98,32 @@
                         <option value="Economia">Economia</option>
                         <option value="Esportes">Esportes</option>
                         <option value="Cultura">Cultura</option>
-                        <option value="Amazonas">Amazonas</option>
                     </select>
                 </div>
-                <button onclick="publishNoticia()">📝 Publicar Notícia</button>
+                <button onclick="publishNoticia()">Publicar Notícia</button>
             </div>
 
-            <!-- Lista de Notícias Publicadas -->
+            <!-- Lista de Notícias Publicadas ORIGINAL -->
             <div class="admin-section">
-                <h3>📰 Notícias Publicadas</h3>
-                <button onclick="loadNoticias()">🔄 Recarregar Publicadas</button>
+                <h3>Gerenciar Notícias</h3>
+                <button onclick="loadNoticias()">Recarregar</button>
                 <div id="noticias" class="noticias-container">
-                    <div class="loading">Carregando notícias publicadas...</div>
+                    <div class="loading">Carregando notícias...</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Variáveis globais
-        let supabaseClient = null;
-        let currentSession = null;
+        // INICIALIZAÇÃO ORIGINAL DO SUPABASE (sem mudanças)
+        const { createClient } = supabase;
+        const supabaseClient = createClient(
+            'https://xtnqypmezntjcidglblc.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
+        );
 
-        // Função para atualizar configuração da API
-        function updateApiConfig() {
-            const supabaseUrl = document.getElementById('supabaseUrl').value;
-            const anonKey = document.getElementById('anonKey').value;
-
-            if (!supabaseUrl || !anonKey) {
-                alert('Preencha a URL e a Anon Key do Supabase!');
-                return;
-            }
-
-            try {
-                // Testa se a key tem o formato correto
-                if (!anonKey.startsWith('eyJ') && !anonKey.startsWith('sb_')) {
-                    alert('⚠️ ATENÇÃO: Esta não parece ser uma API key válida do Supabase.\n\nFormatos válidos:\n- JWT (anon): eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\n- Publishable: sb_publishable_...');
-                    return;
-                }
-
-                // Cria novo cliente Supabase
-                const { createClient } = supabase;
-                supabaseClient = createClient(supabaseUrl, anonKey, {
-                    auth: {
-                        persistSession: true,
-                        autoRefreshToken: true,
-                        detectSessionInUrl: true
-                    }
-                });
-
-                // Salva no localStorage para próximas sessões
-                localStorage.setItem('supabase_url', supabaseUrl);
-                localStorage.setItem('supabase_anon_key', anonKey);
-
-                alert('✅ Configuração atualizada! Agora faça login.');
-                
-                // Se já está logado, reconecta
-                if (currentSession) {
-                    loadScrapedNoticias();
-                    loadNoticias();
-                }
-
-            } catch (error) {
-                alert('❌ Erro ao configurar Supabase: ' + error.message);
-                console.error('Erro de configuração:', error);
-            }
-        }
-
-        // Inicialização com configuração salva ou padrão
-        function initSupabase() {
-            const savedUrl = localStorage.getItem('supabase_url') || 'https://xtnqypmezntjcidglblc.supabase.co';
-            const savedKey = localStorage.getItem('supabase_anon_key') || '';
-
-            if (savedKey) {
-                document.getElementById('anonKey').value = savedKey;
-                
-                try {
-                    const { createClient } = supabase;
-                    supabaseClient = createClient(savedUrl, savedKey, {
-                        auth: {
-                            persistSession: true,
-                            autoRefreshToken: true,
-                            detectSessionInUrl: true
-                        }
-                    });
-
-                    console.log('Supabase inicializado com configuração salva');
-                    
-                    // Verifica se já está logado
-                    supabaseClient.auth.onAuthStateChange((event, session) => {
-                        console.log('Auth state changed:', event, session?.user?.email || 'No user');
-                        
-                        if (session) {
-                            currentSession = session;
-                            document.getElementById('loginForm').classList.add('hidden');
-                            document.getElementById('userInfo').classList.remove('hidden');
-                            document.getElementById('adminPanel').classList.remove('hidden');
-                            document.getElementById('userEmail').textContent = session.user.email;
-                            loadScrapedNoticias();
-                            loadNoticias();
-                        } else {
-                            currentSession = null;
-                            document.getElementById('loginForm').classList.remove('hidden');
-                            document.getElementById('userInfo').classList.add('hidden');
-                            document.getElementById('adminPanel').classList.add('hidden');
-                        }
-                    });
-                    
-                } catch (error) {
-                    console.error('Erro na inicialização:', error);
-                }
-            } else {
-                console.log('Nenhuma configuração salva encontrada. Configure a API key primeiro.');
-            }
-        }
-
-        // Funções de Autenticação
+        // FUNÇÕES ORIGINAIS DE AUTENTICAÇÃO (sem mudanças)
         async function login() {
-            if (!supabaseClient) {
-                alert('⚠️ Configure a API key primeiro antes de fazer login!');
-                return;
-            }
-
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const statusEl = document.getElementById('loginStatus');
@@ -264,309 +136,84 @@
 
                 if (error) throw error;
 
-                currentSession = data.session;
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('userInfo').classList.remove('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                document.getElementById('userEmail').textContent = data.user.email;
                 statusEl.textContent = 'Login realizado com sucesso!';
                 statusEl.style.color = 'green';
 
-                // Interface será atualizada pelo onAuthStateChange
+                // CARREGA AMBAS: ORIGINAL E SCRAPED
+                loadNoticias();
+                loadScrapedNoticias();
 
             } catch (error) {
                 statusEl.textContent = 'Erro: ' + error.message;
                 statusEl.style.color = 'red';
-                console.error('Erro de login:', error);
             }
         }
 
         async function logout() {
-            if (supabaseClient) {
-                await supabaseClient.auth.signOut();
-            }
-            currentSession = null;
+            await supabaseClient.auth.signOut();
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('userInfo').classList.add('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
             document.getElementById('loginStatus').textContent = '';
         }
 
-        // Função para fazer scrape de um portal
-        async function scrapePortal(url, sourceName) {
-            if (!supabaseClient || !currentSession) {
-                alert('Configure a API key e faça login primeiro!');
-                return;
+        // Verificar se já está logado - ORIGINAL
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('userInfo').classList.remove('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                document.getElementById('userEmail').textContent = session.user.email;
+                loadNoticias();
+                loadScrapedNoticias(); // ADICIONA APENAS ESTA LINHA
             }
+        });
 
-            const statusEl = document.getElementById('scrapeStatus');
-            statusEl.classList.remove('hidden');
-            statusEl.textContent = `Buscando notícias do ${sourceName}... Aguarde.`;
-
-            try {
-                const anonKey = document.getElementById('anonKey').value;
-                
-                const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${currentSession.access_token}`,
-                        'Content-Type': 'application/json',
-                        'apikey': anonKey
-                    },
-                    body: JSON.stringify({ url: url })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    const count = data.stats?.processadas_com_sucesso || 1;
-                    statusEl.textContent = `✅ Sucesso! ${count} notícias coletadas do ${sourceName}.`;
-                    statusEl.style.color = 'green';
-                    setTimeout(() => loadScrapedNoticias(), 1000);
-                } else {
-                    statusEl.textContent = `❌ Erro: ${data.error || data.message}`;
-                    statusEl.style.color = 'red';
-                    console.error('Erro da API:', data);
-                }
-
-            } catch (error) {
-                statusEl.textContent = `❌ Erro na requisição: ${error.message}`;
-                statusEl.style.color = 'red';
-                console.error('Erro:', error);
-            }
-
-            setTimeout(() => statusEl.classList.add('hidden'), 5000);
-        }
-
-        // Carregar notícias scraped
-        async function loadScrapedNoticias() {
-            const container = document.getElementById('scrapedNoticias');
-            container.innerHTML = '<div class="loading">Carregando notícias scraped...</div>';
-
-            if (!supabaseClient) {
-                container.innerHTML = '<div class="error-message">❌ Supabase não configurado. Configure a API key primeiro.</div>';
-                return;
-            }
-
-            try {
-                console.log('Carregando notícias scraped...');
-                
-                const { data, error } = await supabaseClient
-                    .from('noticias_scraped')
-                    .select('*')
-                    .eq('status', 'processado')
-                    .order('created_at', { ascending: false })
-                    .limit(20);
-
-                if (error) {
-                    console.error('Erro detalhado ao carregar scraped:', error);
-                    throw error;
-                }
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<div class="loading">✅ Nenhuma notícia scraped pendente. Use os botões acima para buscar notícias automaticamente.</div>';
-                    return;
-                }
-
-                container.innerHTML = data.map(noticia => {
-                    const imagemHtml = noticia.imagem_url 
-                        ? `<img src="${noticia.imagem_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">`
-                        : '';
-                    
-                    const dataFormatada = noticia.data_coleta || noticia.created_at;
-                    const dataTexto = dataFormatada ? new Date(dataFormatada).toLocaleString('pt-BR') : 'Data não disponível';
-                    
-                    return `
-                        <div class="noticia-card scraped-card">
-                            ${imagemHtml}
-                            <div class="noticia-title">${noticia.titulo_reescrito || noticia.titulo_original || 'Título não disponível'}</div>
-                            <div class="noticia-content">${(noticia.resumo_reescrito || noticia.resumo_original || 'Resumo não disponível').substring(0, 200)}...</div>
-                            <div class="noticia-meta">
-                                <span class="status-badge status-${noticia.status || 'pendente'}">${noticia.status || 'pendente'}</span>
-                                <br>
-                                <strong>Fonte:</strong> ${noticia.fonte || 'Não informada'}<br>
-                                <strong>Categoria:</strong> ${noticia.categoria || 'Geral'}<br>
-                                <strong>Coletado:</strong> ${dataTexto}<br>
-                                ${noticia.url_original ? `<strong>URL:</strong> <a href="${noticia.url_original}" target="_blank" style="color: #059669;">Ver original</a>` : ''}
-                            </div>
-                            <div class="noticia-actions">
-                                <button class="publish-button" onclick="publishScrapedNoticia(${noticia.id})">📰 Publicar</button>
-                                <button class="danger-button" onclick="deleteScrapedNoticia(${noticia.id})">🗑️ Excluir</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                console.log(`Carregadas ${data.length} notícias scraped`);
-
-            } catch (error) {
-                console.error('Erro ao carregar notícias scraped:', error);
-                
-                let errorMessage = '⚠️ Erro desconhecido';
-                if (error.message === 'Invalid API key') {
-                    errorMessage = '🔑 API Key inválida! Configure uma API key válida na seção acima.';
-                } else if (error.message) {
-                    errorMessage = error.message;
-                }
-                
-                container.innerHTML = `
-                    <div class="error-message">
-                        ❌ ${errorMessage}
-                        <br><br>
-                        <button onclick="loadScrapedNoticias()" style="background: #059669; margin-top: 10px;">🔄 Tentar Novamente</button>
-                    </div>
-                `;
-            }
-        }
-
-        // Carregar notícias publicadas
+        // FUNÇÃO ORIGINAL loadNoticias (sem mudanças)
         async function loadNoticias() {
             const container = document.getElementById('noticias');
-            container.innerHTML = '<div class="loading">Carregando notícias publicadas...</div>';
-
-            if (!supabaseClient) {
-                container.innerHTML = '<div class="error-message">❌ Supabase não configurado. Configure a API key primeiro.</div>';
-                return;
-            }
+            container.innerHTML = '<div class="loading">Carregando notícias...</div>';
 
             try {
-                console.log('Carregando notícias publicadas...');
-                
                 const { data, error } = await supabaseClient
                     .from('noticias')
                     .select('*')
                     .order('created_at', { ascending: false });
 
-                if (error) {
-                    console.error('Erro detalhado ao carregar publicadas:', error);
-                    throw error;
-                }
+                if (error) throw error;
 
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<div class="loading">✅ Nenhuma notícia publicada encontrada.</div>';
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="loading">Nenhuma notícia encontrada.</div>';
                     return;
                 }
 
-                container.innerHTML = data.map(noticia => {
-                    const imagemHtml = noticia.image_url 
-                        ? `<img src="${noticia.image_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">`
-                        : '';
-                    
-                    const dataTexto = noticia.created_at ? new Date(noticia.created_at).toLocaleString('pt-BR') : 'Data não disponível';
-                    
-                    return `
-                        <div class="noticia-card">
-                            ${imagemHtml}
-                            <div class="noticia-title">${noticia.title || 'Título não disponível'}</div>
-                            <div class="noticia-content">${(noticia.content || 'Conteúdo não disponível').substring(0, 200)}...</div>
-                            <div class="noticia-meta">
-                                <strong>Categoria:</strong> ${noticia.category || 'Não informada'}<br>
-                                <strong>Publicado:</strong> ${dataTexto}
-                            </div>
-                            <div class="noticia-actions">
-                                <button onclick="editNoticia(${noticia.id})">✏️ Editar</button>
-                                <button class="danger-button" onclick="deleteNoticia(${noticia.id})">🗑️ Excluir</button>
-                            </div>
+                container.innerHTML = data.map(noticia => `
+                    <div class="noticia-card">
+                        <div class="noticia-title">${noticia.title}</div>
+                        <div class="noticia-content">${(noticia.content || '').substring(0, 200)}...</div>
+                        <div class="noticia-meta">
+                            <strong>Categoria:</strong> ${noticia.category}<br>
+                            <strong>Publicado:</strong> ${new Date(noticia.created_at).toLocaleString('pt-BR')}
                         </div>
-                    `;
-                }).join('');
-
-                console.log(`Carregadas ${data.length} notícias publicadas`);
-
-            } catch (error) {
-                console.error('Erro ao carregar notícias publicadas:', error);
-                
-                let errorMessage = '⚠️ Erro desconhecido';
-                if (error.message === 'Invalid API key') {
-                    errorMessage = '🔑 API Key inválida! Configure uma API key válida na seção acima.';
-                } else if (error.message) {
-                    errorMessage = error.message;
-                }
-                
-                container.innerHTML = `
-                    <div class="error-message">
-                        ❌ ${errorMessage}
-                        <br><br>
-                        <button onclick="loadNoticias()" style="background: #dc2626; margin-top: 10px;">🔄 Tentar Novamente</button>
+                        <div class="noticia-actions">
+                            <button onclick="editNoticia(${noticia.id})">Editar</button>
+                            <button class="danger-button" onclick="deleteNoticia(${noticia.id})">Excluir</button>
+                        </div>
                     </div>
-                `;
-            }
-        }
+                `).join('');
 
-        // Publicar notícia scraped (move da tabela noticias_scraped para noticias)
-        async function publishScrapedNoticia(scrapedId) {
-            if (!confirm('Publicar esta notícia no site?')) return;
-
-            if (!supabaseClient) {
-                alert('Configure o Supabase primeiro!');
-                return;
-            }
-
-            try {
-                // 1. Busca a notícia scraped
-                const { data: scraped, error: fetchError } = await supabaseClient
-                    .from('noticias_scraped')
-                    .select('*')
-                    .eq('id', scrapedId)
-                    .single();
-
-                if (fetchError) throw fetchError;
-
-                // 2. Insere na tabela noticias (publicada)
-                const { error: insertError } = await supabaseClient
-                    .from('noticias')
-                    .insert({
-                        title: scraped.titulo_reescrito || scraped.titulo_original,
-                        content: scraped.resumo_reescrito || scraped.resumo_original,
-                        category: scraped.categoria || 'Geral',
-                        image_url: scraped.imagem_url
-                    });
-
-                if (insertError) throw insertError;
-
-                // 3. Atualiza status da scraped para 'publicado'
-                const { error: updateError } = await supabaseClient
-                    .from('noticias_scraped')
-                    .update({ status: 'publicado' })
-                    .eq('id', scrapedId);
-
-                if (updateError) throw updateError;
-
-                alert('Notícia publicada com sucesso!');
-                loadScrapedNoticias();
-                loadNoticias();
-                
             } catch (error) {
-                alert('Erro ao publicar: ' + error.message);
-                console.error('Erro:', error);
+                container.innerHTML = `<div class="loading" style="color: red;">Erro ao carregar: ${error.message}</div>`;
+                console.error('Erro ao carregar notícias:', error);
             }
         }
 
-        // Excluir notícia scraped
-        async function deleteScrapedNoticia(scrapedId) {
-            if (!confirm('Excluir esta notícia scraped permanentemente?')) return;
-
-            if (!supabaseClient) {
-                alert('Configure o Supabase primeiro!');
-                return;
-            }
-
-            try {
-                const { error } = await supabaseClient
-                    .from('noticias_scraped')
-                    .delete()
-                    .eq('id', scrapedId);
-
-                if (error) throw error;
-
-                alert('Notícia scraped excluída!');
-                loadScrapedNoticias();
-            } catch (error) {
-                alert('Erro ao excluir: ' + error.message);
-                console.error('Erro:', error);
-            }
-        }
-
-        // Publicar notícia manual
+        // FUNÇÃO ORIGINAL publishNoticia (sem mudanças)
         async function publishNoticia() {
-            if (!supabaseClient) {
-                alert('Configure o Supabase primeiro!');
-                return;
-            }
-
             const title = document.getElementById('title').value;
             const content = document.getElementById('content').value;
             const category = document.getElementById('category').value;
@@ -594,22 +241,16 @@
 
             } catch (error) {
                 alert('Erro ao publicar: ' + error.message);
-                console.error('Erro:', error);
             }
         }
 
-        // Funções auxiliares para notícias publicadas
+        // FUNÇÕES ORIGINAIS editNoticia e deleteNoticia (sem mudanças)
         function editNoticia(id) {
             alert('Função de edição ainda não implementada. ID: ' + id);
         }
 
         async function deleteNoticia(id) {
             if (!confirm('Excluir esta notícia?')) return;
-
-            if (!supabaseClient) {
-                alert('Configure o Supabase primeiro!');
-                return;
-            }
 
             try {
                 const { error } = await supabaseClient
@@ -623,12 +264,159 @@
                 loadNoticias();
             } catch (error) {
                 alert('Erro ao excluir: ' + error.message);
+            }
+        }
+
+        // ✅ APENAS ESTAS FUNÇÕES SÃO NOVAS PARA SCRAPED:
+
+        // Função para buscar G1
+        async function scrapePortal(url, sourceName) {
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) {
+                    alert('Você precisa estar logado');
+                    return;
+                }
+
+                const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Notícias coletadas com sucesso!');
+                    loadScrapedNoticias();
+                } else {
+                    alert('Erro: ' + (data.error || data.message));
+                }
+
+            } catch (error) {
+                alert('Erro: ' + error.message);
                 console.error('Erro:', error);
             }
         }
 
-        // Inicializa quando a página carrega
-        window.addEventListener('DOMContentLoaded', initSupabase);
+        // Carregar notícias scraped APENAS
+        async function loadScrapedNoticias() {
+            const container = document.getElementById('scrapedNoticias');
+            container.innerHTML = '<div class="loading">Carregando notícias scraped...</div>';
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('noticias_scraped')
+                    .select('*')
+                    .eq('status', 'processado')
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+
+                console.log('Resultado da query scraped:', { data, error });
+
+                if (error) {
+                    console.error('Erro na query scraped:', error);
+                    container.innerHTML = `<div class="loading" style="color: red;">❌ Erro: ${error.message}</div>`;
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="loading">Nenhuma notícia scraped pendente. Clique em "Buscar G1 Amazonas" acima.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.map(noticia => `
+                    <div class="noticia-card scraped-card">
+                        ${noticia.imagem_url ? `<img src="${noticia.imagem_url}" alt="Imagem" class="noticia-image" onerror="this.style.display='none'">` : ''}
+                        <div class="noticia-title">${noticia.titulo_reescrito || noticia.titulo_original}</div>
+                        <div class="noticia-content">${(noticia.resumo_reescrito || noticia.resumo_original || '').substring(0, 200)}...</div>
+                        <div class="noticia-meta">
+                            <span class="status-badge status-${noticia.status}">${noticia.status}</span><br>
+                            <strong>Fonte:</strong> ${noticia.fonte}<br>
+                            <strong>Coletado:</strong> ${new Date(noticia.data_coleta || noticia.created_at).toLocaleString('pt-BR')}<br>
+                            <strong>URL:</strong> <a href="${noticia.url_original}" target="_blank" style="color: #059669;">Ver original</a>
+                        </div>
+                        <div class="noticia-actions">
+                            <button class="publish-button" onclick="publishScrapedNoticia(${noticia.id})">📰 Publicar</button>
+                            <button class="danger-button" onclick="deleteScrapedNoticia(${noticia.id})">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                console.log(`✅ Carregadas ${data.length} notícias scraped`);
+
+            } catch (error) {
+                console.error('Erro geral ao carregar scraped:', error);
+                container.innerHTML = `<div class="loading" style="color: red;">Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Publicar notícia scraped
+        async function publishScrapedNoticia(scrapedId) {
+            if (!confirm('Publicar esta notícia no site?')) return;
+
+            try {
+                // 1. Busca scraped
+                const { data: scraped, error: fetchError } = await supabaseClient
+                    .from('noticias_scraped')
+                    .select('*')
+                    .eq('id', scrapedId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                // 2. Publica na tabela principal
+                const { error: insertError } = await supabaseClient
+                    .from('noticias')
+                    .insert({
+                        title: scraped.titulo_reescrito || scraped.titulo_original,
+                        content: scraped.resumo_reescrito || scraped.resumo_original,
+                        category: scraped.categoria || 'Geral',
+                        image_url: scraped.imagem_url
+                    });
+
+                if (insertError) throw insertError;
+
+                // 3. Atualiza status
+                const { error: updateError } = await supabaseClient
+                    .from('noticias_scraped')
+                    .update({ status: 'publicado' })
+                    .eq('id', scrapedId);
+
+                if (updateError) console.warn('Erro ao atualizar status:', updateError);
+
+                alert('Notícia publicada com sucesso!');
+                loadScrapedNoticias();
+                loadNoticias();
+
+            } catch (error) {
+                alert('Erro ao publicar: ' + error.message);
+                console.error('Erro:', error);
+            }
+        }
+
+        // Excluir scraped
+        async function deleteScrapedNoticia(scrapedId) {
+            if (!confirm('Excluir esta notícia scraped?')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('noticias_scraped')
+                    .delete()
+                    .eq('id', scrapedId);
+
+                if (error) throw error;
+
+                alert('Notícia excluída!');
+                loadScrapedNoticias();
+            } catch (error) {
+                alert('Erro ao excluir: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html>
