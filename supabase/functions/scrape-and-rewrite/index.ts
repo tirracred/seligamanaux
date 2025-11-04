@@ -895,94 +895,84 @@ newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
     );
 
     // PROCESSA
-    const processedNews: Array<{
-      titulo: string;
-      fonte: string;
-      url: string;
-      imagem: string;
-    }> = [];
-    let successCount = 0;
-    let errorCount = 0;
+   const processedNews: Array<{ titulo: string; fonte: string; url: string; imagem: string }> = [];
+let successCount = 0;
+let errorCount = 0;
 
-    for (const newsUrl of newsLinks.slice(0, 12)) {
-      try {
-        console.log(`Processando: ${newsUrl}`);
+// use LET newsLinks lá em cima (não const), pois você reatribui newsLinks com paginação/filtragem
+for (const newsUrl of newsLinks.slice(0, 12)) {
+  try {
+    console.log(`Processando: ${newsUrl}`);
 
-        const newsHtml = await fetchHtmlPreferAmp(newsUrl, userAgent);
+    // NUNCA reatribua portalConfig (é const do escopo externo). Use uma variável local:
+    const linkConfig = detectPortal(newsUrl) || portalConfig;
 
-        const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(
-          newsHtml,
-          linkConfig,
-        );
-        
-        if (titulo === "Título não encontrado" || conteudo.length < 100) {
-          console.log("Conteúdo insuficiente, pulando...");
-          continue;
-        }
-        if (titulo === "CONTEÚDO IGNORADO" || looksPromotional(conteudo)) {
-          console.log("Descartado (promo/institucional).");
-          continue;
-        }
-        // Limpeza final antes de usar/resumir/enviar para IA
-        conteudo = stripSourceArtifacts(conteudo);
+    // Preferir AMP quando disponível (G1 e cia)
+    const newsHtml = await fetchHtmlPreferAmp(newsUrl, userAgent);
 
-        const {
-          titulo: tituloReescrito,
-          conteudo: conteudoReescrito,
-        } = await rewriteWithGroq(titulo, conteudo, linkConfig.name);
-
-        if (
-          !conteudoReescrito ||
-          conteudoReescrito === "publieditorial" ||
-          conteudoReescrito.trim().length < 1700
-        ) {
-          console.log("Reescrita vazia/curta, pulando.");
-          continue;
-        }
-
-        const resumoReescrito =
-          conteudoReescrito.substring(0, 300) +
-          (conteudoReescrito.length > 300 ? "..." : "");
-
-        const noticiaData: NoticiaScrapedData = {
-          titulo_original: titulo,
-          titulo_reescrito: tituloReescrito,
-          resumo_original: resumo,
-          resumo_reescrito: resumoReescrito,
-          conteudo_reescrito: conteudoReescrito,
-          url_original: newsUrl,
-          fonte: linkConfig.name,
-          status: "processado",
-          data_coleta: new Date().toISOString(),
-          imagem_url: imagem || null,
-          categoria: linkConfig.category,
-        };
-
-        const { error } = await supabaseAdmin
-          .from("noticias_scraped")
-          .insert(noticiaData);
-
-        if (error) {
-          console.error("Erro ao salvar:", error);
-          errorCount++;
-        } else {
-          processedNews.push({
-            titulo: tituloReescrito,
-            fonte: linkConfig.name,
-            url: newsUrl,
-            imagem: imagem ? "Sim" : "Não",
-          });
-          successCount++;
-          console.log(`✅ Notícia salva: ${titulo.substring(0, 50)}...`);
-        }
-
-        // respeita o portal (rate limit simples)
-        await new Promise((r) => setTimeout(r, 1500));
-      } catch (error) {
-        console.error(`Erro ao processar ${newsUrl}:`, error);
-        errorCount++;
-      }
+    // Extrai
+    const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, linkConfig);
+    if (titulo === "Título não encontrado" || !conteudo || conteudo.length < 120) {
+      console.log(`Conteúdo insuficiente: ${newsUrl}`);
+      continue;
     }
+
+    // Filtros anti-promo/inst
+    if (isBlacklistedTitle(titulo) || looksPromotional(conteudo)) {
+      console.log(`Descartado (promo/institucional): ${newsUrl}`);
+      continue;
+    }
+
+    // Reescrita Groq (2000–4000 + anti-cópia)
+    const { titulo: tituloReescrito, conteudo: conteudoReescrito } =
+      await rewriteWithGroq(titulo, conteudo, linkConfig.name);
+
+    if (conteudoReescrito === "publieditorial") {
+      console.log(`Publieditorial marcado pela IA: ${newsUrl}`);
+      continue;
+    }
+
+    const resumoReescrito =
+      (conteudoReescrito || "").slice(0, 300) + ((conteudoReescrito || "").length > 300 ? "..." : "");
+
+    const noticiaData: NoticiaScrapedData = {
+      titulo_original: titulo,
+      titulo_reescrito: tituloReescrito || titulo,
+      resumo_original: resumo || null,
+      resumo_reescrito: resumoReescrito || null,
+      conteudo_reescrito: conteudoReescrito || conteudo,
+      url_original: newsUrl,
+      fonte: linkConfig.name,
+      status: "processado",
+      data_coleta: new Date().toISOString(),
+      imagem_url: imagem || null,
+      categoria: linkConfig.category
+    };
+
+    const { error } = await supabaseAdmin.from("noticias_scraped").insert(noticiaData);
+    if (error) {
+      console.error("Erro ao salvar:", newsUrl, error);
+      errorCount++;
+      continue;
+    }
+
+    processedNews.push({
+      titulo: tituloReescrito || titulo,
+      fonte: linkConfig.name,
+      url: newsUrl,
+      imagem: imagem ? "Sim" : "Não",
+    });
+    successCount++;
+
+    // pausa de cortesia
+    await new Promise((r) => setTimeout(r, 1500));
+
+  } catch (err) {
+    // IMPORTANTE: este catch está DENTRO do for, então newsUrl existe aqui
+    console.error(`Erro ao processar ${newsUrl}:`, err);
+    errorCount++;
+  }
+}
 
     // RESPOSTA
     return new Response(
