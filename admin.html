@@ -1,449 +1,444 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!doctype html>
+<html lang="pt-br" class="dark">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Admin - SeligaManaux</title>
-<!-- Bibliotecas e estilos -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  * { margin:0; padding:0; box-sizing: border-box }
-  body { font-family: Arial, sans-serif; background:#0b0b0b; color:#fff; padding:20px; line-height:1.4; }
-  .container { max-width:1200px; margin:0 auto; }
-  h1 { text-align:center; margin-bottom:30px; color:#dc2626; font-size:2.2em; }
-
-  /* Condensed styles for boxes */
-  section { background:#1f1f1f; padding:20px; border-radius:8px; margin-bottom:20px; border:1px solid #2d2d2d; }
-
-  /* Destaque para section de scrap */
-  section.scraped { background:#121826; border:2px solid #059669; }
-
-  /* Estilo para configuração de API */
-  .api-config { background:#111827; }
-  .form-group { margin-bottom:15px; }
-  label { display:block; margin-bottom:5px; font-weight:bold; font-size:0.9em; }
-  input[type=text], input[type=email], input[type=password], textarea, select { width:100%; padding:10px; margin-top:2px; border-radius:4px; border:1px solid #404040; background:#222; color:#fff; font-size:1em; }
-  button { padding:12px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:1em; transition:background 0.2s; }
-  button:hover { filter: brightness(0.85); }
-
-  /* Botões específicos */
-  .btn-save { background:#059669; color:#fff; }
-  .btn-save:hover { background:#047857; }
-  .btn-scrape { background:#059669; }
-  .btn-scrape:hover { background:#047857; }
-  .btn-publish { background:#7c3aed; }
-  .btn-publish:hover { background:#6d28d9; }
-  .btn-delete { background:#ef4444; }
-  .btn-delete:hover { background:#dc2626; }
-
-  /* Seção de notícias */
- .noticias-container { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:15px; margin-top:20px; }
-  .noticia-card { background:#222; padding:15px; border-radius:8px; border-left:4px solid #dc2626; display:flex; flex-direction:column; gap:8px; transition: background 0.2s; }
-  .noticia-card:hover { background:#2a2a2a; }
-  .noticia-title { font-weight: bold; font-size:1.1em; color:#fff; }
-  .noticia-content { font-size:0.95em; color:#ccc; max-height:150px; overflow:hidden; }
-  .noticia-meta { font-size:0.8em; color:#9ca3af; }
-  .noticia-actions { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
-  .noticia-actions button { flex:1; padding:8px; border-radius:4px; font-size:0.9em; }
-
-  /* Estado e feedback */
-  .loading { text-align:center; padding:20px; font-size:1.1em; color:#9ca3af; }
-  .erro { background:#dc2626; padding:15px; border-radius:6px; margin:10px 0; font-size:0.95em; }
-  .aviso { background:#f59e0b; padding:15px; border-radius:6px; margin:10px 0; font-size:0.95em; }
-  .muted { font-size:0.8em; color:#9ca3af; }
-
-  /* Botões de carregamento e ações secundárias */
-  .btn-load { background:#059669; }
-  .btn-load:hover { filter: brightness(0.85); }
-
-  /* Outros estilos */
-  a { color:#34d399; text-decoration:underline; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin | seligamanaux</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: dark; }
+    .brand-red { background-color: #7a0a0a; } /* dark-red jornal */
+    .brand-accent { color: #e11d48; }         /* vermelho */
+    .brand-blue { color: #3b82f6; }           /* azul */
+    .card { background:#0b0b0b; border:1px solid #1f2937; border-radius:12px; }
+    .btn { border-radius:10px; padding:0.55rem 0.9rem; font-weight:600; }
+    .btn-red { background:#b91c1c; color:#fff; }
+    .btn-blue { background:#2563eb; color:#fff; }
+    .btn-green { background:#15803d; color:#fff; }
+    .btn-ghost { background:transparent; border:1px solid #374151; color:#e5e7eb; }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .chip { border:1px solid #374151; border-radius:9999px; padding:.15rem .55rem; font-size:.75rem; }
+    .grid-news { display:grid; grid-template-columns: 1fr; gap:12px; }
+    @media(min-width:1024px){ .grid-news { grid-template-columns: 1.5fr 1fr; } }
+    .table { width:100%; border-collapse: collapse; }
+    .table th, .table td { border-bottom:1px solid #1f2937; padding:.6rem .5rem; text-align:left; }
+    .table tr:hover { background:#0f172a; }
+    .pill { padding:.15rem .5rem; border-radius:9999px; font-size:.75rem; }
+  </style>
 </head>
-<body>
-<div class="container">
-<h1>SeligaManaux - Painel Administrativo</h1>
-
-<!-- Aviso de configuração API -->
-<section id="warningBox" class="erro hidden">
-  <h3>⚠️ Importante: Configure as API Keys</h3>
-  <p>Se aparecer "Invalid API key", atualize a Anon Key nas configurações abaixo.</p>
-</section>
-
-<!-- Configuração API -->
-<section class="api-config">
-  <h3>Configuração de API</h3>
-  <p>Copie as chaves públicas do [Supabase Dashboard → Settings → API].</p>
-  <div class="form-group">
-    <label for="supabaseUrl">URL do Supabase</label>
-    <input id="supabaseUrl" type="text" value="https://xtnqypmezntjcidglblc.supabase.co" />
-  </div>
-  <div class="form-group">
-    <label for="anonKey">Chave Anônima (public)</label>
-    <input id="anonKey" type="text" placeholder="Cole aqui sua chave pública" />
-  </div>
-  <button class="btn-save" onclick="updateApiConfig()">Salvar configuração</button>
-  <p class="muted">Configurações salvas localmente no navegador.</p>
-</section>
-
-<!-- Seção Autenticação -->
-<section class="auth-section">
-  <div id="loginForm">
-    <h3>Login</h3>
-    <input id="email" type="email" placeholder="Email" value="tirra@tirracred.com.br" />
-    <input id="password" type="password" placeholder="Senha" />
-    <button onclick="login()">Entrar</button>
-    <p id="loginStatus" class="muted"></p>
-  </div>
-  <div id="userInfo" class="hidden">
-    <p>Usuário: <span id="userEmail"></span></p>
-    <button onclick="logout()">Sair</button>
-  </div>
-</section>
-
-<!-- Painel principal -->
-<section id="adminPanel" class="hidden">
-
-  <!-- Buscar notícias automáticas -->
-  <div class="scraped hidden">
-    <h3>Buscar Notícias Automáticas</h3>
-    <p>Envie solicitações para coleta, reescrita e gravação automática via Edge Function. Use os botões abaixo:</p>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <button class="btn-scrape" onclick="scrapePortal('g1-am','G1 Amazonas')">📰 G1 Amazonas</button>
-      <button class="btn-scrape" onclick="scrapePortal('holanda','Portal do Holanda')">🌐 Portal do Holanda</button>
-      <button class="btn-scrape" onclick="scrapePortal('acritica','A Crítica')">📄 A Crítica</button>
-      <button class="btn-scrape" onclick="scrapePortal('portalamazonia','Portal Amazônia')">🌿 Portal Amazônia</button>
+<body class="bg-black text-gray-100">
+  <header class="brand-red text-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="text-2xl font-bold tracking-wider">seligamanaux</div>
+      <nav class="flex items-center gap-4 text-sm">
+        <span class="hidden md:inline text-gray-200">Administração de conteúdo</span>
+        <span class="chip">Dark mode</span>
+      </nav>
     </div>
-    <div id="scrapeStatus" class="loading" style="display:none;">Buscando notícias... Aguarde.</div>
-  </div>
+  </header>
 
-  <!-- Notícias pendentes -->
-  <section>
-    <h3>Notícias Scraped Pendentes</h3>
-    <p>Itens aguardando revisão ou publicação.</p>
-    <button class="btn-load" onclick="loadScrapedNoticias()">🔄 Recarregar</button>
-    <div id="scrapedNoticias" class="noticias-container"></div>
-  </section>
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <section class="grid-news">
+      <!-- Coluna: Scraper e Ações -->
+      <div class="card p-4">
+        <h2 class="text-xl font-semibold mb-3">
+          Coleta e reescrita <span class="brand-accent">multi‑portal</span>
+        </h2>
+        <p class="text-sm text-gray-400 mb-4">
+          Dispare a Edge Function por portal, com corpo JSON { "portalId": "..." } e opcional { "max": 8–15 } para controlar a quantidade de itens processados [web:13].
+        </p>
 
-  <!-- Criar notícia manual -->
-  <section>
-    <h3>Criar Notícia Manual</h3>
-    <div class="form-group">
-      <label for="title">Título</label>
-      <input id="title" type="text" placeholder="Título da notícia" />
+        <div class="mb-3 flex items-center gap-2">
+          <label class="text-sm text-gray-300">Qtd. itens por execução</label>
+          <input id="max-items" type="number" min="1" max="15" value="8"
+                 class="bg-black border border-gray-700 rounded px-2 py-1 w-20"/>
+        </div>
+
+        <div id="portal-buttons" class="flex flex-wrap gap-2 mb-3"></div>
+
+        <div class="text-xs text-gray-500">
+          Dica: se aparecer “Invalid API key”, atualize a Anon Key nas Configurações abaixo e salve para refazer a conexão [attached_file:22].
+        </div>
+      </div>
+
+      <!-- Coluna: Configurações -->
+      <div class="card p-4">
+        <h2 class="text-xl font-semibold mb-3">
+          Configurações <span class="brand-blue">Supabase</span>
+        </h2>
+        <div class="grid md:grid-cols-1 gap-3">
+          <div>
+            <label class="text-sm text-gray-300">SUPABASE_URL</label>
+            <input id="cfg-url" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
+                   placeholder="https://xxxxx.supabase.co"/>
+          </div>
+          <div>
+            <label class="text-sm text-gray-300">SUPABASE_ANON_KEY</label>
+            <input id="cfg-key" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
+                   placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+          </div>
+          <div>
+            <label class="text-sm text-gray-300">EDGE_FN_URL (POST)</label>
+            <input id="cfg-edge" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
+                   placeholder="/functions/v1/scraper" />
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-green" onclick="saveConfig()">Salvar</button>
+            <button class="btn btn-blue" onclick="testConnection()">Testar conexão</button>
+            <button class="btn btn-ghost" onclick="clearConfig()">Limpar</button>
+          </div>
+          <div id="cfg-status" class="text-sm text-gray-400"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filtros e Lista -->
+    <section class="card p-4 mt-6">
+      <div class="flex flex-col md:flex-row md:items-end gap-3 mb-4">
+        <div class="flex-1">
+          <label class="text-sm text-gray-300">Busca por título</label>
+          <input id="search" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
+                 placeholder="Digite parte do título reescrito..." />
+        </div>
+        <div>
+          <label class="text-sm text-gray-300">Status</label>
+          <select id="filter-status" class="bg-black border border-gray-700 rounded px-3 py-2">
+            <option value="todos">Todos</option>
+            <option value="gerado">Gerado</option>
+            <option value="ignorado">Ignorado</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="rejeitado">Rejeitado</option>
+            <option value="publicado">Publicado</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-300">Itens por página</label>
+          <select id="page-size" class="bg-black border border-gray-700 rounded px-3 py-2">
+            <option>10</option>
+            <option selected>20</option>
+            <option>50</option>
+          </select>
+        </div>
+        <div>
+          <button class="btn btn-blue" onclick="reload()">Aplicar</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="table text-sm" id="table-news">
+          <thead class="text-gray-300">
+            <tr>
+              <th style="width:28%">Título</th>
+              <th style="width:14%">Fonte</th>
+              <th style="width:12%">Coleta</th>
+              <th style="width:10%">Status</th>
+              <th style="width:10%">Tamanho</th>
+              <th style="width:26%">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-news"></tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between">
+        <div id="pager-info" class="text-xs text-gray-400">—</div>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost" onclick="prevPage()">Anterior</button>
+          <button class="btn btn-ghost" onclick="nextPage()">Próxima</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-white text-black">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="font-semibold">seligamanaux</div>
+      <div class="text-sm">Admin • Conteúdo • Publicação</div>
     </div>
-    <div class="form-group">
-      <label for="content">Conteúdo</label>
-      <textarea id="content" rows="10" placeholder="Conteúdo completo da notícia"></textarea>
-    </div>
-    <div class="form-group">
-      <label for="category">Categoria</label>
-      <select id="category">
-        <option>Geral</option>
-        <option>Política</option>
-        <option>Economia</option>
-        <option>Esportes</option>
-        <option>Cultura</option>
-        <option>Amazonas</option>
-      </select>
-    </div>
-    <button class="btn-publish" onclick="publishNoticia()">📝 Publicar</button>
-  </section>
+  </footer>
 
-  <!-- Notícias Publicadas -->
-  <section>
-    <h3>Notícias Publicadas</h3>
-    <button class="btn-load" onclick="loadNoticias()">🔄 Recarregar</button>
-    <div id="noticias"></div>
-  </section>
+  <!-- Supabase JS v2 (browser) -->
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-</section>
-</div>
+    // ---------- Portais (botões gerados dinamicamente) ----------
+    const PORTAIS = [
+      { id: "g1-am", label: "G1 Amazonas" },
+      { id: "portaldoholanda", label: "Portal do Holanda" },
+      { id: "acritica", label: "A Crítica" },
+      { id: "portalamazonia", label: "Portal Amazônia" },
+    ];
 
-<script>
-  // =========================== //
-  // Variáveis globais e configuração
-  // =========================== //
-  let supabase; let session = null;
-  const DEFAULT_URL = 'https://xtnqypmezntjcidglblc.supabase.co';
-  const EDGE_FUNC_URL = `${DEFAULT_URL}/functions/v1/scraper`;
-  
-  // Carregar config
-  function getConfig() {
-    return {
-      url: localStorage.getItem('supabase_url') || document.getElementById('supabaseUrl').value || DEFAULT_URL,
-      key: localStorage.getItem('supabase_anon_key') || document.getElementById('anonKey').value || ''
-    };
-  }
-  function saveConfig(url, key) {
-    localStorage.setItem('supabase_url', url);
-    localStorage.setItem('supabase_anon_key', key);
-  }
+    // ---------- Estado ----------
+    let supabase = null;
+    let currentPage = 1;
+    let total = 0;
 
-  // Atualizar configuração
-  function updateApiConfig() {
-    const url = document.getElementById('supabaseUrl').value.trim();
-    const key = document.getElementById('anonKey').value.trim();
-    if (!url || !key) return alert("Preencha URL e Chave.");
-    saveConfig(url, key);
-    initSupabase(true);
-    alert('Configuração salva.');
-  }
+    // ---------- DOM ----------
+    const elButtons = document.getElementById("portal-buttons");
+    const elMax = document.getElementById("max-items");
+    const elCfgUrl = document.getElementById("cfg-url");
+    const elCfgKey = document.getElementById("cfg-key");
+    const elCfgEdge = document.getElementById("cfg-edge");
+    const elCfgStatus = document.getElementById("cfg-status");
+    const elSearch = document.getElementById("search");
+    const elFilterStatus = document.getElementById("filter-status");
+    const elPageSize = document.getElementById("page-size");
+    const elTbody = document.getElementById("tbody-news");
+    const elPagerInfo = document.getElementById("pager-info");
 
-  // =========================== //
-  // Initialização do Supabase
-  // =========================== //
-  function initSupabase(forcar = false) {
-    try {
-      const { url, key } = getConfig();
-      // Exibir aviso se chave não preenchida
-      document.getElementById('warningBox').classList.toggle('hidden', !!key);
-      // Criar cliente
-      const { createClient } = supabase; // var global do CDN
-      supabase = createClient(url, key, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    // ---------- Config persistida ----------
+    function loadConfig() {
+      elCfgUrl.value = localStorage.getItem("SB_URL") || "";
+      elCfgKey.value = localStorage.getItem("SB_ANON") || "";
+      elCfgEdge.value = localStorage.getItem("EDGE_FN") || "/functions/v1/scraper";
+      initSupabase();
+    }
+
+    function saveConfig() {
+      localStorage.setItem("SB_URL", elCfgUrl.value.trim());
+      localStorage.setItem("SB_ANON", elCfgKey.value.trim());
+      localStorage.setItem("EDGE_FN", elCfgEdge.value.trim());
+      initSupabase();
+      toast("Configurações salvas.");
+    }
+
+    function clearConfig() {
+      localStorage.removeItem("SB_URL");
+      localStorage.removeItem("SB_ANON");
+      localStorage.removeItem("EDGE_FN");
+      elCfgUrl.value = "";
+      elCfgKey.value = "";
+      elCfgEdge.value = "/functions/v1/scraper";
+      supabase = null;
+      toast("Configurações limpas.");
+    }
+
+    function initSupabase() {
+      const url = elCfgUrl.value.trim();
+      const key = elCfgKey.value.trim();
+      if (!url || !key) {
+        elCfgStatus.textContent = "Configure SUPABASE_URL e ANON_KEY.";
+        return;
+      }
+      try {
+        supabase = createClient(url, key, { auth: { persistSession: false } });
+        elCfgStatus.textContent = "Cliente Supabase inicializado.";
+      } catch (e) {
+        elCfgStatus.textContent = "Falha ao inicializar Supabase: " + e;
+      }
+    }
+
+    async function testConnection() {
+      if (!supabase) { initSupabase(); }
+      if (!supabase) { return toast("Configuração incompleta."); }
+      const { error } = await supabase
+        .from("noticias_scraped")
+        .select("url_original", { count: "exact", head: true })
+        .limit(1);
+      elCfgStatus.textContent = error ? ("Erro: " + error.message) : "Conexão OK.";
+      toast(error ? ("Erro: " + error.message) : "Conexão OK.");
+    }
+
+    // ---------- Botões de Portais ----------
+    function renderPortalButtons() {
+      elButtons.innerHTML = "";
+      PORTAIS.forEach(p => {
+        const b = document.createElement("button");
+        b.className = "btn btn-red";
+        b.textContent = p.label;
+        b.onclick = () => scrapePortal(p.id, p.label, b);
+        elButtons.appendChild(b);
       });
-      if (forcar) {
-        supabase.auth.getSession().then(({ data }) => { session = data.session; syncUI(); });
+    }
+
+    async function scrapePortal(portalId, label, btn) {
+      const edgeUrl = elCfgEdge.value.trim() || "/functions/v1/scraper";
+      const max = Math.min(Math.max(parseInt(elMax.value || "8", 10), 1), 15);
+      btn.disabled = true;
+      const prev = btn.textContent;
+      btn.textContent = `Processando ${label}...`;
+      try {
+        const res = await fetch(edgeUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ portalId, max })
+        });
+        const data = await res.json();
+        toast(`${label}: ${data?.processed ?? 0} itens processados.`);
+        reload();
+      } catch (e) {
+        toast(`Falha ao processar ${label}: ${e}`, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = prev;
       }
-      supabase.auth.onAuthStateChange((_event, sess) => { session = sess; syncUI(); });
-    } catch (err) {
-      console.error('Erro na inicialização:', err);
     }
-  }
 
-  // Sincronizar UI com status de sessão
-  function syncUI() {
-    const logado = !!session;
-    document.getElementById('loginForm').classList.toggle('hidden', logado);
-    document.getElementById('userInfo').classList.toggle('hidden', !logado);
-    document.getElementById('adminPanel').classList.toggle('hidden', !logado);
-    if (logado) {
-      document.getElementById('userEmail').textContent = session.user?.email || '(sem email)';
-      loadScrapedNoticias();
-      loadNoticias();
-    } else {
-      document.getElementById('loginStatus').textContent = '';
+    // ---------- Listagem ----------
+    function getPageSize() { return parseInt(elPageSize.value || "20", 10); }
+
+    async function loadItems() {
+      if (!supabase) { initSupabase(); }
+      if (!supabase) return;
+
+      const pageSize = getPageSize();
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let q = supabase
+        .from("noticias_scraped")
+        .select("id,titulo_reescrito,conteudo_reescrito,url_original,fonte,categoria,status,data_coleta", { count: "exact" })
+        .order("data_coleta", { ascending: false })
+        .range(from, to);
+
+      const term = (elSearch.value || "").trim();
+      if (term) {
+        q = q.ilike("titulo_reescrito", `%${term}%`);
+      }
+      const f = elFilterStatus.value;
+      if (f && f !== "todos") {
+        q = q.eq("status", f);
+      }
+
+      const { data, count, error } = await q;
+      if (error) {
+        elTbody.innerHTML = `<tr><td colspan="6" class="text-red-400">${error.message}</td></tr>`;
+        elPagerInfo.textContent = "—";
+        return;
+      }
+      total = count || 0;
+      renderRows(data || []);
+      renderPager();
     }
-  }
 
-  // =========================== //
-  // Autenticação
-  // =========================== //
-  async function login() {
-    const email = document.getElementById('email').value.trim();
-    const pass = document.getElementById('password').value.trim();
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-      if (error) throw error;
-      session = data.session;
-    } catch (err) {
-      alert('Erro de login: ' + (err.message || err));
-    }
-  }
+    function renderRows(rows) {
+      elTbody.innerHTML = "";
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
 
-  async function logout() {
-    await supabase.auth.signOut();
-    session = null; syncUI();
-  }
+        const tTitulo = document.createElement("td");
+        tTitulo.innerHTML = `<div class="line-clamp-2">${escapeHtml(r.titulo_reescrito || "(sem título)")}</div>
+                             <div class="text-xs text-gray-400 line-clamp-1">${escapeHtml(r.url_original)}</div>`;
 
-  // =========================== //
-  // Função principal de scrape por portalId
-  // =========================== //
-  async function scrapePortal(portalId, nomeFonte) {
-    if (!session || !supabase) return alert('Faça login primeiro.');
-    const statusEl = document.getElementById('scrapeStatus');
-    statusEl.style.display = 'block';
-    statusEl.textContent = `Buscando de ${nomeFonte}... Aguarde.`;
-    statusEl.style.color = '#9ca3af';
-    try {
-      const { key } = getConfig();
-      const res = await fetch(EDGE_FUNC_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-          'apikey': key
-        },
-        body: JSON.stringify({ portalId }) // Envio via portalId
+        const tFonte = document.createElement("td");
+        tFonte.textContent = `${r.fonte || "-"} • ${r.categoria || "-"}`;
+
+        const tData = document.createElement("td");
+        tData.textContent = r.data_coleta ? new Date(r.data_coleta).toLocaleString() : "-";
+
+        const tStatus = document.createElement("td");
+        tStatus.innerHTML = `
+          <select class="bg-black border border-gray-700 rounded px-2 py-1 text-xs">
+            ${["gerado","ignorado","aprovado","rejeitado","publicado"].map(s => `
+              <option value="${s}" ${r.status===s?"selected":""}>${s}</option>
+            `).join("")}
+          </select>
+        `;
+        const sel = tStatus.querySelector("select");
+        sel.onchange = () => updateStatus(r.id, sel.value);
+
+        const tTam = document.createElement("td");
+        const len = (r.conteudo_reescrito || "").length;
+        tTam.textContent = len ? `${len} chars` : "-";
+
+        const tAcoes = document.createElement("td");
+        tAcoes.className = "flex flex-wrap gap-2";
+        tAcoes.appendChild(makeLink("Original", r.url_original));
+        tAcoes.appendChild(makeBtn("Copiar título", () => copy(r.titulo_reescrito||"")));
+        tAcoes.appendChild(makeBtn("Copiar conteúdo", () => copy(r.conteudo_reescrito||"")));
+        tAcoes.appendChild(makeBtn("Aprovar", () => updateStatus(r.id, "aprovado"), "btn-green"));
+        tAcoes.appendChild(makeBtn("Publicar", () => updateStatus(r.id, "publicado"), "btn-blue"));
+
+        tr.appendChild(tTitulo);
+        tr.appendChild(tFonte);
+        tr.appendChild(tData);
+        tr.appendChild(tStatus);
+        tr.appendChild(tTam);
+        tr.appendChild(tAcoes);
+        elTbody.appendChild(tr);
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || data?.message || 'Falha na coleta');
-      const coletados = data?.coletados || 0;
-      const salvos = data?.salvos || 0;
-      statusEl.textContent = `Sucesso! ${nomeFonte} — links: ${coletados}, salvos: ${salvos}`;
-      statusEl.style.color = '#10b981';
-      setTimeout(loadScrapedNoticias, 1500);
-    } catch (err) {
-      console.error('Erro:', err);
-      statusEl.textContent = `Erro: ${err.message}`;
-      statusEl.style.color = '#ef4444';
-    } finally {
-      setTimeout(() => { statusEl.style.display='none'; }, 5000);
     }
-  }
 
-  // =========================== //
-  // Carregar notícias pendentes
-  // =========================== //
-  async function loadScrapedNoticias() {
-    const container = document.getElementById('scrapedNoticias');
-    container.innerHTML = '<div class="loading">Carregando notícias...</div>';
-    if (!supabase) { container.innerHTML='<div class="erro">Erro na configuração.</div>'; return; }
-    try {
-      const { data, error } = await supabase
-        .from('noticias_scraped')
-        .select('*')
-        .in('status', ['rascunho','processado'])
-        .order('created_at', { ascending:false })
-        .limit(30);
-      if (error) throw error;
-      if (!data || data.length===0) {
-        container.innerHTML='<div class="loading">Nenhuma notícia pendente.</div>'; return;
-      }
-      container.innerHTML = data.map(n => {
-        const img = n.imagem_url ? `<img src="${n.imagem_url}" class="noticia-image" onerror="this.style.display='none'" />` : '';
-        const titulo = n.titulo_reescrito || n.titulo_original || 'Sem título';
-        const resumo = (n.conteudo_reescrito || n.resumo_reescrito || n.resumo_original || '').toString();
-        const snippet = resumo.substring(0,200) + (resumo.length>200?'...':'');
-        const statusClass = `status-${(n.status || 'rascunho').toLowerCase()}`;
-        const dataColeta = n.data_coleta || n.created_at;
-        const dataTxt = dataColeta ? new Date(dataColeta).toLocaleString('pt-BR') : 'N/D';
-        return `
-        <div class="noticia-card scraped">
-          ${img}
-          <div class="noticia-title">${titulo}</div>
-          <div class="noticia-content">${snippet}</div>
-          <div class="noticia-meta">
-            <span class="status-badge ${statusClass}">${n.status || 'rascunho'}</span>
-            <br><strong>Fonte:</strong> ${n.fonte||'N/D'}<br>
-            <strong>Categoria:</strong> ${n.categoria||'Geral'}<br>
-            <strong>Coletado:</strong> ${dataTxt}
-            <br><a href="${n.url_original}" target="_blank">Ver original</a>
-          </div>
-          <div class="noticia-actions">
-            <button onclick="publishScrapedNoticia(${n.id})" class="btn-publish">Publicar</button>
-            <button onclick="deleteScrapedNoticia(${n.id})" class="btn-delete">Excluir</button>
-          </div>
-        </div>`;
-      }).join('');
-    } catch (err) {
-      console.error('Erro ao carregar:', err);
-      container.innerHTML = `<div class="erro">Erro: ${err.message}</div>`;
+    function renderPager() {
+      const pageSize = getPageSize();
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+      currentPage = Math.min(currentPage, pages);
+      elPagerInfo.textContent = `Página ${currentPage} de ${pages} • ${total} itens`;
     }
-  }
 
-  // Publicar scraped - move para noticias
-  async function publishScrapedNoticia(id) {
-    if (!confirm('Publicar esta notícia?')) return;
-    if (!supabase) return alert('Configuração do banco não encontrada.');
-    try {
-      const { data: scraped, error } = await supabase
-        .from('noticias_scraped')
-        .select('*')
-        .eq('id', id).single();
-      if (error) throw error;
-      const conteudo = scraped.conteudo_reescrito || scraped.resumo_reescrito || scraped.resumo_original || '';
-      await supabase
-        .from('noticias')
-        .insert({ title: scraped.titulo_reescrito || scraped.titulo_original || 'Sem título', content: conteudo, category: scraped.categoria || 'Geral', image_url: scraped.imagem_url });
-      // atualizar status do scraped para 'publicado'
-      await supabase.from('noticias_scraped').update({ status: 'publicado' }).eq('id', id);
-      alert('Publicada com sucesso');
-      loadScrapedNoticias();
-      loadNoticias();
-    } catch (err) {
-      alert('Erro: ' + (err.message || err));
+    function prevPage() { if (currentPage > 1) { currentPage--; loadItems(); } }
+    function nextPage() {
+      const pageSize = getPageSize();
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+      if (currentPage < pages) { currentPage++; loadItems(); }
     }
-  }
+    window.prevPage = prevPage;
+    window.nextPage = nextPage;
 
-  // Excluir notícia scraped
-  async function deleteScrapedNoticia(id) {
-    if (!confirm('Excluir esta notícia?')) return;
-    if (!supabase) return;
-    try {
-      await supabase.from('noticias_scraped').delete().eq('id', id);
-      alert('Excluída');
-      loadScrapedNoticias();
-    } catch (err) {
-      alert('Erro: ' + (err.message || err));
+    function reload() { currentPage = 1; loadItems(); }
+    window.reload = reload;
+
+    async function updateStatus(id, status) {
+      if (!supabase) return;
+      const patch = { status };
+      if (status === "publicado") { patch["data_publicacao"] = new Date().toISOString(); }
+      const { error } = await supabase.from("noticias_scraped").update(patch).eq("id", id);
+      if (error) { return toast("Erro ao atualizar: " + error.message, true); }
+      toast("Status atualizado: " + status);
+      loadItems();
     }
-  }
 
-  // Carregar notícias publicadas
-  async function loadNoticias() {
-    const container = document.getElementById('noticias');
-    container.innerHTML = '<div class="loading">Carregando notícias...</div>';
-    if (!supabase) return;
-    try {
-      const { data, error } = await supabase
-        .from('noticias')
-        .select('*')
-        .order('created_at', { ascending:false })
-        .limit(24);
-      if (error) throw error;
-      if (!data || data.length===0) {
-        container.innerHTML = '<div class="loading">Nenhuma notícia publicada</div>'; return;
-      }
-      container.innerHTML = data.map(n => {
-        const img = n.image_url ? `<img src="${n.image_url}" class="noticia-image" onerror="this.style.display='none'" />` : '';
-        const titulo = n.title || 'Sem título';
-        const snippet = (n.content || '').substring(0,200) + (n.content && n.content.length>200?'...':'');
-        const dataPublicado = n.created_at ? new Date(n.created_at).toLocaleString('pt-BR') : 'N/D';
-        return `
-        <div class="noticia-card">
-          ${img}
-          <div class="noticia-title">${titulo}</div>
-          <div class="noticia-content">${snippet}</div>
-          <div class="noticia-meta">
-            <strong>Categoria:</strong> ${n.category || 'Geral'}<br>
-            <strong>Publicada:</strong> ${dataPublicado}
-          </div>
-          <div class="noticia-actions">
-            <button onclick="editNoticia(${n.id})">✏️ Editar</button>
-            <button class="btn-delete" onclick="deleteNoticia(${n.id})">🗑️ Excluir</button>
-          </div>
-        </div>`;
-      }).join('');
-    } catch (err) {
-      console.error('Erro:', err);
-      document.getElementById('noticias').innerHTML = `<div class="erro">Erro: ${err.message}</div>`;
+    // ---------- Utils ----------
+    function makeLink(label, href) {
+      const a = document.createElement("a");
+      a.href = href; a.target = "_blank"; a.rel = "noopener";
+      a.className = "btn btn-ghost";
+      a.textContent = label;
+      return a;
     }
-  }
-
-  // Ações
-  function editNoticia(id) { alert('Edição não implementada: ' + id); }
-
-  async function deleteNoticia(id) {
-    if (!confirm('Excluir?')) return;
-    try {
-      await supabase.from('noticias').delete().eq('id', id);
-      loadNoticias();
-    } catch (err) {
-      alert('Erro: ' + (err.message || err));
+    function makeBtn(label, fn, cls="btn-ghost") {
+      const b = document.createElement("button");
+      b.className = "btn " + cls;
+      b.textContent = label;
+      b.onclick = fn;
+      return b;
     }
-  }
+    function copy(text) {
+      navigator.clipboard.writeText(text || "").then(() => toast("Copiado."), () => toast("Falha ao copiar.", true));
+    }
+    function escapeHtml(s) {
+      return (s||"").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;" }[m]));
+    }
+    function toast(msg, err=false) {
+      const d = document.createElement("div");
+      d.textContent = msg;
+      d.style.position="fixed"; d.style.right="16px"; d.style.bottom="16px";
+      d.style.background = err ? "#7f1d1d" : "#1e293b"; d.style.color="#fff";
+      d.style.padding="10px 12px"; d.style.borderRadius="10px"; d.style.zIndex=9999;
+      document.body.appendChild(d);
+      setTimeout(()=> d.remove(), 3200);
+    }
 
-  // =========================== //
-  // Evento inicial
-  // =========================== //
-  window.addEventListener('DOMContentLoaded', () => {
-    // Preenche config
-    const url = localStorage.getItem('supabase_url') || DEFAULT_URL;
-    const key = localStorage.getItem('supabase_anon_key') || '';
-    document.getElementById('supabaseUrl').value = url;
-    document.getElementById('anonKey').value = key;
-    initSupabase(true);
-  });
-</script>
+    // ---------- Boot ----------
+    renderPortalButtons();
+    loadConfig();
+    reload();
 
-
-
-
+    // Expor globais necessárias a botões/filtros
+    window.saveConfig = saveConfig;
+    window.clearConfig = clearConfig;
+    window.testConnection = testConnection;
+  </script>
 </body>
 
 
 
+
+
+
 </html>
+
+
 
 
