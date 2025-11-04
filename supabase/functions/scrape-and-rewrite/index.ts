@@ -55,8 +55,7 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
     'a[href*="/am/amazonas/noticia/"]',
     'a[href*="/amazonas/noticia/"]',
     '.feed-post-link[href*="/noticia/"]',
-    'a[href*="/am/amazonas/"][href*="/noticia/"]', // NOVO
-    'a[href*="/am/amazonas/20"]'                   // NOVO (URLs com data)
+    
   ],
     titleSelectors: [
       'h1.content-head__title',
@@ -86,7 +85,7 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
     'a[href*="/noticias/"]',
     '.post-link',
     'h2 a','h3 a',
-    'a[href*="/amazonas/"]', 'a[href*="/policia/"]', 'a[href*="/politica/"]' // NOVOS
+    
   ],
     titleSelectors: [
       'h1.entry-title',
@@ -542,7 +541,7 @@ function detectPortal(url: string): PortalConfig | null {
 Deno.serve(async (req) => {
   console.log(`${req.method} ${req.url}`);
 
-  if (req.method === "OPTIONS") {
+ if (req.method === "OPTIONS") {
   return new Response(null, { status: 204, headers: corsHeaders });
 }
 
