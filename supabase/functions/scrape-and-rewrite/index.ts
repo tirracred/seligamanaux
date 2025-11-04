@@ -9,6 +9,7 @@ interface NoticiaScrapedData {
   titulo_reescrito: string;
   resumo_original?: string;
   resumo_reescrito?: string;
+  conteudo_reescrito?: string; // <-- ADICIONADO: Para salvar o artigo completo
   url_original: string;
   fonte: string;
   status: string;
@@ -165,7 +166,7 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   }
 };
 
-// --- FUNÇÃO MELHORADA PARA EXTRAIR LINKS ---
+// --- FUNÇÃO MELHORADA PARA EXTRAIR LINKS --- (Sem alterações)
 function extractNewsLinks(html: string, config: PortalConfig, maxLinks = 15): string[] {
   const links: Set<string> = new Set();
   
@@ -235,7 +236,7 @@ function extractNewsLinks(html: string, config: PortalConfig, maxLinks = 15): st
   return linkArray;
 }
 
-// --- FUNÇÃO MELHORADA PARA EXTRAIR CONTEÚDO E IMAGEM ---
+// --- FUNÇÃO MELHORADA PARA EXTRAIR CONTEÚDO E IMAGEM --- (Sem alterações)
 function extractContentWithRegex(html: string, config: PortalConfig): { titulo: string; conteudo: string; resumo: string; imagem: string } {
   let titulo = "Título não encontrado";
   let conteudo = "Conteúdo não encontrado";
@@ -350,7 +351,9 @@ function extractContentWithRegex(html: string, config: PortalConfig): { titulo: 
   return { titulo, conteudo, resumo, imagem };
 }
 
-// --- FUNÇÃO DE REESCRITA COM IA (MANTIDA IGUAL) ---
+// -------------------------------------------------------------------
+// MUDANÇA 3: Função de reescrita com IA (Prompt robusto e filtro)
+// -------------------------------------------------------------------
 async function rewriteWithGrok(titulo: string, conteudo: string, fonte: string): Promise<GrokResponse> {
   const GROK_API_KEY = Deno.env.get("GROK_API_KEY"); 
   if (!GROK_API_KEY) {
@@ -358,16 +361,32 @@ async function rewriteWithGrok(titulo: string, conteudo: string, fonte: string):
     return { titulo, conteudo };
   }
 
-  const prompt = `Você é jornalista do "SeligaManaux", portal de notícias de Manaus/Amazonas.
-Reescreva esta notícia de forma clara, objetiva e interessante para manauaras.
-Mantenha os fatos, mas mude as palavras e estrutura.
+  const prompt = `Você é um jornalista sênior e editor-chefe do "SeligaManaux", o principal portal de notícias de Manaus e do Amazonas. Sua missão é reescrever a notícia abaixo, transformando-a em um **artigo robusto e completo**, não um simples resumo.
 
-ORIGINAL (${fonte}):
-Título: ${titulo}
-Texto: ${conteudo.substring(0, 1800)}
+**Instruções de Identidade (SeligaManaux):**
+1.  **Tom de Voz:** Direto, vibrante, e com a "boca no trombone". Use uma linguagem que o manauara entende, sem ser vulgar. "Se liga!"
+2.  **Foco Local:** Sempre que possível, traga o impacto da notícia para a realidade de Manaus/Amazonas.
+3.  **Qualidade:** Crie um artigo coeso, com parágrafos bem estruturados (introdução, desenvolvimento, conclusão), não apenas frases reescritas. Queremos um artigo de verdade.
 
-Responda APENAS com JSON válido:
-{"titulo": "novo título focado em Manaus/Amazonas", "conteudo": "texto reescrito de forma clara e interessante"}`;
+**Filtro de Conteúdo (IMPORTANTE):**
+Se a "notícia" original for claramente um anúncio, um publieditorial, ou apenas uma propaganda para um programa de TV (ex: "Assista ao Jornal do Amazonas" ou "Veja a programação completa"), **não reescreva**. Em vez disso, responda APENAS com o seguinte JSON:
+{
+  "titulo": "CONTEÚDO IGNORADO",
+  "conteudo": "publieditorial"
+}
+
+**Notícia Original (Fonte: ${fonte}):**
+Título Original: ${titulo}
+Texto Original (base): ${conteudo.substring(0, 2500)}
+
+**Sua Tarefa (Se for notícia):**
+Reescreva o texto acima como um artigo completo e original para o SeligaManaux. Mantenha 100% dos fatos, mas mude a estrutura e as palavras.
+
+Responda **APENAS** com um objeto JSON válido, sem nenhum texto antes ou depois:
+{
+  "titulo": "Um novo título chamativo, com a cara do SeligaManaux",
+  "conteudo": "O artigo completo reescrito por você, com vários parágrafos, de forma robusta e interessante para o povo manauara."
+}`;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -379,8 +398,8 @@ Responda APENAS com JSON válido:
       body: JSON.stringify({
         model: "llama-3.1-8b-instant",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
-        max_tokens: 1000,
+        temperature: 0.5, // Aumentado para mais criatividade
+        max_tokens: 2048, // Aumentado para artigos mais longos
       }),
     });
 
@@ -396,7 +415,13 @@ Responda APENAS com JSON válido:
     }
     
     const jsonResponse = JSON.parse(content);
+    
     if (jsonResponse.titulo && jsonResponse.conteudo) {
+      // VERIFICA O FILTRO DE PUBLI
+      if (jsonResponse.conteudo === "publieditorial") {
+        console.log(`Groq identificou publieditorial, pulando: ${titulo}`);
+        return { titulo: "CONTEÚDO IGNORADO", conteudo: "publieditorial" };
+      }
       return jsonResponse as GrokResponse;
     }
     
@@ -404,10 +429,11 @@ Responda APENAS com JSON válido:
     console.error("Erro Groq:", error);
   }
 
+  // Fallback em caso de erro da IA
   return { titulo, conteudo };
 }
 
-// --- FUNÇÃO PARA DETECTAR PORTAL ---
+// --- FUNÇÃO PARA DETECTAR PORTAL --- (Sem alterações)
 function detectPortal(url: string): PortalConfig | null {
   try {
     const urlObj = new URL(url);
@@ -563,21 +589,33 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // -------------------------------------------------------------------
+        // MUDANÇA 4: Verificar filtro de "publi"
+        // -------------------------------------------------------------------
+        
         // Reescreve com IA
         const { titulo: tituloReescrito, conteudo: conteudoReescrito } = await rewriteWithGrok(titulo, conteudo, portalConfig.name);
+        
+        // VERIFICA SE A IA IGNOROU O CONTEÚDO
+        if (conteudoReescrito === "publieditorial") {
+          console.log(`Pulando publieditorial/anúncio: ${titulo}`);
+          continue; // Pula para a próxima URL
+        }
+
         const resumoReescrito = conteudoReescrito.substring(0, 300) + (conteudoReescrito.length > 300 ? "..." : "");
 
-        // Salva no banco COM IMAGEM
+        // Salva no banco COM IMAGEM e CONTEÚDO COMPLETO
         const noticiaData: NoticiaScrapedData = {
           titulo_original: titulo,
           titulo_reescrito: tituloReescrito,
           resumo_original: resumo,
           resumo_reescrito: resumoReescrito,
+          conteudo_reescrito: conteudoReescrito, // <-- SALVANDO O ARTIGO COMPLETO
           url_original: newsUrl,
           fonte: portalConfig.name,
           status: 'processado',
           data_coleta: new Date().toISOString(),
-          imagem_url: imagem || null, // IMAGEM INCLUÍDA
+          imagem_url: imagem || null,
           categoria: portalConfig.category
         };
 
