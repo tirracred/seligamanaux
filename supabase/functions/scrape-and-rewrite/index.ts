@@ -314,16 +314,20 @@ async function fetchHtmlPreferAmp(url: string, ua: string) {
   return await r.text();
 }
 
-function sanitizeHtml(html: string) {
+function sanitizeHtml(html: string): string {
   return html
+    // remove scripts e styles
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
+    // remove blocos estruturais que só poluem (sem backreference)
     .replace(
-      .replace(/<(nav|header|footer|aside|form|iframe|button|svg|noscript)[\s\S]*?<\/\1>/gi, "")
+      /<(?:nav|header|footer|aside|form|iframe|button|svg|noscript)[\s\S]*?<\/(?:nav|header|footer|aside|form|iframe|button|svg|noscript)>/gi,
+      ""
     )
+    // limpa elementos com classes/ids típicos de menu/ads
     .replace(
-      /\b(class|id)="[^"]*(menu|newsletter|social|share|advert|ad-|banner|promo|sponsored)[^"]*"/gi,
-      "",
+      /\b(?:class|id)="[^"]*(?:menu|newsletter|social|share|advert|ad-|banner|promo|sponsored)[^"]*"/gi,
+      ""
     );
 }
 
