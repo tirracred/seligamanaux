@@ -477,7 +477,7 @@
             }
         }
 
-        // Publicar notícia scraped (move da tabela noticias_scraped para noticias)
+       // Publicar notícia scraped (move da tabela noticias_scraped para noticias)
         async function publishScrapedNoticia(scrapedId) {
             if (!confirm('Publicar esta notícia no site?')) return;
 
@@ -512,7 +512,7 @@
 
                 // 3. Atualiza status da scraped para 'publicado'
                 const { error: updateError } = await supabaseClient
-                    .from('notias_scraped')
+                    .from('noticias_scraped') // 
                     .update({ status: 'publicado' })
                     .eq('id', scrapedId);
 
