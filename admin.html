@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - SeligaManaux</title>
-    <script src="[https://unpkg.com/@supabase/supabase-js@2](https://unpkg.com/@supabase/supabase-js@2)"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; padding: 20px; }
@@ -59,7 +59,7 @@
             <p>Vá no <strong>Supabase Dashboard > Settings > API</strong> e copie as keys aqui:</p>
             <div class="form-group">
                 <label for="supabaseUrl">Supabase URL:</label>
-                <input type="text" id="supabaseUrl" value="[https://xtnqypmezntjcidglblc.supabase.co](https://xtnqypmezntjcidglblc.supabase.co)" readonly>
+                <input type="text" id="supabaseUrl" value="https://xtnqypmezntjcidglblc.supabase.co" readonly>
             </div>
             <div class="form-group">
                 <label for="anonKey">Anon Key (Publishable):</label>
@@ -88,10 +88,10 @@
                 <p>Buscar, reescrever e salvar notícias dos principais portais de Manaus/Amazonas.</p>
                 
                 <div class="source-buttons">
-                    <button class="scrape-button" onclick="scrapePortal('[https://g1.globo.com/am/amazonas/](https://g1.globo.com/am/amazonas/)', 'G1 Amazonas')">📰 Buscar G1 Amazonas</button>
-                    <button class="scrape-button" onclick="scrapePortal('[https://portaldoholanda.com.br/amazonas](https://portaldoholanda.com.br/amazonas)', 'Portal do Holanda')">🌐 Buscar Portal do Holanda</button>
-                    <button class="scrape-button" onclick="scrapePortal('[https://www.acritica.com/](https://www.acritica.com/)', 'A Crítica')">📄 Buscar A Crítica</button>
-                    <button class="scrape-button" onclick="scrapePortal('[https://portalamazonia.com/](https://portalamazonia.com/)', 'Portal Amazônia')">🌿 Buscar Portal Amazônia</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://g1.globo.com/am/amazonas/', 'G1 Amazonas')">📰 Buscar G1 Amazonas</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://portaldoholanda.com.br/amazonas', 'Portal do Holanda')">🌐 Buscar Portal do Holanda</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://www.acritica.com/', 'A Crítica')">📄 Buscar A Crítica</button>
+                    <button class="scrape-button" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia')">🌿 Buscar Portal Amazônia</button>
                 </div>
 
                 <div id="scrapeStatus" class="loading hidden">Buscando notícias... Aguarde.</div>
@@ -186,17 +186,18 @@
 
         // Inicialização com configuração salva ou padrão
         function initSupabase() {
-            const savedUrl = localStorage.getItem('supabase_url') || '[https://xtnqypmezntjcidglblc.supabase.co](https://xtnqypmezntjcidglblc.supabase.co)';
-            // -------------------------------------------------------------------
-            // MUDANÇA: Anon key agora está fixa aqui (a que você passou por texto)
-            // -------------------------------------------------------------------
+            const savedUrl = localStorage.getItem('supabase_url') || 'https://xtnqypmezntjcidglblc.supabase.co';
+            // Anon key fixa
             const savedKey = localStorage.getItem('supabase_anon_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODEwMDksImV4cCI6MjA3NzU1NzAwOX0.fz__YKaMuEWjoXVansGZnLgUhsdsg7J1tLCriMhV8Ls';
 
             if (savedKey) {
                 document.getElementById('anonKey').value = savedKey;
                 
                 try {
-                    const { createClient } = supabase;
+                    // -------------------------------------------------------------------
+                    // PONTO ONDE O ERRO OCORRIA
+                    // -------------------------------------------------------------------
+                    const { createClient } = supabase; // <-- 'supabase' não estava definido
                     supabaseClient = createClient(savedUrl, savedKey, {
                         auth: {
                             persistSession: true,
@@ -228,7 +229,7 @@
                     });
                     
                 } catch (error) {
-                    console.error('Erro na inicialização:', error);
+                    console.error('Erro na inicialização:', error); // <-- Este erro deve sumir agora
                 }
             } else {
                 console.log('Erro: Anon key não encontrada.');
@@ -238,8 +239,8 @@
         // Funções de Autenticação
         async function login() {
             if (!supabaseClient) {
-                // Esta verificação agora deve sempre passar
-                alert('⚠️ Erro: Cliente Supabase não foi inicializado.');
+                // Este era o alerta que você viu
+                alert('⚠️ Erro: Cliente Supabase não foi inicializado.'); 
                 return;
             }
 
@@ -258,8 +259,6 @@
                 currentSession = data.session;
                 statusEl.textContent = 'Login realizado com sucesso!';
                 statusEl.style.color = 'green';
-
-                // Interface será atualizada pelo onAuthStateChange
 
             } catch (error) {
                 statusEl.textContent = 'Erro: ' + error.message;
@@ -288,10 +287,9 @@
             statusEl.textContent = `Buscando notícias do ${sourceName}... Aguarde. (Isso pode levar até 1 minuto)`;
 
             try {
-                // A anonKey é lida do campo (agora oculto, mas preenchido)
                 const anonKey = document.getElementById('anonKey').value;
                 
-                const response = await fetch('[https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite](https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite)', {
+                const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${currentSession.access_token}`,
@@ -498,9 +496,6 @@
 
                 if (fetchError) throw fetchError;
                 
-                // -------------------------------------------------------------------
-                // MUDANÇA: Usar 'conteudo_reescrito' (o artigo longo)
-                // -------------------------------------------------------------------
                 const conteudoCompleto = scraped.conteudo_reescrito || scraped.resumo_reescrito || scraped.resumo_original;
 
                 // 2. Insere na tabela noticias (publicada)
@@ -508,7 +503,7 @@
                     .from('noticias')
                     .insert({
                         title: scraped.titulo_reescrito || scraped.titulo_original,
-                        content: conteudoCompleto, // <-- MUDANÇA APLICADA
+                        content: conteudoCompleto, 
                         category: scraped.categoria || 'Geral',
                         image_url: scraped.imagem_url
                     });
@@ -517,7 +512,7 @@
 
                 // 3. Atualiza status da scraped para 'publicado'
                 const { error: updateError } = await supabaseClient
-                    .from('noticias_scraped')
+                    .from('notias_scraped')
                     .update({ status: 'publicado' })
                     .eq('id', scrapedId);
 
