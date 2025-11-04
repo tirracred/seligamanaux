@@ -1,675 +1,715 @@
-// Importa o 'edge-runtime' para tipos Deno
+// Importa o 'edge-runtime' para tipos Deno (Supabase Edge Functions)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-// Importa o createClient da biblioteca supabase-js v2
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Interface para a tabela NOTICIAS_SCRAPED
-interface NoticiaScrapedData {
-  titulo_original: string;
-  titulo_reescrito: string;
-  resumo_original?: string;
-  resumo_reescrito?: string;
-  conteudo_reescrito?: string; // Coluna que você adicionou no PASSO 1
-  url_original: string;
-  fonte: string;
-  status: string;
-  data_coleta: string;
-  data_publicacao?: string;
-  imagem_url?: string;
-  categoria: string;
-}
+// Deno-DOM: parser de HTML no ambiente Deno
+// Import via jsr
+// deno-lint-ignore no-explicit-any
+const { DOMParser } = await import("jsr:@b-fuze/deno-dom");
 
-// Interface para resposta da IA
-interface GrokResponse {
-  titulo: string;
-  conteudo: string;
-}
+type PortalId = "g1-am" | "holanda" | "acritica" | "portalamazonia";
 
-// Interface para configuração de portais
 interface PortalConfig {
+  id: PortalId;
   name: string;
+  host: string;
   baseUrl: string;
-  linkSelectors: string[];
+  // Seletor(es) onde ficam os links de notícias na listagem/home do portal
+  listLinkSelectors: string[];
+  // Padrões permitidos / negados para links de artigo
+  articleLinkAllowPatterns: RegExp[];
+  articleLinkDenyPatterns: RegExp[];
+  // Seletor(es) do título dentro da página do artigo
   titleSelectors: string[];
+  // Seletor(es) do conteúdo do artigo
   contentSelectors: string[];
+  // Seletor(es) de imagem de destaque
   imageSelectors: string[];
+  // Limite de links a visitar por portal (proteção)
+  maxLinks?: number;
+  // Identificador de categoria
   category: string;
 }
 
-// CORS Headers
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Max-Age': '86400',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 
-// Configurações dos portais (Sem alterações)
-const PORTAIS_CONFIG: Record<string, PortalConfig> = {
-  'g1.globo.com': {
-    name: 'G1 Amazonas',
-    baseUrl: 'https://g1.globo.com/am/amazonas/',
-    linkSelectors: [
+const PORTAIS_CONFIG: Record<PortalId, PortalConfig> = {
+  "g1-am": {
+    id: "g1-am",
+    name: "G1 Amazonas",
+    host: "g1.globo.com",
+    baseUrl: "https://g1.globo.com/am/amazonas/",
+    listLinkSelectors: [
+      "a.feed-post-link",
       'a[href*="/am/amazonas/noticia/"]',
       'a[href*="/amazonas/noticia/"]',
-      '.feed-post-link[href*="/noticia/"]'
+    ],
+    articleLinkAllowPatterns: [
+      /\/am\/amazonas\/noticia\//i,
+      /\/amazonas\/noticia\//i,
+      /\/noticia\//i,
+    ],
+    articleLinkDenyPatterns: [
+      /\/sobre/i,
+      /\/termos/i,
+      /\/politica-de-privacidade/i,
+      /\/anuncie/i,
+      /\/globoid/i,
+      /\/quem-somos/i,
+      /\/ajuda/i,
+      /\/contato/i,
+      /\/promocao/i,
+      /\/parceiro/i,
+      /\/gshow\//i,
+      /\/esportes\//i, // opcional
     ],
     titleSelectors: [
-      'h1.content-head__title',
-      'h1.gui-color-primary',
-      'h1',
-      '.content-head__title'
+      "h1.content-head__title",
+      "h1.gui-color-primary",
+      "article h1",
+      "h1",
     ],
     contentSelectors: [
-      '.content-text__container',
-      '.mc-article-body',
-      '.post__content',
-      'article .content'
+      ".content-text__container",
+      "article .mc-article-body",
+      "article .content",
+      "article",
     ],
     imageSelectors: [
-      '.content-media__image img',
-      '.progressive-img img',
-      'figure img',
-      '.content-head__image img'
+      ".content-media__image img",
+      ".progressive-img img",
+      "figure img",
+      ".content-head__image img",
     ],
-    category: 'Amazonas'
+    maxLinks: 12,
+    category: "Amazonas",
   },
-  'portaldoholanda.com.br': {
-    name: 'Portal do Holanda',
-    baseUrl: 'https://portaldoholanda.com.br/',
-    linkSelectors: [
+
+  holanda: {
+    id: "holanda",
+    name: "Portal do Holanda",
+    host: "portaldoholanda.com.br",
+    baseUrl: "https://portaldoholanda.com.br/",
+    listLinkSelectors: [
+      "h2 a",
+      "h3 a",
+      ".post-link",
       'a[href*="/noticia/"]',
       'a[href*="/noticias/"]',
-      '.post-link',
-      'h2 a',
-      'h3 a'
     ],
-    titleSelectors: [
-      'h1.entry-title',
-      'h1.post-title',
-      'h1',
-      '.title'
+    articleLinkAllowPatterns: [/\/noticia\//i, /\/noticias\//i],
+    articleLinkDenyPatterns: [
+      /\/sobre/i,
+      /\/termos/i,
+      /\/quem-somos/i,
+      /\/institucional/i,
+      /\/anuncie/i,
+      /\/privacidade/i,
+      /\/contato/i,
+      /\/classificados/i,
     ],
+    titleSelectors: ["h1.entry-title", "h1.post-title", "article h1", "h1"],
     contentSelectors: [
-      '.entry-content',
-      '.post-content',
-      '.content',
-      'article .text'
+      ".entry-content",
+      ".post-content",
+      "article .text",
+      "article",
     ],
     imageSelectors: [
-      '.featured-image img',
-      '.post-thumbnail img',
-      'article img',
-      '.wp-post-image'
+      ".featured-image img",
+      ".post-thumbnail img",
+      "article img",
+      ".wp-post-image",
     ],
-    category: 'Amazonas'
+    maxLinks: 12,
+    category: "Amazonas",
   },
-  'acritica.com': {
-    name: 'A Crítica',
-    baseUrl: 'https://www.acritica.com/',
-    linkSelectors: [
-      'a[href*="/noticias/"]',
+
+  acrítica: undefined as never, // apenas para evitar typo
+
+  acritica: {
+    id: "acritica",
+    name: "A Crítica",
+    host: "www.acritica.com",
+    baseUrl: "https://www.acritica.com/",
+    listLinkSelectors: [
+      "h2 a",
+      "h3 a",
+      ".post-item a",
       'a[href*="/noticia/"]',
-      '.post-item a',
-      'h2 a',
-      'h3 a'
+      'a[href*="/noticias/"]',
     ],
-    titleSelectors: [
-      'h1.post-title',
-      'h1.entry-title',
-      'h1',
-      '.article-title'
+    articleLinkAllowPatterns: [/\/noticia\//i, /\/noticias\//i],
+    articleLinkDenyPatterns: [
+      /\/sobre/i,
+      /\/termos/i,
+      /\/anuncie/i,
+      /\/contato/i,
+      /\/institucional/i,
+      /\/privacidade/i,
+      /\/classificados/i,
     ],
+    titleSelectors: ["h1.post-title", "h1.entry-title", ".article-title", "h1"],
     contentSelectors: [
-      '.post-content',
-      '.entry-content',
-      '.article-content',
-      'article .content'
+      ".post-content",
+      ".entry-content",
+      ".article-content",
+      "article .content",
+      "article",
     ],
     imageSelectors: [
-      '.featured-image img',
-      '.post-image img',
-      'article img',
-      '.thumbnail img'
+      ".featured-image img",
+      ".post-image img",
+      "article img",
+      ".thumbnail img",
     ],
-    category: 'Amazonas'
+    maxLinks: 12,
+    category: "Amazonas",
   },
-  'portalamazonia.com': {
-    name: 'Portal Amazônia',
-    baseUrl: 'https://portalamazonia.com/',
-    linkSelectors: [
-      'a[href*="/noticias/"]',
+
+  portalamazonia: {
+    id: "portalamazonia",
+    name: "Portal Amazônia",
+    host: "portalamazonia.com",
+    baseUrl: "https://portalamazonia.com/",
+    listLinkSelectors: [
+      "h2 a",
+      "h3 a",
+      ".post-link",
       'a[href*="/noticia/"]',
-      '.post-link',
-      'h2 a',
-      'h3 a'
+      'a[href*="/noticias/"]',
     ],
-    titleSelectors: [
-      'h1.entry-title',
-      'h1.post-title',
-      'h1',
-      '.article-title'
+    articleLinkAllowPatterns: [/\/noticia\//i, /\/noticias\//i],
+    articleLinkDenyPatterns: [
+      /\/sobre/i,
+      /\/termos/i,
+      /\/anuncie/i,
+      /\/contato/i,
+      /\/institucional/i,
+      /\/privacidade/i,
     ],
+    titleSelectors: ["h1.entry-title", "h1.post-title", ".article-title", "h1"],
     contentSelectors: [
-      '.entry-content',
-      '.post-content',
-      '.article-body',
-      'article .content'
+      ".entry-content",
+      ".post-content",
+      ".article-body",
+      "article .content",
+      "article",
     ],
     imageSelectors: [
-      '.featured-image img',
-      '.post-thumbnail img',
-      'article img',
-      '.wp-post-image'
+      ".featured-image img",
+      ".post-thumbnail img",
+      "article img",
+      ".wp-post-image",
     ],
-    category: 'Amazônia'
-  }
+    maxLinks: 12,
+    category: "Amazônia",
+  },
 };
 
-// --- FUNÇÃO MELHORADA PARA EXTRAIR LINKS --- (Sem alterações)
-function extractNewsLinks(html: string, config: PortalConfig, maxLinks = 15): string[] {
-  const links: Set<string> = new Set();
-  
+// Helpers
+
+function normalizeUrl(base: string, href: string): string | null {
   try {
-    console.log(`Buscando links para ${config.name}...`);
-    
-    for (const selector of config.linkSelectors) {
-      // Cria regex mais flexível para cada seletor
-      let pattern: RegExp;
-      
-      if (selector.includes('[href*=')) {
-        // Para seletores com href*=
-        const hrefPattern = selector.match(/\[href\*="([^"]+)"\]/);
-        if (hrefPattern) {
-          pattern = new RegExp(`<a[^>]+href=["']([^"']*${hrefPattern[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^"']*)["'][^>]*>`, 'gi');
-        } else {
-          continue;
-        }
-      } else {
-        // Para seletores de classe
-        const className = selector.replace('.', '');
-        pattern = new RegExp(`<a[^>]+class=["'][^"']*${className}[^"']*["'][^>]+href=["']([^"']+)["']`, 'gi');
-      }
-      
-      let match;
-      while ((match = pattern.exec(html)) !== null && links.size < maxLinks) {
-        let url = match[1];
-        
-        // Normaliza URLs
-        if (url.startsWith('/')) {
-          const baseUrl = new URL(config.baseUrl);
-          url = baseUrl.origin + url;
-        } else if (!url.startsWith('http')) {
-          url = config.baseUrl + url;
-        }
-        
-        // Filtra URLs válidas de notícias
-        if (url.includes('/noticia') || url.includes('/noticias/')) {
-          links.add(url);
-        }
-      }
+    if (!href) return null;
+    // evita anchors e mailto/tel
+    if (href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+      return null;
     }
-
-    // Fallback: busca geral por links de notícias
-    if (links.size < 5) {
-      const generalPattern = /<a[^>]+href=["']([^"']*(?:noticia|noticias)[^"']*)["'][^>]*>/gi;
-      let match;
-      
-      while ((match = generalPattern.exec(html)) !== null && links.size < maxLinks) {
-        let url = match[1];
-        if (url.startsWith('/')) {
-          const baseUrl = new URL(config.baseUrl);
-          url = baseUrl.origin + url;
-        }
-        if (url.startsWith('http')) {
-          links.add(url);
-        }
-      }
-    }
-
-  } catch (error) {
-    console.error('Erro ao extrair links:', error);
+    const url = href.startsWith("http")
+      ? new URL(href)
+      : new URL(href, base);
+    return url.toString();
+  } catch {
+    return null;
   }
-
-  const linkArray = Array.from(links);
-  console.log(`Encontrados ${linkArray.length} links únicos para ${config.name}`);
-  return linkArray;
 }
 
-// --- FUNÇÃO MELHORADA PARA EXTRAIR CONTEÚDO E IMAGEM --- (Sem alterações)
-function extractContentWithRegex(html: string, config: PortalConfig): { titulo: string; conteudo: string; resumo: string; imagem: string } {
-  let titulo = "Título não encontrado";
-  let conteudo = "Conteúdo não encontrado";
-  let resumo = "";
-  let imagem = "";
-
+function isLikelyArticleLink(
+  urlStr: string,
+  cfg: PortalConfig,
+): boolean {
   try {
-    // Extrai título
-    for (const selector of config.titleSelectors) {
-      const patterns = [
-        new RegExp(`<${selector}[^>]*>(.*?)</${selector}>`, 'is'),
-        new RegExp(`<[^>]+class=["'][^"']*${selector.replace(/[.#]/g, '')}[^"']*["'][^>]*>(.*?)<\/[^>]+>`, 'is')
-      ];
-      
-      for (const pattern of patterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-          titulo = match[1].replace(/<[^>]*>/g, '').trim();
-          if (titulo && titulo !== "Título não encontrado") break;
-        }
-      }
-      if (titulo !== "Título não encontrado") break;
+    const url = new URL(urlStr);
+    if (!url.hostname.includes(cfg.host)) return false;
+
+    for (const deny of cfg.articleLinkDenyPatterns) {
+      if (deny.test(url.pathname)) return false;
     }
-
-    // Extrai conteúdo
-    for (const selector of config.contentSelectors) {
-      const patterns = [
-        new RegExp(`<[^>]+class=["'][^"']*${selector.replace(/[.#]/g, '')}[^"']*["'][^>]*>(.*?)<\/[^>]+>`, 'is'),
-        new RegExp(`<${selector}[^>]*>(.*?)</${selector}>`, 'is')
-      ];
-      
-      for (const pattern of patterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-          conteudo = match[1]
-            .replace(/<script[^>]*>.*?<\/script>/gis, '')
-            .replace(/<style[^>]*>.*?<\/style>/gis, '')
-            .replace(/<[^>]*>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          
-          if (conteudo.length > 100) break;
-        }
-      }
-      if (conteudo.length > 100) break;
+    for (const allow of cfg.articleLinkAllowPatterns) {
+      if (allow.test(url.pathname)) return true;
     }
-
-    // Extrai imagem
-    for (const selector of config.imageSelectors) {
-      const patterns = [
-        new RegExp(`<img[^>]+class=["'][^"']*${selector.replace(/[.#]/g, '').replace(' img', '')}[^"']*["'][^>]+src=["']([^"']+)["']`, 'i'),
-        new RegExp(`<img[^>]+src=["']([^"']+)["'][^>]*class=["'][^"']*${selector.replace(/[.#]/g, '').replace(' img', '')}[^"']*["']`, 'i')
-      ];
-      
-      for (const pattern of patterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-          let imgUrl = match[1];
-          
-          // Normaliza URL da imagem
-          if (imgUrl.startsWith('/')) {
-            const baseUrl = new URL(config.baseUrl);
-            imgUrl = baseUrl.origin + imgUrl;
-          }
-          
-          // Verifica se é uma imagem válida
-          if (imgUrl.includes('.jpg') || imgUrl.includes('.jpeg') || imgUrl.includes('.png') || imgUrl.includes('.webp')) {
-            imagem = imgUrl;
-            break;
-          }
-        }
-      }
-      if (imagem) break;
-    }
-
-    // Fallback para extração de conteúdo
-    if (conteudo === "Conteúdo não encontrado" || conteudo.length < 100) {
-      const paragraphs = html.match(/<p[^>]*>(.*?)<\/p>/gis);
-      if (paragraphs && paragraphs.length > 0) {
-        conteudo = paragraphs
-          .map(p => p.replace(/<[^>]*>/g, '').trim())
-          .filter(p => p.length > 30)
-          .slice(0, 10)
-          .join(' ');
-      }
-    }
-
-    // Fallback para imagem
-    if (!imagem) {
-      const imgMatch = html.match(/<img[^>]+src=["']([^"']+(?:\.jpg|\.jpeg|\.png|\.webp)[^"']*)["']/i);
-      if (imgMatch) {
-        let imgUrl = imgMatch[1];
-        if (imgUrl.startsWith('/')) {
-          const baseUrl = new URL(config.baseUrl);
-          imgUrl = baseUrl.origin + imgUrl;
-        }
-        imagem = imgUrl;
-      }
-    }
-
-    // Cria resumo
-    if (conteudo && conteudo !== "Conteúdo não encontrado") {
-      resumo = conteudo.substring(0, 300) + (conteudo.length > 300 ? "..." : "");
-    }
-
-    console.log(`${config.name} - Extraído: Título: ${titulo.substring(0, 50)}..., Conteúdo: ${conteudo.length} chars, Imagem: ${imagem ? 'Sim' : 'Não'}`);
-
-  } catch (error) {
-    console.error(`Erro na extração para ${config.name}:`, error);
+    return false;
+  } catch {
+    return false;
   }
-
-  return { titulo, conteudo, resumo, imagem };
 }
 
-// -------------------------------------------------------------------
-// MUDANÇA: Função de reescrita (Prompt de 1500-4000)
-// -------------------------------------------------------------------
-async function rewriteWithGrok(titulo: string, conteudo: string, fonte: string): Promise<GrokResponse> {
-  const GROK_API_KEY = Deno.env.get("GROK_API_KEY"); 
-  if (!GROK_API_KEY) {
-    console.error("GROK_API_KEY não está definida");
-    return { titulo, conteudo };
-  }
-
-  const prompt = `Você é um jornalista sênior e editor-chefe do "SeligaManaux", o principal portal de notícias de Manaus e do Amazonas. Sua missão é reescrever a notícia abaixo, transformando-a em um **artigo robusto e completo**.
-
-**Instruções de Identidade (SeligaManaux):**
-1.  **Tom de Voz:** Direto, vibrante, e com a "boca no trombone". Use uma linguagem que o manauara entende, sem ser vulgar. "Se liga!"
-2.  **Foco Local:** Sempre que possível, traga o impacto da notícia para a realidade de Manaus/Amazonas.
-3.  **Comprimento:** O artigo final deve ser robusto, contendo entre **1500 e 4000 caracteres**. Não entregue resumos.
-
-**Filtro de Conteúdo (IMPORTANTE):**
-Se a "notícia" original for claramente um anúncio, um publieditorial, ou apenas uma propaganda para um programa de TV (ex: "Assista ao Jornal do Amazonas" ou "Veja a programação completa"), **não reescreva**. Em vez disso, responda APENAS com o seguinte JSON:
-{
-  "titulo": "CONTEÚDO IGNORADO",
-  "conteudo": "publieditorial"
+function cleanDom(root: any) {
+  // remove lixo típico que polui textContent
+  const toRemove = root.querySelectorAll(
+    [
+      "script",
+      "style",
+      "noscript",
+      "template",
+      "iframe",
+      "link",
+      "form",
+      "header nav",
+      "footer",
+      ".ads",
+      ".ad",
+      ".advertising",
+      "[class*='ad-']",
+      ".sponsor",
+      ".sponsored",
+      ".sharing",
+      ".share",
+      ".breadcrumbs",
+      ".cookie",
+      ".newsletter",
+      ".related",
+      ".recommendations",
+      ".comments",
+      ".author-box",
+      ".bio",
+      ".widget",
+      ".sidebar",
+      ".menu",
+      ".nav",
+      ".pagination",
+    ].join(","),
+  );
+  toRemove.forEach((n: any) => n.remove());
 }
 
-**Notícia Original (Fonte: ${fonte}):**
-Título Original: ${titulo}
-Texto Original (base): ${conteudo.substring(0, 4000)} 
+function extractFirstMatchText(doc: any, selectors: string[]): string {
+  for (const sel of selectors) {
+    const el = doc.querySelector(sel);
+    if (el) {
+      const txt = el.textContent?.trim();
+      if (txt) return txt;
+    }
+  }
+  return "";
+}
 
-**Sua Tarefa (Se for notícia):**
-Reescreva o texto acima como um artigo completo e original (1500-4000 caracteres) para o SeligaManaux. Mantenha 100% dos fatos, mas mude a estrutura e as palavras.
+function extractFirstImage(doc: any, selectors: string[]): string {
+  for (const sel of selectors) {
+    const el = doc.querySelector(sel);
+    if (el) {
+      const src = el.getAttribute("src") || el.getAttribute("data-src");
+      if (src && !src.startsWith("data:")) return src;
+    }
+  }
+  return "";
+}
 
-Responda **APENAS** com um objeto JSON válido, sem nenhum texto antes ou depois:
-{
-  "titulo": "Um novo título chamativo, com a cara do SeligaManaux",
-  "conteudo": "O artigo completo reescrito por você, com vários parágrafos, de forma robusta e interessante para o povo manauara (mínimo de 1500 caracteres)."
-}`;
+function concatContent(doc: any, selectors: string[]): string {
+  for (const sel of selectors) {
+    const container = doc.querySelector(sel);
+    if (container) {
+      // clona para limpar sem afetar o doc principal
+      const clone = container.cloneNode(true);
+      cleanDom(clone);
+      const text = clone.textContent ?? "";
+      // normalização
+      const normalized = text
+        .replace(/\u00A0/g, " ")
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n\s*\n\s*\n+/g, "\n\n")
+        .trim();
+      if (normalized.length > 120) return normalized;
+    }
+  }
+  // fallback: tenta no article inteiro
+  const article = doc.querySelector("article");
+  if (article) {
+    const clone = article.cloneNode(true);
+    cleanDom(clone);
+    return (clone.textContent ?? "").replace(/[ \t]+/g, " ").trim();
+  }
+  return "";
+}
 
-  try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+async function fetchHtml(url: string): Promise<string> {
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (compatible; SeligaManauxBot/1.0; +https://seligamanaux)",
+      "Accept": "text/html,application/xhtml+xml",
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} ao carregar ${url}`);
+  }
+  return await res.text();
+}
+
+async function listArticleLinks(cfg: PortalConfig): Promise<string[]> {
+  const html = await fetchHtml(cfg.baseUrl);
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (!doc) return [];
+  cleanDom(doc);
+
+  const linksSet = new Set<string>();
+  for (const sel of cfg.listLinkSelectors) {
+    doc.querySelectorAll(sel).forEach((a: any) => {
+      const href = a.getAttribute("href") || "";
+      const url = normalizeUrl(cfg.baseUrl, href);
+      if (!url) return;
+      if (isLikelyArticleLink(url, cfg)) {
+        linksSet.add(url);
+      }
+    });
+  }
+
+  // fallback: pega qualquer link de noticia permitido no dom
+  if (linksSet.size < 4) {
+    doc.querySelectorAll("a[href]").forEach((a: any) => {
+      const href = a.getAttribute("href") || "";
+      const url = normalizeUrl(cfg.baseUrl, href);
+      if (!url) return;
+      if (isLikelyArticleLink(url, cfg)) {
+        linksSet.add(url);
+      }
+    });
+  }
+
+  const links = Array.from(linksSet).slice(0, cfg.maxLinks ?? 10);
+  return links;
+}
+
+function wordCount(text: string): number {
+  const words = text
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+  return words.length;
+}
+
+async function extractArticle(url: string, cfg: PortalConfig) {
+  const html = await fetchHtml(url);
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (!doc) {
+    throw new Error("Falha ao parsear DOM");
+  }
+  cleanDom(doc);
+
+  const tituloOriginal = extractFirstMatchText(doc, cfg.titleSelectors);
+  let conteudoOriginal = concatContent(doc, cfg.contentSelectors);
+  const imagem = extractFirstImage(doc, cfg.imageSelectors);
+
+  // sanity filters
+  conteudoOriginal = conteudoOriginal
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return {
+    tituloOriginal: tituloOriginal || "(sem título)",
+    conteudoOriginal,
+    imagem,
+    url,
+    fonte: cfg.name,
+    categoria: cfg.category,
+  };
+}
+
+// Reescrita com Groq – ajusta para o seu modelo
+async function rewriteWithGroq(
+  titulo: string,
+  texto: string,
+  fonte: string,
+): Promise<{ titulo: string; conteudo: string }> {
+  const apiKey = Deno.env.get("GROQ_API_KEY");
+  if (!apiKey) throw new Error("GROQ_API_KEY ausente");
+
+  // hard stop para textos curtos
+  if (wordCount(texto) < 150) {
+    return {
+      titulo: "CONTEÚDO IGNORADO",
+      conteudo: "CONTEÚDO IGNORADO",
+    };
+  }
+
+  const prompt = `
+Você é um editor jornalístico. Reescreva o texto a seguir em português brasileiro, formato jornalístico objetivo (pirâmide invertida), coeso e rico em detalhes, entre 1.800 e 4.000 caracteres. Mantenha neutralidade e evite adjetivação gratuita. Não invente fatos novos.
+
+Restrições:
+- Tamanho final obrigatório: 1.800–4.000 caracteres.
+- Sem opinião, sem clichês, sem promoções.
+- Mantenha a informação factual.
+- Não inclua HTML nem tags.
+- Se o texto original parecer incompleto, superficial ou menor que 150 palavras, responda apenas "CONTEÚDO IGNORADO".
+
+Título original: ${titulo}
+
+Texto original:
+${texto}
+`.trim();
+
+  // Exemplo de chamada a Groq (ajuste para seu endpoint/model)
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "llama-3.1-70b-versatile",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Você é um editor jornalístico brasileiro. Produza textos claros, objetivos e completos.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Groq HTTP ${res.status}`);
+
+  const data = await res.json();
+  const content =
+    data?.choices?.[0]?.message?.content?.toString()?.trim() ?? "";
+
+  if (!content) {
+    throw new Error("Groq sem conteúdo");
+  }
+
+  if (content === "CONTEÚDO IGNORADO") {
+    return { titulo: "CONTEÚDO IGNORADO", conteudo: "CONTEÚDO IGNORADO" };
+  }
+
+  // enforce length
+  const len = content.length;
+  if (len < 1700 || len > 4300) {
+    // Segunda passada para ajuste fino de tamanho (pequeno truque)
+    const adjustPrompt = `
+Ajuste o texto para ficar estritamente entre 1.800 e 4.000 caracteres. Não mude fatos.
+
+Texto:
+${content}
+`.trim();
+
+    const res2 = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROK_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.5,
-        max_tokens: 4096, 
+        model: "llama-3.1-70b-versatile",
+        temperature: 0.2,
+        messages: [
+          { role: "system", content: "Ajuste de comprimento." },
+          { role: "user", content: adjustPrompt },
+        ],
       }),
     });
-
-    if (!response.ok) {
-      throw new Error(`Groq API error: ${response.status}`);
+    if (res2.ok) {
+      const data2 = await res2.json();
+      const adjusted =
+        data2?.choices?.[0]?.message?.content?.toString()?.trim() ?? content;
+      return { titulo, conteudo: adjusted };
     }
-
-    const data = await response.json();
-    
-    // -------------------------------------------------------------------
-    // MUDANÇA (CORREÇÃO ERRO 2): Limpeza da resposta JSON
-    // -------------------------------------------------------------------
-    let content = data.choices[0].message.content;
-    
-    // Procura o JSON dentro da resposta (ignorando "```json" ou "aqui está:")
-    const jsonMatch = content.match(/{[\s\S]*}/);
-    
-    if (!jsonMatch) {
-      throw new Error("Resposta da IA não contém JSON válido. Resposta: " + content);
-    }
-    
-    const jsonString = jsonMatch[0];
-    const jsonResponse = JSON.parse(jsonString); // Parse apenas do JSON limpo
-    // -------------------------------------------------------------------
-
-    if (jsonResponse.titulo && jsonResponse.conteudo) {
-      // VERIFICA O FILTRO DE PUBLI
-      if (jsonResponse.conteudo === "publieditorial") {
-        console.log(`Groq identificou publieditorial, pulando: ${titulo}`);
-        return { titulo: "CONTEÚDO IGNORADO", conteudo: "publieditorial" };
-      }
-      return jsonResponse as GrokResponse;
-    }
-    
-  } catch (error) {
-    console.error("Erro Groq:", error);
   }
 
-  // Fallback em caso de erro da IA
-  return { titulo, conteudo };
+  return { titulo, conteudo: content };
 }
 
-// --- FUNÇÃO PARA DETECTAR PORTAL --- (Sem alterações)
-function detectPortal(url: string): PortalConfig | null {
-  try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname.replace('www.', '');
-    
-    for (const [key, config] of Object.entries(PORTAIS_CONFIG)) {
-      if (hostname.includes(key.replace('www.', '')) || key.includes(hostname)) {
-        return config;
-      }
-    }
-  } catch (error) {
-    console.error('Erro ao detectar portal:', error);
-  }
-  
-  return null;
+async function saveToSupabase(rows: Array<{
+  titulo_original: string;
+  titulo_reescrito: string;
+  conteudo_reescrito: string;
+  url_original: string;
+  fonte: string;
+  imagem_url?: string;
+  categoria: string;
+}>) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const client = createClient(supabaseUrl, supabaseKey);
+
+  const enriched = rows.map((r) => ({
+    ...r,
+    status: "rascunho",
+    data_coleta: new Date().toISOString(),
+  }));
+
+  const { error } = await client
+    .from("noticias_scraped")
+    .insert(enriched);
+
+  if (error) throw new Error(`Supabase insert error: ${error.message}`);
 }
 
-// --- FUNÇÃO PRINCIPAL ---
 Deno.serve(async (req) => {
-  console.log(`${req.method} ${req.url}`);
-
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { status: 200, headers: corsHeaders });
-  }
-
-  if (req.method !== 'POST') {
-    return new Response('Método não permitido', { status: 405, headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // AUTENTICAÇÃO
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Sem autorização" }), 
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
-    }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-  
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-  
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Usuário não autenticado" }), 
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
-    }
-
-    // PARSE DA URL
-    const body = await req.json();
-    const targetUrl = body.url;
-    if (!targetUrl) {
-      return new Response(JSON.stringify({ error: "URL obrigatória" }), 
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
-    }
-
-    console.log('Processando URL:', targetUrl);
-
-    // DETECTA O PORTAL
-    const portalConfig = detectPortal(targetUrl);
-    if (!portalConfig) {
-      return new Response(JSON.stringify({ error: "Portal não suportado" }), 
-        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
-    }
-
-    console.log('Portal detectado:', portalConfig.name);
-
-    // BUSCA URLs JÁ PROCESSADAS PARA EVITAR DUPLICATAS
-    const { data: existingUrls } = await supabaseAdmin
-      .from('noticias_scraped')
-      .select('url_original')
-      .eq('fonte', portalConfig.name)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()); // Últimos 7 dias
-
-    const existingUrlsSet = new Set(existingUrls?.map(item => item.url_original) || []);
-    console.log(`URLs já processadas: ${existingUrlsSet.size}`);
-
-    // BUSCA A PÁGINA INICIAL DO PORTAL
-    const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-    let htmlContent: string;
-    
-    try {
-      const response = await fetch(targetUrl, { 
-        headers: { "User-Agent": userAgent },
-        signal: AbortSignal.timeout(30000)
+    const contentType = req.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      return new Response(JSON.stringify({ error: "JSON esperado" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      htmlContent = await response.text();
-      console.log('HTML recebido, tamanho:', htmlContent.length);
-      
-    } catch (error) {
-      console.error("Erro no scraping:", error);
-      return new Response(JSON.stringify({ error: `Erro ao acessar ${portalConfig.name}: ${error.message}` }), 
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
     }
 
-    // EXTRAI LINKS DE NOTÍCIAS (MAIS LINKS PARA EVITAR DUPLICATAS)
-    const newsLinks = extractNewsLinks(htmlContent, portalConfig, 20) // Aumentado para 20
-      .filter(url => !existingUrlsSet.has(url)); // Remove URLs já processadas
-    
-    if (newsLinks.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: `Todas as notícias recentes do ${portalConfig.name} já foram processadas.`,
-        stats: { 
-          total_encontradas: 0,
-          processadas_com_sucesso: 0,
-          erros: 0,
-          portal: portalConfig.name
-        }
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" }});
+    const body = await req.json().catch(() => null) as {
+      portalId?: PortalId;
+    };
+
+    if (!body?.portalId) {
+      return new Response(
+        JSON.stringify({ error: "Informe { portalId }" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    console.log(`Processando ${newsLinks.length} notícias novas de ${portalConfig.name}`);
+    const cfg = PORTAIS_CONFIG[body.portalId];
+    if (!cfg) {
+      return new Response(
+        JSON.stringify({ error: `portalId inválido: ${body.portalId}` }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
-    // PROCESSA CADA NOTÍCIA
-    const processedNews = [];
-    let successCount = 0;
-    let errorCount = 0;
+    // 1) Coleta links de artigos válidos
+    const links = await listArticleLinks(cfg);
 
-    // -------------------------------------------------------------------
-    // MUDANÇA: Aumentado para 12 notícias por varredura
-    // -------------------------------------------------------------------
-    for (const newsUrl of newsLinks.slice(0, 12)) { 
+    // 2) Para cada link, extrai e reescreve
+    const results: Array<{
+      titulo_original: string;
+      titulo_reescrito: string;
+      conteudo_reescrito: string;
+      url_original: string;
+      fonte: string;
+      imagem_url?: string;
+      categoria: string;
+      status: "OK" | "IGNORADO" | "ERRO";
+      reason?: string;
+    }> = [];
+
+    for (const url of links) {
       try {
-        console.log(`Processando: ${newsUrl}`);
+        const art = await extractArticle(url, cfg);
+        const wc = wordCount(art.conteudoOriginal);
 
-        // Busca a página da notícia
-        const newsResponse = await fetch(newsUrl, { 
-          headers: { "User-Agent": userAgent },
-          signal: AbortSignal.timeout(20000)
-        });
-        
-        if (!newsResponse.ok) {
-          console.log(`Erro HTTP ${newsResponse.status} para ${newsUrl}`);
-          continue;
-        }
-        
-        const newsHtml = await newsResponse.text();
-        
-        // Extrai conteúdo E imagem
-        const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, portalConfig);
-        
-        if (titulo === "Título não encontrado" || conteudo.length < 100) {
-          console.log('Conteúdo insuficiente, pulando...');
-          continue;
-        }
-        
-        // Reescreve com IA
-        const { titulo: tituloReescrito, conteudo: conteudoReescrito } = await rewriteWithGrok(titulo, conteudo, portalConfig.name);
-        
-        // VERIFICA SE A IA IGNOROU O CONTEÚDO
-        if (conteudoReescrito === "publieditorial") {
-          console.log(`Pulando publieditorial/anúncio: ${titulo}`);
-          continue; // Pula para a próxima URL
-        }
-
-        const resumoReescrito = conteudoReescrito.substring(0, 300) + (conteudoReescrito.length > 300 ? "..." : "");
-
-        // Salva no banco COM IMAGEM e CONTEÚDO COMPLETO
-        const noticiaData: NoticiaScrapedData = {
-          titulo_original: titulo,
-          titulo_reescrito: tituloReescrito,
-          resumo_original: resumo,
-          resumo_reescrito: resumoReescrito,
-          conteudo_reescrito: conteudoReescrito, // <-- SALVANDO O ARTIGO COMPLETO
-          url_original: newsUrl,
-          fonte: portalConfig.name,
-          status: 'processado',
-          data_coleta: new Date().toISOString(),
-          imagem_url: imagem || null,
-          categoria: portalConfig.category
-        };
-
-        const { error } = await supabaseAdmin
-          .from("noticias_scraped")
-          .insert(noticiaData);
-
-        if (error) {
-          console.error('Erro ao salvar:', error);
-          errorCount++;
-        } else {
-          processedNews.push({
-            titulo: tituloReescrito,
-            fonte: portalConfig.name,
-            url: newsUrl,
-            imagem: imagem ? 'Sim' : 'Não'
+        if (wc < 150) {
+          results.push({
+            titulo_original: art.tituloOriginal,
+            titulo_reescrito: "CONTEÚDO IGNORADO",
+            conteudo_reescrito: "CONTEÚDO IGNORADO",
+            url_original: art.url,
+            fonte: art.fonte,
+            imagem_url: art.imagem,
+            categoria: art.categoria,
+            status: "IGNORADO",
+            reason: "Texto original curto",
           });
-          successCount++;
-          console.log(`✅ Notícia salva: ${titulo.substring(0, 50)}...`);
+          continue;
         }
 
-        // Pausa entre requests
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        const rewritten = await rewriteWithGroq(
+          art.tituloOriginal,
+          art.conteudoOriginal,
+          art.fonte,
+        );
 
-      } catch (error) {
-        console.error(`Erro ao processar ${newsUrl}:`, error);
-        errorCount++;
+        if (rewritten.conteudo === "CONTEÚDO IGNORADO") {
+          results.push({
+            titulo_original: art.tituloOriginal,
+            titulo_reescrito: "CONTEÚDO IGNORADO",
+            conteudo_reescrito: "CONTEÚDO IGNORADO",
+            url_original: art.url,
+            fonte: art.fonte,
+            imagem_url: art.imagem,
+            categoria: art.categoria,
+            status: "IGNORADO",
+            reason: "Groq recusou por conteúdo insuficiente",
+          });
+          continue;
+        }
+
+        // coerce título reescrito mínimo
+        const tituloReescrito =
+          rewritten.titulo && rewritten.titulo !== "CONTEÚDO IGNORADO"
+            ? rewritten.titulo
+            : art.tituloOriginal;
+
+        results.push({
+          titulo_original: art.tituloOriginal,
+          titulo_reescrito: tituloReescrito,
+          conteudo_reescrito: rewritten.conteudo,
+          url_original: art.url,
+          fonte: art.fonte,
+          imagem_url: art.imagem,
+          categoria: art.categoria,
+          status: "OK",
+        });
+      } catch (e) {
+        results.push({
+          titulo_original: "(erro)",
+          titulo_reescrito: "(erro)",
+          conteudo_reescrito: "(erro)",
+          url_original: url,
+          fonte: cfg.name,
+          categoria: cfg.category,
+          status: "ERRO",
+          reason: (e as Error).message,
+        });
       }
     }
 
-    // RESPOSTA FINAL
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Processamento do ${portalConfig.name} concluído!`,
-      stats: {
-        total_encontradas: newsLinks.length,
-        processadas_com_sucesso: successCount,
-        erros: errorCount,
-        portal: portalConfig.name
-      },
-      noticias: processedNews
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" }});
+    // 3) Persistência: salva apenas os OK
+    const toSave = results.filter((r) => r.status === "OK").map((r) => ({
+      titulo_original: r.titulo_original,
+      titulo_reescrito: r.titulo_reescrito,
+      conteudo_reescrito: r.conteudo_reescrito,
+      url_original: r.url_original,
+      fonte: r.fonte,
+      imagem_url: r.imagem_url,
+      categoria: r.categoria,
+    }));
 
+    if (toSave.length > 0) {
+      await saveToSupabase(toSave);
+    }
+
+    return new Response(JSON.stringify({
+      portal: cfg.name,
+      coletados: links.length,
+      salvos: toSave.length,
+      resultados: results,
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error('Erro geral:', error);
-    return new Response(JSON.stringify({ error: `Erro interno: ${error.message}` }), 
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }});
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
