@@ -26,7 +26,7 @@ interface GroqResponse {
   conteudo: string;
 }
 
-interface PortalConfig {
+interface linkConfig {
   name: string;
   baseUrl: string;
   linkSelectors: string[];
@@ -51,7 +51,7 @@ const corsHeaders = {
 /* =========================
    Configuração de Portais
    ========================= */
-const PORTAIS_CONFIG: Record<string, PortalConfig> = {
+const PORTAIS_CONFIG: Record<string, linkConfig> = {
   "g1.globo.com": {
     name: "G1 Amazonas",
     baseUrl: "https://g1.globo.com/am/amazonas/",
@@ -333,7 +333,7 @@ function sanitizeHtml(html: string) {
    ========================= */
 function extractNewsLinks(
   html: string,
-  config: PortalConfig,
+  config: linkConfig,
   maxLinks = 15,
 ): string[] {
   const links: Set<string> = new Set();
@@ -419,7 +419,7 @@ function extractNewsLinks(
    ========================= */
 function extractContentWithRegex(
   html: string,
-  config: PortalConfig,
+  config: linkConfig,
 ): { titulo: string; conteudo: string; resumo: string; imagem: string } {
   const clean = sanitizeHtml(html).replace(
     /glb\.cdnConfig[\s\S]*?(?:;|\})/gi,
@@ -676,7 +676,7 @@ Se o texto base for anúncio/publieditorial, responda exatamente:
 /* =========================
    Detectar portal por hostname
    ========================= */
-function detectPortal(url: string): PortalConfig | null {
+function detectPortal(url: string): linkConfig | null {
   try {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.replace("www.", "");
@@ -755,20 +755,20 @@ Deno.serve(async (req) => {
     console.log("Processando URL:", targetUrl);
 
     // DETECTA PORTAL
-    const portalConfig = detectPortal(targetUrl);
-    if (!portalConfig) {
+const linkConfig = detectPortal(newsUrl) || linkConfig;
+    if (!linkConfig) {
       return new Response(JSON.stringify({ error: "Portal não suportado" }), {
         status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    console.log("Portal detectado:", portalConfig.name);
+    console.log("Portal detectado:", linkConfig.name);
 
     // EVITAR DUPLICATAS (últimos 7 dias)
     const { data: existingUrls } = await supabaseAdmin
       .from("noticias_scraped")
       .select("url_original")
-      .eq("fonte", portalConfig.name)
+      .eq("fonte", linkConfig.name)
       .gte(
         "created_at",
         new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -802,7 +802,7 @@ Deno.serve(async (req) => {
       console.error("Erro no scraping:", error);
       return new Response(
         JSON.stringify({
-          error: `Erro ao acessar ${portalConfig.name}: ${error.message}`,
+          error: `Erro ao acessar ${linkConfig.name}: ${error.message}`,
         }),
         {
           status: 500,
@@ -812,7 +812,7 @@ Deno.serve(async (req) => {
     }
 
     // Fallback específico Portal Amazônia
-    if (portalConfig.name === "Portal Amazônia") {
+    if (linkConfig.name === "Portal Amazônia") {
       if (!htmlContent || htmlContent.length < 15000) {
         const alts = [
           "https://portalamazonia.com/noticias/amazonas",
@@ -831,7 +831,7 @@ Deno.serve(async (req) => {
 
     // LINKS
    // Tenta coletar links extras em páginas 2..4 para alguns portais
-function buildPaginationUrls(config: PortalConfig): string[] {
+function buildPaginationUrls(config: linkConfig): string[] {
   const origin = new URL(config.baseUrl).origin;
   const base = config.baseUrl.replace(/\/+$/, "");
   const urls: string[] = [];
@@ -857,11 +857,11 @@ let newsLinks = extractNewsLinks(htmlContent, portalConfig, 20);
 
 // Se veio pouco, tenta páginas seguintes
 if (newsLinks.length < 8) {
-  const morePages = buildPaginationUrls(portalConfig);
+  const morePages = buildPaginationUrls(linkConfig);
   for (const u of morePages) {
     try {
       const html = await fetchHtmlPreferAmp(u, userAgent);
-      const extra = extractNewsLinks(html, portalConfig, 20);
+      const extra = extractNewsLinks(html, linkConfig, 20);
       newsLinks = Array.from(new Set([...newsLinks, ...extra]));
       if (newsLinks.length >= 20) break;
     } catch {
@@ -878,12 +878,12 @@ newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
         JSON.stringify({
           success: true,
           message:
-            `Todas as notícias recentes do ${portalConfig.name} já foram processadas.`,
+            `Todas as notícias recentes do ${linkConfig.name} já foram processadas.`,
           stats: {
             total_encontradas: 0,
             processadas_com_sucesso: 0,
             erros: 0,
-            portal: portalConfig.name,
+            portal: linkConfig.name,
           },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -891,7 +891,7 @@ newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
     }
 
     console.log(
-      `Processando ${newsLinks.length} notícias novas de ${portalConfig.name}`,
+      `Processando ${newsLinks.length} notícias novas de ${linkConfig.name}`,
     );
 
     // PROCESSA
@@ -912,7 +912,7 @@ newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
 
         const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(
           newsHtml,
-          portalConfig,
+          linkConfig,
         );
         
         if (titulo === "Título não encontrado" || conteudo.length < 100) {
@@ -929,7 +929,7 @@ newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
         const {
           titulo: tituloReescrito,
           conteudo: conteudoReescrito,
-        } = await rewriteWithGroq(titulo, conteudo, portalConfig.name);
+        } = await rewriteWithGroq(titulo, conteudo, linkConfig.name);
 
         if (
           !conteudoReescrito ||
@@ -951,11 +951,11 @@ newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
           resumo_reescrito: resumoReescrito,
           conteudo_reescrito: conteudoReescrito,
           url_original: newsUrl,
-          fonte: portalConfig.name,
+          fonte: linkConfig.name,
           status: "processado",
           data_coleta: new Date().toISOString(),
           imagem_url: imagem || null,
-          categoria: portalConfig.category,
+          categoria: linkConfig.category,
         };
 
         const { error } = await supabaseAdmin
@@ -968,7 +968,7 @@ newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
         } else {
           processedNews.push({
             titulo: tituloReescrito,
-            fonte: portalConfig.name,
+            fonte: linkConfig.name,
             url: newsUrl,
             imagem: imagem ? "Sim" : "Não",
           });
@@ -988,7 +988,7 @@ newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Processamento do ${portalConfig.name} concluído!`,
+        message: `Processamento do ${linkConfig.name} concluído!`,
         stats: {
           total_encontradas: newsLinks.length,
           processadas_com_sucesso: successCount,
