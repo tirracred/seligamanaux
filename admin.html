@@ -94,6 +94,26 @@
                     <button class="scrape-button" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia')">🌿 Buscar Portal Amazônia</button>
                 </div>
 
+                <div id="scrapeControls" class="form-group" style="margin-top:10px">
+<label for="rodadas">Rodadas por portal:</label>
+<input type="number" id="rodadas" min="1" max="10" value="3">
+
+
+<label for="limitePorPortal">Máximo de artigos por portal (por rodada):</label>
+<input type="number" id="limitePorPortal" min="1" max="15" value="6">
+
+
+<label style="display:flex;align-items:center;gap:8px;margin-top:6px">
+<input type="checkbox" id="ignorarPromo" checked>
+Ignorar páginas promocionais / institucionais (recomendado)
+</label>
+
+
+<div class="source-buttons" style="margin-top:10px">
+<button class="scrape-button" onclick="scrapeAll()">🚀 Buscar de todos os portais (auto)</button>
+</div>
+</div>
+
                 <div id="scrapeStatus" class="loading hidden">Buscando notícias... Aguarde.</div>
             </div>
 
@@ -144,6 +164,53 @@
         // Variáveis globais
         let supabaseClient = null;
         let currentSession = null;
+
+        // Portais padronizados (pode editar/expandir à vontade)
+        const PORTAIS = [
+        { key: 'g1', name: 'G1 Amazonas', url: 'https://g1.globo.com/am/amazonas/' },
+        { key: 'holanda', name: 'Portal do Holanda', url: 'https://portaldoholanda.com.br/amazonas' },
+        { key: 'acritica', name: 'A Crítica', url: 'https://www.acritica.com/' },
+        { key: 'amazonia', name: 'Portal Amazônia', url: 'https://portalamazonia.com/' },
+        ];
+
+
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+
+        async function scrapeAll() {
+        if (!supabaseClient || !currentSession) {
+        alert('Faça login primeiro!');
+        return;
+        }
+        const rounds = parseInt(document.getElementById('rodadas')?.value || '1', 10);
+        const limit = parseInt(document.getElementById('limitePorPortal')?.value || '6', 10);
+        const strict = document.getElementById('ignorarPromo')?.checked ?? true;
+
+
+        const statusEl = document.getElementById('scrapeStatus');
+        statusEl.classList.remove('hidden');
+        statusEl.style.color = '#ccc';
+
+
+        for (let r = 1; r <= rounds; r++) {
+        for (const p of PORTAIS) {
+        statusEl.textContent = `Rodada ${r}/${rounds} — buscando ${p.name}...`;
+        await scrapePortal(p.url, p.name, {
+        sourceKey: p.key,
+        limit,
+        strict,
+        cacheBuster: `${Date.now()}-${Math.random().toString(36).slice(2)}`
+        });
+        await sleep(1200); // respiro para evitar rate limits
+        }
+        }
+
+
+        statusEl.textContent = '✅ Finalizado. Recarregando pendentes...';
+        statusEl.style.color = 'green';
+        setTimeout(() => statusEl.classList.add('hidden'), 4000);
+        await loadScrapedNoticias();
+        }
 
         // Função para atualizar configuração da API (Não é mais necessária, mas mantida)
         function updateApiConfig() {
@@ -276,50 +343,65 @@
         }
 
         // Função para fazer scrape de um portal
-        async function scrapePortal(url, sourceName) {
-            if (!supabaseClient || !currentSession) {
-                alert('Faça login primeiro!');
-                return;
-            }
+       async function scrapePortal(url, sourceName, opts = {}) {
+        if (!supabaseClient || !currentSession) {
+        alert('Faça login primeiro!');
+        return;
+        }
 
-            const statusEl = document.getElementById('scrapeStatus');
-            statusEl.classList.remove('hidden');
-            statusEl.textContent = `Buscando notícias do ${sourceName}... Aguarde. (Isso pode levar até 1 minuto)`;
 
-            try {
-                const anonKey = document.getElementById('anonKey').value;
-                
-                const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${currentSession.access_token}`,
-                        'Content-Type': 'application/json',
-                        'apikey': anonKey
-                    },
-                    body: JSON.stringify({ url: url })
-                });
+        const statusEl = document.getElementById('scrapeStatus');
+        statusEl.classList.remove('hidden');
+        statusEl.textContent = `Buscando notícias do ${sourceName}... Aguarde. (Isso pode levar até 1 minuto)`;
 
-                const data = await response.json();
 
-                if (response.ok) {
-                    const count = data.stats?.processadas_com_sucesso || 0;
-                    const msg = data.message || `Sucesso! ${count} notícias coletadas do ${sourceName}.`;
-                    statusEl.textContent = `✅ ${msg}`;
-                    statusEl.style.color = 'green';
-                    setTimeout(() => loadScrapedNoticias(), 1000);
-                } else {
-                    statusEl.textContent = `❌ Erro: ${data.error || data.message}`;
-                    statusEl.style.color = 'red';
-                    console.error('Erro da API:', data);
-                }
+        try {
+        const anonKey = document.getElementById('anonKey').value;
 
-            } catch (error) {
-                statusEl.textContent = `❌ Erro na requisição: ${error.message}`;
-                statusEl.style.color = 'red';
-                console.error('Erro:', error);
-            }
 
-            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
+        method: 'POST',
+        headers: {
+        'Authorization': `Bearer ${currentSession.access_token}`,
+        'Content-Type': 'application/json',
+        'apikey': anonKey
+        },
+        body: JSON.stringify({
+        url,
+        sourceName,
+        sourceKey: opts.sourceKey || null,
+        limit: opts.limit ?? 6,
+        strict: typeof opts.strict === 'boolean' ? opts.strict : (document.getElementById('ignorarPromo')?.checked ?? true),
+        requireLength: { min: 1800, max: 4000 },
+        cacheBuster: opts.cacheBuster ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+        })
+        });
+
+
+        const data = await response.json();
+
+
+        if (response.ok) {
+        const count = data.stats?.processadas_com_sucesso || 0;
+        const msg = data.message || `Sucesso! ${count} notícias coletadas do ${sourceName}.`;
+        statusEl.textContent = `✅ ${msg}`;
+        statusEl.style.color = 'green';
+        setTimeout(() => loadScrapedNoticias(), 1000);
+        } else {
+        statusEl.textContent = `❌ Erro: ${data.error || data.message}`;
+        statusEl.style.color = 'red';
+        console.error('Erro da API:', data);
+        }
+
+
+        } catch (error) {
+        statusEl.textContent = `❌ Erro na requisição: ${error.message}`;
+        statusEl.style.color = 'red';
+        console.error('Erro:', error);
+        }
+
+
+        setTimeout(() => statusEl.classList.add('hidden'), 5000);
         }
 
         // Carregar notícias scraped
@@ -512,7 +594,7 @@
 
                 // 3. Atualiza status da scraped para 'publicado'
                 const { error: updateError } = await supabaseClient
-                    .from('notias_scraped')
+                    .from('noticias_scraped')
                     .update({ status: 'publicado' })
                     .eq('id', scrapedId);
 
