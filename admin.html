@@ -1,455 +1,359 @@
-<!doctype html>
-<html lang="pt-br" class="dark">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin | seligamanaux</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin - SeligaManaux</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root { color-scheme: dark; }
-    .brand-red { background-color: #7a0a0a; }
-    .brand-accent { color: #e11d48; }
-    .brand-blue { color: #3b82f6; }
-    .card { background:#0b0b0b; border:1px solid #1f2937; border-radius:12px; }
-    .btn { border-radius:10px; padding:0.55rem 0.9rem; font-weight:600; }
-    .btn-red { background:#b91c1c; color:#fff; }
-    .btn-blue { background:#2563eb; color:#fff; }
-    .btn-green { background:#15803d; color:#fff; }
-    .btn-ghost { background:transparent; border:1px solid #374151; color:#e5e7eb; }
-    .btn:disabled { opacity:.6; cursor:not-allowed; }
-    .chip { border:1px solid #374151; border-radius:9999px; padding:.15rem .55rem; font-size:.75rem; }
-    .grid-news { display:grid; grid-template-columns: 1fr; gap:12px; }
-    @media(min-width:1024px){ .grid-news { grid-template-columns: 1.5fr 1fr; } }
-    .table { width:100%; border-collapse: collapse; }
-    .table th, .table td { border-bottom:1px solid #1f2937; padding:.6rem .5rem; text-align:left; vertical-align:top; }
-    .table tr:hover { background:#0f172a; }
-    .pill { padding:.15rem .5rem; border-radius:9999px; font-size:.75rem; }
-
-    /* line-clamp sem plugin do Tailwind */
-    .line-clamp-1, .line-clamp-2 { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
-    .line-clamp-1 { -webkit-line-clamp: 1; }
-    .line-clamp-2 { -webkit-line-clamp: 2; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #0b0b0b; color: #fff; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 30px; color: #dc2626; }
+    .auth-section, .admin-section, .scraped-section, .api-config { background: #161616; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .scraped-section { border: 2px solid #059669; background:#101922; }
+    input, textarea, button, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #333; background: #222; color: #fff; border-radius: 6px; }
+    button { background: #dc2626; cursor: pointer; font-weight: bold; border: none; }
+    button:hover { background: #b91c1c; }
+    .scrape-button { background: #059669; }
+    .scrape-button:hover { background: #047857; }
+    .publish-button { background: #7c3aed; }
+    .publish-button:hover { background: #6d28d9; }
+    .danger-button { background: #ef4444; }
+    .danger-button:hover { background: #dc2626; }
+    .source-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .hidden { display: none; }
+    .loading { text-align: center; color: #bbb; padding: 20px; }
+    .noticias-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+    .noticia-card { background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 4px solid #dc2626; }
+    .scraped-card { background: #101922; border-left: 4px solid #059669; }
+    .noticia-title { font-weight: bold; margin-bottom: 10px; color: #fff; }
+    .noticia-content { color: #ccc; margin-bottom: 10px; max-height: 110px; overflow: hidden; }
+    .noticia-meta { font-size: 12px; color: #8b8b8b; margin-bottom: 10px; }
+    .noticia-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .noticia-image { width: 100%; max-height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 10px; }
+    .error-message { background: #dc2626; color: white; padding: 15px; border-radius: 6px; margin: 10px 0; }
+    .ok-message { background: #065f46; color: white; padding: 15px; border-radius: 6px; margin: 10px 0; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width: 700px){ .row { grid-template-columns: 1fr; } }
   </style>
 </head>
-<body class="bg-black text-gray-100">
-  <header class="brand-red text-white">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-      <div class="text-2xl font-bold tracking-wider">seligamanaux</div>
-      <nav class="flex items-center gap-4 text-sm">
-        <span class="hidden md:inline text-gray-200">Administração de conteúdo</span>
-        <span class="chip">Dark mode</span>
-      </nav>
+<body>
+  <div class="container">
+    <h1>SeligaManaux - Admin</h1>
+
+    <div class="api-config">
+      <h3>🔧 Configuração do Supabase</h3>
+      <div class="row">
+        <div>
+          <label for="supabaseUrl">Supabase URL</label>
+          <input id="supabaseUrl" placeholder="https://SEU_PROJETO.supabase.co">
+        </div>
+        <div>
+          <label for="anonKey">Anon (publishable) Key</label>
+          <input id="anonKey" placeholder="Cole a ANON KEY">
+        </div>
+      </div>
+      <button onclick="updateApiConfig()" class="scrape-button">💾 Salvar & Conectar</button>
+      <div id="cfgStatus" class="loading hidden"></div>
     </div>
-  </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-6">
-    <section class="grid-news">
-      <!-- Coluna: Scraper e Ações -->
-      <div class="card p-4">
-        <h2 class="text-xl font-semibold mb-3">
-          Coleta e reescrita <span class="brand-accent">multi‑portal</span>
-        </h2>
-        <p class="text-sm text-gray-400 mb-4">
-          Dispare a Edge Function por portal. Enviaremos <code>{ "portalId": "...", "max": 8-15 }</code> no corpo do POST.
-        </p>
-
-        <div class="mb-3 flex items-center gap-2">
-          <label class="text-sm text-gray-300">Qtd. itens por execução</label>
-          <input id="max-items" type="number" min="1" max="15" value="8"
-                 class="bg-black border border-gray-700 rounded px-2 py-1 w-20"/>
-        </div>
-
-        <div id="portal-buttons" class="flex flex-wrap gap-2 mb-3"></div>
-
-        <div class="text-xs text-gray-500">
-          Dica: se aparecer “Invalid API key”, confira a URL e a Anon Key nas Configurações e teste a conexão.
-        </div>
+    <div class="auth-section">
+      <div id="loginForm">
+        <h3>🔐 Login</h3>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Senha">
+        <button onclick="login()">Entrar</button>
+        <p id="loginStatus"></p>
       </div>
-
-      <!-- Coluna: Configurações -->
-      <div class="card p-4">
-        <h2 class="text-xl font-semibold mb-3">
-          Configurações <span class="brand-blue">Supabase</span>
-        </h2>
-        <div class="grid md:grid-cols-1 gap-3">
-          <div>
-            <label class="text-sm text-gray-300">SUPABASE_URL</label>
-            <input id="cfg-url" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
-                   placeholder="https://xxxxx.supabase.co"/>
-          </div>
-          <div>
-            <label class="text-sm text-gray-300">SUPABASE_ANON_KEY</label>
-            <input id="cfg-key" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
-                   placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
-          </div>
-          <div>
-            <label class="text-sm text-gray-300">EDGE_FN_URL (POST)</label>
-            <input id="cfg-edge" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
-                   placeholder="/functions/v1/scraper" />
-          </div>
-          <div class="flex gap-2">
-            <button class="btn btn-green" onclick="saveConfig()">Salvar</button>
-            <button class="btn btn-blue" onclick="testConnection()">Testar conexão</button>
-            <button class="btn btn-ghost" onclick="clearConfig()">Limpar</button>
-          </div>
-          <div id="cfg-status" class="text-sm text-gray-400"></div>
-        </div>
+      <div id="userInfo" class="hidden">
+        <p>Usuário logado: <span id="userEmail"></span></p>
+        <button onclick="logout()">Sair</button>
       </div>
-    </section>
-
-    <!-- Filtros e Lista -->
-    <section class="card p-4 mt-6">
-      <div class="flex flex-col md:flex-row md:items-end gap-3 mb-4">
-        <div class="flex-1">
-          <label class="text-sm text-gray-300">Busca por título</label>
-          <input id="search" class="w-full bg-black border border-gray-700 rounded px-3 py-2"
-                 placeholder="Digite parte do título reescrito..." />
-        </div>
-        <div>
-          <label class="text-sm text-gray-300">Status</label>
-          <select id="filter-status" class="bg-black border border-gray-700 rounded px-3 py-2">
-            <option value="todos">Todos</option>
-            <option value="gerado">Gerado</option>
-            <option value="ignorado">Ignorado</option>
-            <option value="aprovado">Aprovado</option>
-            <option value="rejeitado">Rejeitado</option>
-            <option value="publicado">Publicado</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-sm text-gray-300">Itens por página</label>
-          <select id="page-size" class="bg-black border border-gray-700 rounded px-3 py-2">
-            <option>10</option>
-            <option selected>20</option>
-            <option>50</option>
-          </select>
-        </div>
-        <div>
-          <button class="btn btn-blue" onclick="reload()">Aplicar</button>
-        </div>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="table text-sm" id="table-news">
-          <thead class="text-gray-300">
-            <tr>
-              <th style="width:28%">Título</th>
-              <th style="width:14%">Fonte</th>
-              <th style="width:12%">Coleta</th>
-              <th style="width:10%">Status</th>
-              <th style="width:10%">Tamanho</th>
-              <th style="width:26%">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-news"></tbody>
-        </table>
-      </div>
-
-      <div class="mt-4 flex items-center justify-between">
-        <div id="pager-info" class="text-xs text-gray-400">—</div>
-        <div class="flex gap-2">
-          <button class="btn btn-ghost" onclick="prevPage()">Anterior</button>
-          <button class="btn btn-ghost" onclick="nextPage()">Próxima</button>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="bg-white text-black">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-      <div class="font-semibold">seligamanaux</div>
-      <div class="text-sm">Admin • Conteúdo • Publicação</div>
     </div>
-  </footer>
 
-  <!-- Supabase JS v2 (browser) -->
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+    <div id="adminPanel" class="hidden">
+      <div class="scraped-section">
+        <h3>🤖 Scraper multi-portal</h3>
+        <p>Gera matérias limpas e reescritas (1.800–4.000 caracteres) a partir dos portais abaixo.</p>
+        <div class="row">
+          <div>
+            <label for="maxItems">Qtd. por execução (1–15)</label>
+            <input id="maxItems" type="number" min="1" max="15" value="8">
+          </div>
+          <div>
+            <label for="edgeUrl">Edge Function URL</label>
+            <input id="edgeUrl" placeholder="/functions/v1/scraper">
+          </div>
+        </div>
 
-    // ---------- Portais (botões gerados dinamicamente) ----------
-    const PORTAIS = [
-      { id: "g1-am", label: "G1 Amazonas" },
-      { id: "portaldoholanda", label: "Portal do Holanda" },
-      { id: "acritica", label: "A Crítica" },
-      { id: "portalamazonia", label: "Portal Amazônia" },
-    ];
+        <div class="source-buttons">
+          <button class="scrape-button" onclick="scrapeById('g1-am', 'G1 Amazonas')">📰 G1 Amazonas</button>
+          <button class="scrape-button" onclick="scrapeById('portaldoholanda', 'Portal do Holanda')">🌐 Portal do Holanda</button>
+          <button class="scrape-button" onclick="scrapeById('acritica', 'A Crítica')">📄 A Crítica</button>
+          <button class="scrape-button" onclick="scrapeById('portalamazonia', 'Portal Amazônia')">🌿 Portal Amazônia</button>
+        </div>
 
-    // ---------- Estado ----------
-    let supabase = null;
-    let currentPage = 1;
-    let total = 0;
+        <div id="scrapeStatus" class="loading hidden">Buscando notícias... Aguarde.</div>
+      </div>
 
-    // ---------- DOM ----------
-    const elButtons = document.getElementById("portal-buttons");
-    const elMax = document.getElementById("max-items");
-    const elCfgUrl = document.getElementById("cfg-url");
-    const elCfgKey = document.getElementById("cfg-key");
-    const elCfgEdge = document.getElementById("cfg-edge");
-    const elCfgStatus = document.getElementById("cfg-status");
-    const elSearch = document.getElementById("search");
-    const elFilterStatus = document.getElementById("filter-status");
-    const elPageSize = document.getElementById("page-size");
-    const elTbody = document.getElementById("tbody-news");
-    const elPagerInfo = document.getElementById("pager-info");
+      <div class="admin-section">
+        <h3>📋 Notícias Scraped (pendentes/geradas)</h3>
+        <button onclick="loadScrapedNoticias()" class="scrape-button">🔄 Recarregar</button>
+        <div id="scrapedNoticias" class="noticias-container">
+          <div class="loading">Carregando...</div>
+        </div>
+      </div>
 
-    // ---------- Config persistida ----------
-    function loadConfig() {
-      elCfgUrl.value = localStorage.getItem("SB_URL") || "";
-      elCfgKey.value = localStorage.getItem("SB_ANON") || "";
-      elCfgEdge.value = localStorage.getItem("EDGE_FN") || "/functions/v1/scraper";
+      <div class="admin-section">
+        <h3>✍️ Criar Notícia Manual</h3>
+        <div class="row">
+          <div>
+            <label for="title">Título</label>
+            <input id="title" placeholder="Título da notícia">
+          </div>
+          <div>
+            <label for="category">Categoria</label>
+            <select id="category">
+              <option value="Geral">Geral</option>
+              <option value="Política">Política</option>
+              <option value="Economia">Economia</option>
+              <option value="Esportes">Esportes</option>
+              <option value="Cultura">Cultura</option>
+              <option value="Amazonas">Amazonas</option>
+            </select>
+          </div>
+        </div>
+        <label for="content">Conteúdo</label>
+        <textarea id="content" rows="10" placeholder="Conteúdo da notícia"></textarea>
+        <button onclick="publishNoticia()">📝 Publicar Notícia</button>
+      </div>
+
+      <div class="admin-section">
+        <h3>📰 Notícias Publicadas</h3>
+        <button onclick="loadNoticias()">🔄 Recarregar</button>
+        <div id="noticias" class="noticias-container">
+          <div class="loading">Carregando...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ======== Estado/Auth ========
+    let supabaseClient = null;
+    let currentSession = null;
+
+    function show(el, yes) { el.classList.toggle('hidden', !yes); }
+
+    function updateApiConfig() {
+      const url = document.getElementById('supabaseUrl').value.trim();
+      const key = document.getElementById('anonKey').value.trim();
+      if (!url || !key) { alert('Informe URL e ANON KEY.'); return; }
+      localStorage.setItem('supabase_url', url);
+      localStorage.setItem('supabase_anon_key', key);
       initSupabase();
-    }
-
-    function saveConfig() {
-      localStorage.setItem("SB_URL", elCfgUrl.value.trim());
-      localStorage.setItem("SB_ANON", elCfgKey.value.trim());
-      localStorage.setItem("EDGE_FN", elCfgEdge.value.trim());
-      initSupabase();
-      toast("Configurações salvas.");
-    }
-
-    function clearConfig() {
-      localStorage.removeItem("SB_URL");
-      localStorage.removeItem("SB_ANON");
-      localStorage.removeItem("EDGE_FN");
-      elCfgUrl.value = "";
-      elCfgKey.value = "";
-      elCfgEdge.value = "/functions/v1/scraper";
-      supabase = null;
-      toast("Configurações limpas.");
+      const cfg = document.getElementById('cfgStatus');
+      cfg.textContent = '✅ Configuração salva.';
+      show(cfg, true);
+      setTimeout(()=> show(cfg, false), 3000);
     }
 
     function initSupabase() {
-      const url = elCfgUrl.value.trim();
-      const key = elCfgKey.value.trim();
-      if (!url || !key) {
-        elCfgStatus.textContent = "Configure SUPABASE_URL e ANON_KEY.";
-        return;
-      }
-      try {
-        supabase = createClient(url, key, { auth: { persistSession: false } });
-        elCfgStatus.textContent = "Cliente Supabase inicializado.";
-      } catch (e) {
-        elCfgStatus.textContent = "Falha ao inicializar Supabase: " + e;
-      }
-    }
-
-    async function testConnection() {
-      if (!supabase) { initSupabase(); }
-      if (!supabase) { return toast("Configuração incompleta."); }
-      const { error } = await supabase
-        .from("noticias_scraped")
-        .select("id", { count: "exact", head: true })
-        .limit(1);
-      elCfgStatus.textContent = error ? ("Erro: " + error.message) : "Conexão OK.";
-      toast(error ? ("Erro: " + error.message) : "Conexão OK.");
-    }
-
-    // ---------- Botões de Portais ----------
-    function renderPortalButtons() {
-      elButtons.innerHTML = "";
-      PORTAIS.forEach(p => {
-        const b = document.createElement("button");
-        b.className = "btn btn-red";
-        b.textContent = p.label;
-        b.onclick = () => scrapePortal(p.id, p.label, b);
-        elButtons.appendChild(b);
+      const savedUrl = localStorage.getItem('supabase_url') || '';
+      const savedKey = localStorage.getItem('supabase_anon_key') || '';
+      if (!savedUrl || !savedKey) return;
+      const { createClient } = supabase;
+      supabaseClient = createClient(savedUrl, savedKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        currentSession = session;
+        if (session) {
+          document.getElementById('userEmail').textContent = session.user.email;
+        }
+        show(document.getElementById('loginForm'), !session);
+        show(document.getElementById('userInfo'), !!session);
+        show(document.getElementById('adminPanel'), !!session);
+        if (session) { loadScrapedNoticias(); loadNoticias(); }
       });
     }
 
-    async function scrapePortal(portalId, label, btn) {
-      const edgeUrl = elCfgEdge.value.trim() || "/functions/v1/scraper";
-      const max = Math.min(Math.max(parseInt(elMax.value || "8", 10), 1), 15);
-      btn.disabled = true;
-      const prev = btn.textContent;
-      btn.textContent = `Processando ${label}...`;
+    async function login() {
+      if (!supabaseClient) return alert('Configure o Supabase primeiro.');
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const statusEl = document.getElementById('loginStatus');
+      statusEl.textContent = 'Entrando...';
       try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        statusEl.textContent = '✅ Login OK';
+      } catch (e) {
+        statusEl.textContent = '❌ ' + (e.message || e);
+      }
+    }
+
+    async function logout() {
+      if (!supabaseClient) return;
+      await supabaseClient.auth.signOut();
+    }
+
+    // ======== Scraper Trigger ========
+    async function scrapeById(portalId, label) {
+      if (!supabaseClient || !currentSession) return alert('Faça login primeiro.');
+      const edgeUrl = (document.getElementById('edgeUrl').value.trim() || '/functions/v1/scraper');
+      const max = Math.min(Math.max(parseInt(document.getElementById('maxItems').value || '8', 10), 1), 15);
+      const statusEl = document.getElementById('scrapeStatus');
+      statusEl.textContent = `Processando ${label}...`;
+      show(statusEl, true);
+      try {
+        const anonKey = localStorage.getItem('supabase_anon_key') || '';
         const res = await fetch(edgeUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentSession.access_token}`,
+            'Content-Type': 'application/json',
+            'apikey': anonKey
+          },
           body: JSON.stringify({ portalId, max })
         });
-
-        let data = null;
-        try { data = await res.json(); } catch {}
-
-        if (!res.ok) {
-          const errMsg = (data && data.error) ? data.error : `HTTP ${res.status}`;
-          throw new Error(errMsg);
-        }
-
-        toast(`${label}: ${data?.processed ?? 0} itens processados.`);
-        reload();
+        const data = await res.json().catch(()=> ({}));
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        statusEl.textContent = `✅ ${label}: ${data.processed || 0} processadas, ${data.inserted || 0} salvas.`;
+        setTimeout(()=> show(statusEl, false), 4000);
+        loadScrapedNoticias();
       } catch (e) {
-        toast(`Falha ao processar ${label}: ${e?.message || e}`, true);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = prev;
+        statusEl.textContent = '❌ ' + (e.message || e);
+        setTimeout(()=> show(statusEl, false), 5000);
       }
     }
 
-    // ---------- Listagem ----------
-    function getPageSize() { return parseInt(elPageSize.value || "20", 10); }
-
-    async function loadItems() {
-      if (!supabase) { initSupabase(); }
-      if (!supabase) return;
-
-      const pageSize = getPageSize();
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      let q = supabase
-        .from("noticias_scraped")
-        .select("id,titulo_reescrito,conteudo_reescrito,url_original,fonte,categoria,status,data_coleta", { count: "exact" })
-        .order("data_coleta", { ascending: false })
-        .range(from, to);
-
-      const term = (elSearch.value || "").trim();
-      if (term) q = q.ilike("titulo_reescrito", `%${term}%`);
-
-      const f = elFilterStatus.value;
-      if (f && f !== "todos") q = q.eq("status", f);
-
-      const { data, count, error } = await q;
+    // ======== Scraped ========
+    async function loadScrapedNoticias() {
+      const container = document.getElementById('scrapedNoticias');
+      container.innerHTML = '<div class="loading">Carregando...</div>';
+      if (!supabaseClient) return;
+      const { data, error } = await supabaseClient
+        .from('noticias_scraped')
+        .select('*')
+        .in('status', ['gerado','aprovado'])
+        .order('data_coleta', { ascending: false })
+        .limit(30);
       if (error) {
-        elTbody.innerHTML = `<tr><td colspan="6" class="text-red-400">${escapeHtml(error.message)}</td></tr>`;
-        elPagerInfo.textContent = "—";
+        container.innerHTML = `<div class="error-message">Erro: ${error.message}</div>`;
         return;
       }
-      total = count || 0;
-      renderRows(data || []);
-      renderPager();
-    }
-
-    function renderRows(rows) {
-      elTbody.innerHTML = "";
-      rows.forEach(r => {
-        const tr = document.createElement("tr");
-
-        const tTitulo = document.createElement("td");
-        tTitulo.innerHTML = `
-          <div class="line-clamp-2 font-medium">${escapeHtml(r.titulo_reescrito || "(sem título)")}</div>
-          <div class="text-xs text-gray-400 line-clamp-1">${escapeHtml(r.url_original || "")}</div>
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="ok-message">Sem pendências. Dispare o scraper acima.</div>';
+        return;
+      }
+      container.innerHTML = data.map(n => {
+        const img = n.imagem_url ? `<img src="${n.imagem_url}" class="noticia-image" onerror="this.style.display='none'">` : '';
+        const len = (n.conteudo_reescrito || '').length;
+        return `
+          <div class="noticia-card scraped-card">
+            ${img}
+            <div class="noticia-title">${(n.titulo_reescrito || n.titulo_original || '(sem título)')}</div>
+            <div class="noticia-content">${(n.conteudo_reescrito || '').substring(0, 300)}...</div>
+            <div class="noticia-meta">
+              <strong>Fonte:</strong> ${n.fonte || '-'} • <strong>Categoria:</strong> ${n.categoria || '-'}
+              <br><strong>Tamanho:</strong> ${len} chars • <strong>Status:</strong> ${n.status}
+              <br>${n.url_original ? `<a href="${n.url_original}" target="_blank" style="color:#34d399">Original</a>` : ''}
+            </div>
+            <div class="noticia-actions">
+              <button onclick="copyToClipboard(${JSON.stringify(n.titulo_reescrito || '').replace(/"/g,'&quot;')})">Copiar título</button>
+              <button onclick="copyToClipboard(${JSON.stringify(n.conteudo_reescrito || '').replace(/"/g,'&quot;')})">Copiar conteúdo</button>
+              <button class="scrape-button" onclick="setStatus(${n.id}, 'aprovado')">Aprovar</button>
+              <button class="publish-button" onclick="publishScraped(${n.id})">Publicar</button>
+              <button class="danger-button" onclick="deleteScraped(${n.id})">Excluir</button>
+            </div>
+          </div>
         `;
-
-        const tFonte = document.createElement("td");
-        tFonte.textContent = `${r.fonte || "-"} • ${r.categoria || "-"}`;
-
-        const tData = document.createElement("td");
-        tData.textContent = r.data_coleta
-          ? new Date(r.data_coleta).toLocaleString("pt-BR")
-          : "-";
-
-        const tStatus = document.createElement("td");
-        tStatus.innerHTML = `
-          <select class="bg-black border border-gray-700 rounded px-2 py-1 text-xs">
-            ${["gerado","ignorado","aprovado","rejeitado","publicado"].map(s => `
-              <option value="${s}" ${r.status===s?"selected":""}>${s}</option>
-            `).join("")}
-          </select>
-        `;
-        const sel = tStatus.querySelector("select");
-        sel.onchange = () => updateStatus(r.id, sel.value);
-
-        const tTam = document.createElement("td");
-        const len = (r.conteudo_reescrito || "").length;
-        tTam.textContent = len ? `${len.toLocaleString("pt-BR")} chars` : "-";
-
-        const tAcoes = document.createElement("td");
-        tAcoes.className = "flex flex-wrap gap-2";
-        tAcoes.appendChild(makeLink("Original", r.url_original));
-        tAcoes.appendChild(makeBtn("Copiar título", () => copy(r.titulo_reescrito||"")));
-        tAcoes.appendChild(makeBtn("Copiar conteúdo", () => copy(r.conteudo_reescrito||"")));
-        tAcoes.appendChild(makeBtn("Aprovar", () => updateStatus(r.id, "aprovado"), "btn-green"));
-        tAcoes.appendChild(makeBtn("Publicar", () => updateStatus(r.id, "publicado"), "btn-blue"));
-
-        tr.appendChild(tTitulo);
-        tr.appendChild(tFonte);
-        tr.appendChild(tData);
-        tr.appendChild(tStatus);
-        tr.appendChild(tTam);
-        tr.appendChild(tAcoes);
-        elTbody.appendChild(tr);
-      });
+      }).join('');
     }
 
-    function renderPager() {
-      const pageSize = getPageSize();
-      const pages = Math.max(1, Math.ceil(total / pageSize));
-      currentPage = Math.min(currentPage, pages);
-      elPagerInfo.textContent = `Página ${currentPage} de ${pages} • ${total.toLocaleString("pt-BR")} itens`;
-    }
-
-    function prevPage() { if (currentPage > 1) { currentPage--; loadItems(); } }
-    function nextPage() {
-      const pageSize = getPageSize();
-      const pages = Math.max(1, Math.ceil(total / pageSize));
-      if (currentPage < pages) { currentPage++; loadItems(); }
-    }
-    window.prevPage = prevPage;
-    window.nextPage = nextPage;
-
-    function reload() { currentPage = 1; loadItems(); }
-    window.reload = reload;
-
-    async function updateStatus(id, status) {
-      if (!supabase) return;
+    async function setStatus(id, status) {
+      if (!supabaseClient) return;
       const patch = { status };
-      if (status === "publicado") patch["data_publicacao"] = new Date().toISOString();
-      const { error } = await supabase.from("noticias_scraped").update(patch).eq("id", id);
-      if (error) { return toast("Erro ao atualizar: " + error.message, true); }
-      toast("Status atualizado: " + status);
-      loadItems();
+      if (status === 'publicado') patch['data_publicacao'] = new Date().toISOString();
+      const { error } = await supabaseClient.from('noticias_scraped').update(patch).eq('id', id);
+      if (error) return alert('Erro: ' + error.message);
+      loadScrapedNoticias();
     }
 
-    // ---------- Utils ----------
-    function makeLink(label, href) {
-      const a = document.createElement("a");
-      a.href = href || "#";
-      a.target = "_blank"; a.rel = "noopener";
-      a.className = "btn btn-ghost";
-      a.textContent = label;
-      if (!href) a.classList.add("opacity-50","pointer-events-none");
-      return a;
-    }
-    function makeBtn(label, fn, cls="btn-ghost") {
-      const b = document.createElement("button");
-      b.className = "btn " + cls;
-      b.textContent = label;
-      b.onclick = fn;
-      return b;
-    }
-    function copy(text) {
-      navigator.clipboard.writeText(text || "")
-        .then(() => toast("Copiado."))
-        .catch(() => toast("Falha ao copiar.", true));
-    }
-    function escapeHtml(s) {
-      return (s||"").replace(/[&<>\"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;" }[m]));
-    }
-    function toast(msg, err=false) {
-      const d = document.createElement("div");
-      d.textContent = msg;
-      d.style.position="fixed"; d.style.right="16px"; d.style.bottom="16px";
-      d.style.background = err ? "#7f1d1d" : "#1e293b"; d.style.color="#fff";
-      d.style.padding="10px 12px"; d.style.borderRadius="10px"; d.style.zIndex=9999;
-      document.body.appendChild(d);
-      setTimeout(()=> d.remove(), 3200);
+    async function publishScraped(scrapedId) {
+      if (!confirm('Publicar esta notícia?')) return;
+      const { data: s, error: e1 } = await supabaseClient.from('noticias_scraped').select('*').eq('id', scrapedId).single();
+      if (e1) return alert('Erro: ' + e1.message);
+      const content = s.conteudo_reescrito || '';
+      const { error: e2 } = await supabaseClient.from('noticias').insert({
+        title: s.titulo_reescrito || s.titulo_original,
+        content,
+        category: s.categoria || 'Geral',
+        image_url: s.imagem_url
+      });
+      if (e2) return alert('Erro: ' + e2.message);
+      await setStatus(scrapedId, 'publicado');
+      loadNoticias();
     }
 
-    // Enter para buscar
-    elSearch.addEventListener("keydown", (e) => { if (e.key === "Enter") reload(); });
+    async function deleteScraped(id) {
+      if (!confirm('Excluir esta notícia?')) return;
+      const { error } = await supabaseClient.from('noticias_scraped').delete().eq('id', id);
+      if (error) return alert('Erro: ' + error.message);
+      loadScrapedNoticias();
+    }
 
-    // ---------- Boot ----------
-    renderPortalButtons();
-    loadConfig();
-    reload();
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text || '').then(()=> alert('Copiado!'), ()=> alert('Falha ao copiar.'));
+    }
 
-    // Expor globais necessárias a botões/filtros
-    window.saveConfig = saveConfig;
-    window.clearConfig = clearConfig;
-    window.testConnection = testConnection;
+    // ======== Publicadas ========
+    async function loadNoticias() {
+      const container = document.getElementById('noticias');
+      container.innerHTML = '<div class="loading">Carregando...</div>';
+      if (!supabaseClient) return;
+      const { data, error } = await supabaseClient.from('noticias').select('*').order('created_at', { ascending: false }).limit(30);
+      if (error) {
+        container.innerHTML = `<div class="error-message">Erro: ${error.message}</div>`;
+        return;
+      }
+      if (!data || data.length === 0) { container.innerHTML = '<div class="ok-message">Sem notícias publicadas.</div>'; return; }
+      container.innerHTML = data.map(n => {
+        const img = n.image_url ? `<img src="${n.image_url}" class="noticia-image" onerror="this.style.display='none'">` : '';
+        const created = n.created_at ? new Date(n.created_at).toLocaleString('pt-BR') : '-';
+        return `
+          <div class="noticia-card">
+            ${img}
+            <div class="noticia-title">${n.title || '(sem título)'}</div>
+            <div class="noticia-content">${(n.content || '').substring(0, 300)}...</div>
+            <div class="noticia-meta">
+              <strong>Categoria:</strong> ${n.category || '-'} • <strong>Publicado:</strong> ${created}
+            </div>
+            <div class="noticia-actions">
+              <button class="danger-button" onclick="deleteNoticia(${n.id})">Excluir</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function deleteNoticia(id) {
+      if (!confirm('Excluir definitivamente?')) return;
+      const { error } = await supabaseClient.from('noticias').delete().eq('id', id);
+      if (error) return alert('Erro: ' + error.message);
+      loadNoticias();
+    }
+
+    // ======== Boot ========
+    window.addEventListener('DOMContentLoaded', () => {
+      // carregar config armazenada
+      document.getElementById('supabaseUrl').value = localStorage.getItem('supabase_url') || '';
+      document.getElementById('anonKey').value = localStorage.getItem('supabase_anon_key') || '';
+      document.getElementById('edgeUrl').value = localStorage.getItem('edge_url') || '/functions/v1/scraper';
+      initSupabase();
+    });
+    // persist edge url
+    document.getElementById('edgeUrl').addEventListener('change', (e)=> localStorage.setItem('edge_url', e.target.value));
   </script>
 </body>
 </html>
