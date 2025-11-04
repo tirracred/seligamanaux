@@ -4,10 +4,11 @@ import { DOMParser, Element } from "https://deno.land/x/deno_dom/deno-dom-wasm.t
 import Groq from "npm:groq-sdk";
 
 // --- HEADERS CORS ---
+// ESTE BLOCO É A SOLUÇÃO PARA O SEU ERRO
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': '*', // Permite seu site
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS', // Permite os métodos POST e OPTIONS
   'Access-Control-Max-Age': '86400',
 };
 
@@ -40,19 +41,16 @@ interface PortalConfig {
 }
 
 // --- CONFIGURAÇÃO MESTRA DOS PORTAIS (O "PAINEL DE CONTROLE") ---
-// Baseado 100% na sua análise. Manutenção é feita AQUI.
 const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   'g1-am': {
     idPortal: 'g1-am',
     baseURL: 'https://g1.globo.com/am/amazonas/',
     linkSelector: 'a.feed-post-link', // Seletor rigoroso
     articleSelectors: {
-      // Usa [itemprop] como primário (mais estável que classe)
       content: 'div[itemprop="articleBody"], div.mc-article-body',
       title: 'h1.content-head__title, h1.content-post__title',
       image: 'img.content-media-image__image',
     },
-    // Filtro rigoroso para evitar lixo
     linkFilter: (url: string) => url.includes('/am/amazonas/'),
   },
   'a-critica': {
@@ -86,7 +84,6 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
       title: 'h1.post-title, h1.title-post',
       image: 'div.post-featured-image img',
     },
-    // Filtro de ID numérico (muito robusto)
     linkFilter: (url: string) => /\/\d{6,}\//.test(url),
   },
   'amazonas-atual': {
@@ -127,7 +124,8 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
 // --- FUNÇÃO PRINCIPAL (EDGE FUNCTION) ---
 
 Deno.serve(async (req) => {
-  // Trata a requisição OPTIONS (preflight)
+  // Trata a requisição OPTIONS (preflight) - É ISSO QUE CORRIGE O ERRO
+  // O navegador envia um 'OPTIONS' antes do 'POST'. Temos que responder 'ok'.
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -151,6 +149,7 @@ Deno.serve(async (req) => {
       throw new Error("portalId é obrigatório no body");
     }
   } catch (error) {
+    // Se der erro no Body, também envia o header CORS
     return new Response(JSON.stringify({ error: `Body inválido: ${error.message}` }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -227,6 +226,7 @@ Deno.serve(async (req) => {
   const summary = `[${portalConfig.idPortal}] Scraper finalizado. Salvas: ${successCount}. Ignoradas (curtas/sem conteúdo): ${ignoredCount}. Falhas: ${failedCount}.`;
   console.log(summary);
   
+  // Resposta final de sucesso, TAMBÉM inclui o header CORS
   return new Response(JSON.stringify({ message: summary, saved: successCount, ignored: ignoredCount, failed: failedCount }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
