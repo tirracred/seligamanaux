@@ -500,3 +500,5 @@ async function saveToSupabase(supabase: SupabaseClient, data: GroqResponseOutput
     console.log(`[Supabase] Notícia salva com sucesso (ID: ${inserted[0].id}): ${data.titulo_reescrito}`);
   }
 }
+
+
