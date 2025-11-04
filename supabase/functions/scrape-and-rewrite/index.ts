@@ -52,8 +52,8 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
     name: 'G1 Amazonas',
     baseUrl: 'https://g1.globo.com/am/amazonas/',
     linkSelectors: [
-    'a[href*="/am/amazonas/noticia/"]',
-    'a[href*="/amazonas/noticia/"]',
+    'a[href*="/am/amazonas/"][href*="/noticia/"]',
+    'a[href*="/am/amazonas/20"]', 
     '.feed-post-link[href*="/noticia/"]',
     
   ],
@@ -79,10 +79,11 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   },
   'portaldoholanda.com.br': {
     name: 'Portal do Holanda',
-    baseUrl: 'https://portaldoholanda.com.br/',
+    baseUrl: 'https://portaldoholanda.com.br/amazonas',
      linkSelectors: [
-    'a[href*="/noticia/"]',
-    'a[href*="/noticias/"]',
+      'a[href*="/amazonas/"]',
+    'a[href*="/policia/"]',
+    'a[href*="/politica/"]',
     '.post-link',
     'h2 a','h3 a',
     
