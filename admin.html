@@ -40,6 +40,7 @@
         .status-pendente { background: #f59e0b; color: white; }
         .status-publicado { background: #7c3aed; color: white; }
         .noticia-image { width: 100%; max-height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 10px; }
+        .error-message { background: #dc2626; color: white; padding: 10px; border-radius: 4px; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -124,12 +125,29 @@
     </div>
 
     <script>
-        // Inicialização do Supabase
+        // Inicialização do Supabase COM CONFIGURAÇÃO CORRETA
         const { createClient } = supabase;
+        
+        // CONFIGURAÇÃO CORRIGIDA COM OS HEADERS NECESSÁRIOS
         const supabaseClient = createClient(
             'https://xtnqypmezntjcidglblc.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8',
+            {
+                auth: {
+                    persistSession: true,
+                    autoRefreshToken: true,
+                    detectSessionInUrl: true
+                },
+                global: {
+                    headers: {
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
+                    }
+                }
+            }
         );
+
+        // Variável para armazenar sessão atual
+        let currentSession = null;
 
         // Funções de Autenticação
         async function login() {
@@ -145,6 +163,8 @@
 
                 if (error) throw error;
 
+                currentSession = data.session; // Armazena a sessão
+                
                 document.getElementById('loginForm').classList.add('hidden');
                 document.getElementById('userInfo').classList.remove('hidden');
                 document.getElementById('adminPanel').classList.remove('hidden');
@@ -159,11 +179,13 @@
             } catch (error) {
                 statusEl.textContent = 'Erro: ' + error.message;
                 statusEl.style.color = 'red';
+                console.error('Erro de login:', error);
             }
         }
 
         async function logout() {
             await supabaseClient.auth.signOut();
+            currentSession = null;
             document.getElementById('loginForm').classList.remove('hidden');
             document.getElementById('userInfo').classList.add('hidden');
             document.getElementById('adminPanel').classList.add('hidden');
@@ -172,13 +194,21 @@
 
         // Verificar se já está logado
         supabaseClient.auth.onAuthStateChange((event, session) => {
+            console.log('Auth state changed:', event, session?.user?.email || 'No user');
+            
             if (session) {
+                currentSession = session;
                 document.getElementById('loginForm').classList.add('hidden');
                 document.getElementById('userInfo').classList.remove('hidden');
                 document.getElementById('adminPanel').classList.remove('hidden');
                 document.getElementById('userEmail').textContent = session.user.email;
                 loadScrapedNoticias();
                 loadNoticias();
+            } else {
+                currentSession = null;
+                document.getElementById('loginForm').classList.remove('hidden');
+                document.getElementById('userInfo').classList.add('hidden');
+                document.getElementById('adminPanel').classList.add('hidden');
             }
         });
 
@@ -189,16 +219,20 @@
             statusEl.textContent = `Buscando notícias do ${sourceName}... Aguarde.`;
 
             try {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                if (!session) {
-                    alert('Você precisa estar logado para usar esta função');
-                    return;
+                // Verifica se há sessão ativa
+                if (!currentSession) {
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (!session) {
+                        alert('Você precisa estar logado para usar esta função');
+                        return;
+                    }
+                    currentSession = session;
                 }
 
                 const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${session.access_token}`,
+                        'Authorization': `Bearer ${currentSession.access_token}`,
                         'Content-Type': 'application/json',
                         'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2NzMyNTIsImV4cCI6MjA0NjI0OTI1Mn0.VQTr6jYOWmQZvPdZhOqBK0hH7eeZxrMbSTNaDGS_7h8'
                     },
@@ -215,6 +249,7 @@
                 } else {
                     statusEl.textContent = `❌ Erro: ${data.error || data.message}`;
                     statusEl.style.color = 'red';
+                    console.error('Erro da API:', data);
                 }
 
             } catch (error) {
@@ -226,12 +261,22 @@
             setTimeout(() => statusEl.classList.add('hidden'), 5000);
         }
 
-        // Carregar notícias scraped (tabela noticias_scraped)
+        // Carregar notícias scraped COM TRATAMENTO DE ERRO MELHORADO
         async function loadScrapedNoticias() {
             const container = document.getElementById('scrapedNoticias');
             container.innerHTML = '<div class="loading">Carregando notícias scraped...</div>';
 
             try {
+                // Verifica se há sessão ativa
+                if (!currentSession) {
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (!session) {
+                        container.innerHTML = '<div class="error-message">⚠️ Você precisa estar logado para ver as notícias scraped.</div>';
+                        return;
+                    }
+                    currentSession = session;
+                }
+
                 const { data, error } = await supabaseClient
                     .from('noticias_scraped')
                     .select('*')
@@ -239,76 +284,137 @@
                     .order('created_at', { ascending: false })
                     .limit(20);
 
-                if (error) throw error;
+                if (error) {
+                    console.error('Erro detalhado:', error);
+                    throw error;
+                }
 
-                if (data.length === 0) {
+                if (!data || data.length === 0) {
                     container.innerHTML = '<div class="loading">Nenhuma notícia scraped encontrada. Use os botões acima para buscar notícias automaticamente.</div>';
                     return;
                 }
 
-                container.innerHTML = data.map(noticia => `
-                    <div class="noticia-card scraped-card">
-                        ${noticia.imagem_url ? `<img src="${noticia.imagem_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">` : ''}
-                        <div class="noticia-title">${noticia.titulo_reescrito || noticia.titulo_original}</div>
-                        <div class="noticia-content">${(noticia.resumo_reescrito || noticia.resumo_original || '').substring(0, 200)}...</div>
-                        <div class="noticia-meta">
-                            <span class="status-badge status-${noticia.status}">${noticia.status}</span>
-                            <br>
-                            <strong>Fonte:</strong> ${noticia.fonte}<br>
-                            <strong>Categoria:</strong> ${noticia.categoria}<br>
-                            <strong>Coletado:</strong> ${new Date(noticia.data_coleta || noticia.created_at).toLocaleString('pt-BR')}<br>
-                            <strong>URL:</strong> <a href="${noticia.url_original}" target="_blank" style="color: #059669;">Ver original</a>
+                container.innerHTML = data.map(noticia => {
+                    const imagemHtml = noticia.imagem_url 
+                        ? `<img src="${noticia.imagem_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">`
+                        : '';
+                    
+                    const dataFormatada = noticia.data_coleta || noticia.created_at;
+                    const dataTexto = dataFormatada ? new Date(dataFormatada).toLocaleString('pt-BR') : 'Data não disponível';
+                    
+                    return `
+                        <div class="noticia-card scraped-card">
+                            ${imagemHtml}
+                            <div class="noticia-title">${noticia.titulo_reescrito || noticia.titulo_original || 'Título não disponível'}</div>
+                            <div class="noticia-content">${(noticia.resumo_reescrito || noticia.resumo_original || 'Resumo não disponível').substring(0, 200)}...</div>
+                            <div class="noticia-meta">
+                                <span class="status-badge status-${noticia.status || 'pendente'}">${noticia.status || 'pendente'}</span>
+                                <br>
+                                <strong>Fonte:</strong> ${noticia.fonte || 'Não informada'}<br>
+                                <strong>Categoria:</strong> ${noticia.categoria || 'Geral'}<br>
+                                <strong>Coletado:</strong> ${dataTexto}<br>
+                                ${noticia.url_original ? `<strong>URL:</strong> <a href="${noticia.url_original}" target="_blank" style="color: #059669;">Ver original</a>` : ''}
+                            </div>
+                            <div class="noticia-actions">
+                                <button class="publish-button" onclick="publishScrapedNoticia(${noticia.id})">📰 Publicar</button>
+                                <button class="danger-button" onclick="deleteScrapedNoticia(${noticia.id})">🗑️ Excluir</button>
+                            </div>
                         </div>
-                        <div class="noticia-actions">
-                            <button class="publish-button" onclick="publishScrapedNoticia(${noticia.id})">📰 Publicar</button>
-                            <button class="danger-button" onclick="deleteScrapedNoticia(${noticia.id})">🗑️ Excluir</button>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
 
             } catch (error) {
-                container.innerHTML = `<div class="loading" style="color: red;">Erro ao carregar: ${error.message}</div>`;
                 console.error('Erro ao carregar notícias scraped:', error);
+                let errorMessage = 'Erro desconhecido';
+                
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (typeof error === 'object') {
+                    errorMessage = JSON.stringify(error);
+                }
+                
+                container.innerHTML = `
+                    <div class="error-message">
+                        ❌ Erro ao carregar notícias scraped: ${errorMessage}
+                        <br><br>
+                        <button onclick="loadScrapedNoticias()" style="background: #059669; margin-top: 10px;">🔄 Tentar Novamente</button>
+                    </div>
+                `;
             }
         }
 
-        // Carregar notícias publicadas (tabela noticias) - FUNÇÃO ORIGINAL
+        // Carregar notícias publicadas COM TRATAMENTO DE ERRO MELHORADO
         async function loadNoticias() {
             const container = document.getElementById('noticias');
             container.innerHTML = '<div class="loading">Carregando notícias publicadas...</div>';
 
             try {
+                // Verifica se há sessão ativa
+                if (!currentSession) {
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (!session) {
+                        container.innerHTML = '<div class="error-message">⚠️ Você precisa estar logado para ver as notícias publicadas.</div>';
+                        return;
+                    }
+                    currentSession = session;
+                }
+
                 const { data, error } = await supabaseClient
                     .from('noticias')
                     .select('*')
                     .order('created_at', { ascending: false });
 
-                if (error) throw error;
+                if (error) {
+                    console.error('Erro detalhado:', error);
+                    throw error;
+                }
 
-                if (data.length === 0) {
+                if (!data || data.length === 0) {
                     container.innerHTML = '<div class="loading">Nenhuma notícia publicada encontrada.</div>';
                     return;
                 }
 
-                container.innerHTML = data.map(noticia => `
-                    <div class="noticia-card">
-                        ${noticia.image_url ? `<img src="${noticia.image_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">` : ''}
-                        <div class="noticia-title">${noticia.title}</div>
-                        <div class="noticia-content">${(noticia.content || '').substring(0, 200)}...</div>
-                        <div class="noticia-meta">
-                            <strong>Categoria:</strong> ${noticia.category}<br>
-                            <strong>Publicado:</strong> ${new Date(noticia.created_at).toLocaleString('pt-BR')}
+                container.innerHTML = data.map(noticia => {
+                    const imagemHtml = noticia.image_url 
+                        ? `<img src="${noticia.image_url}" alt="Imagem da notícia" class="noticia-image" onerror="this.style.display='none'">`
+                        : '';
+                    
+                    const dataTexto = noticia.created_at ? new Date(noticia.created_at).toLocaleString('pt-BR') : 'Data não disponível';
+                    
+                    return `
+                        <div class="noticia-card">
+                            ${imagemHtml}
+                            <div class="noticia-title">${noticia.title || 'Título não disponível'}</div>
+                            <div class="noticia-content">${(noticia.content || 'Conteúdo não disponível').substring(0, 200)}...</div>
+                            <div class="noticia-meta">
+                                <strong>Categoria:</strong> ${noticia.category || 'Não informada'}<br>
+                                <strong>Publicado:</strong> ${dataTexto}
+                            </div>
+                            <div class="noticia-actions">
+                                <button onclick="editNoticia(${noticia.id})">✏️ Editar</button>
+                                <button class="danger-button" onclick="deleteNoticia(${noticia.id})">🗑️ Excluir</button>
+                            </div>
                         </div>
-                        <div class="noticia-actions">
-                            <button onclick="editNoticia(${noticia.id})">✏️ Editar</button>
-                            <button class="danger-button" onclick="deleteNoticia(${noticia.id})">🗑️ Excluir</button>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
 
             } catch (error) {
-                container.innerHTML = `<div class="loading" style="color: red;">Erro ao carregar: ${error.message}</div>`;
                 console.error('Erro ao carregar notícias:', error);
+                let errorMessage = 'Erro desconhecido';
+                
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (typeof error === 'object') {
+                    errorMessage = JSON.stringify(error);
+                }
+                
+                container.innerHTML = `
+                    <div class="error-message">
+                        ❌ Erro ao carregar notícias publicadas: ${errorMessage}
+                        <br><br>
+                        <button onclick="loadNoticias()" style="background: #dc2626; margin-top: 10px;">🔄 Tentar Novamente</button>
+                    </div>
+                `;
             }
         }
 
@@ -317,6 +423,11 @@
             if (!confirm('Publicar esta notícia no site?')) return;
 
             try {
+                if (!currentSession) {
+                    alert('Você precisa estar logado para publicar notícias');
+                    return;
+                }
+
                 // 1. Busca a notícia scraped
                 const { data: scraped, error: fetchError } = await supabaseClient
                     .from('noticias_scraped')
@@ -330,9 +441,9 @@
                 const { error: insertError } = await supabaseClient
                     .from('noticias')
                     .insert({
-                        title: scraped.titulo_reescrito,
+                        title: scraped.titulo_reescrito || scraped.titulo_original,
                         content: scraped.resumo_reescrito || scraped.resumo_original,
-                        category: scraped.categoria,
+                        category: scraped.categoria || 'Geral',
                         image_url: scraped.imagem_url
                     });
 
@@ -361,6 +472,11 @@
             if (!confirm('Excluir esta notícia scraped permanentemente?')) return;
 
             try {
+                if (!currentSession) {
+                    alert('Você precisa estar logado para excluir notícias');
+                    return;
+                }
+
                 const { error } = await supabaseClient
                     .from('noticias_scraped')
                     .delete()
@@ -372,10 +488,11 @@
                 loadScrapedNoticias();
             } catch (error) {
                 alert('Erro ao excluir: ' + error.message);
+                console.error('Erro:', error);
             }
         }
 
-        // Publicar notícia manual - FUNÇÃO ORIGINAL
+        // Publicar notícia manual
         async function publishNoticia() {
             const title = document.getElementById('title').value;
             const content = document.getElementById('content').value;
@@ -387,6 +504,11 @@
             }
 
             try {
+                if (!currentSession) {
+                    alert('Você precisa estar logado para publicar notícias');
+                    return;
+                }
+
                 const { error } = await supabaseClient
                     .from('noticias')
                     .insert({
@@ -404,10 +526,11 @@
 
             } catch (error) {
                 alert('Erro ao publicar: ' + error.message);
+                console.error('Erro:', error);
             }
         }
 
-        // Funções auxiliares para notícias publicadas - ORIGINAIS
+        // Funções auxiliares para notícias publicadas
         function editNoticia(id) {
             alert('Função de edição ainda não implementada. ID: ' + id);
         }
@@ -416,6 +539,11 @@
             if (!confirm('Excluir esta notícia?')) return;
 
             try {
+                if (!currentSession) {
+                    alert('Você precisa estar logado para excluir notícias');
+                    return;
+                }
+
                 const { error } = await supabaseClient
                     .from('noticias')
                     .delete()
@@ -427,10 +555,14 @@
                 loadNoticias();
             } catch (error) {
                 alert('Erro ao excluir: ' + error.message);
+                console.error('Erro:', error);
             }
         }
 
+
+        
     </script>
-    
+
+
 </body>
 </html>
