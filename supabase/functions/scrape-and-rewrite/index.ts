@@ -215,62 +215,29 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
    Filtros anti-promo/institucional
    ========================= */
 const URL_BLACKLIST = [
-  "/sobre",
-  "/institucional",
-  "/anuncie",
-  "/publicidade",
-  "/assine",
-  "/assinante",
-  "/trabalhe-",
-  "/faq",
-  "/politica-de-privacidade",
-  "/termos",
-  "/contato",
-  "/equipe",
-  "/comercial",
-  "/videos/",
-  "/podcast/",
-  "/tag/",
-  "/tags/",
-  "/ao-vivo/",
-  "/galeria/",
-  "/classificados/",
-  "/redacao",
-  "/nossa-equipe",
-  "/quem-somos",
-  "/menu",
-  "/globonews",
-  "/programacao",
+  "/sobre", "/institucional", "/anuncie", "/publicidade", "/assine", "/assinante",
+  "/trabalhe-", "/faq", "/politica-de-privacidade", "/termos", "/contato", "/equipe", "/comercial",
+  "/videos/", "/podcast/", "/tag/", "/tags/", "/ao-vivo/", "/galeria/", "/classificados/",
+  "/redacao", "/nossa-equipe", "/quem-somos", "/menu", "/globonews", "/programacao"
 ];
 
+
 const TITLE_BLACKLIST = [
-  "menu",
-  "nossa equipe",
-  "equipe",
-  "redação",
-  "siga a globonews nas redes sociais",
-  "conheça a história do globo repórter",
-  "programação",
-  "assista",
+  "menu","nossa equipe","equipe","redação","siga a globonews nas redes sociais",
+  "conheça a história do globo repórter","programação","assista"
 ];
 
 function isBlacklistedUrl(u: string) {
-  const x = u.toLowerCase();
-  return URL_BLACKLIST.some((b) => x.includes(b));
+  const x = (u||"").toLowerCase();
+  return URL_BLACKLIST.some(b => x.includes(b));
 }
 function isBlacklistedTitle(t: string) {
-  const x = (t || "").toLowerCase().trim();
-  return x.length < 8 || TITLE_BLACKLIST.some((b) => x.includes(b));
+  const x = (t||"").toLowerCase().trim();
+  return x.length < 8 || TITLE_BLACKLIST.some(b => x.includes(b));
 }
+// ÚNICA definição desta função no arquivo!
 function looksPromotional(text: string) {
-  const x = (text || "").toLowerCase();
-  return /publieditorial|publicidade|assessoria de imprensa|assine|clique aqui|programação|assista ao/i.test(
-    x,
-  );
-}
-
-function looksPromotional(text: string) {
-  const x = (text || "").toLowerCase();
+  const x = (text||"").toLowerCase();
   return /publieditorial|publicidade|assessoria de imprensa|assine|clique aqui|programação|assista ao|patrocinado|publipost|oferecimento|oferecido por|parceria/i.test(x);
 }
 
