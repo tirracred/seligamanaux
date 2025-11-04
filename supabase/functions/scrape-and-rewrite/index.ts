@@ -51,7 +51,7 @@ const corsHeaders = {
 /* =========================
    Configuração de Portais
    ========================= */
-const PORTAIS_CONFIG: Record<string, linkConfig> = {
+const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   "g1.globo.com": {
     name: "G1 Amazonas",
     baseUrl: "https://g1.globo.com/am/amazonas/",
@@ -319,8 +319,7 @@ function sanitizeHtml(html: string) {
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
     .replace(
-      /<(nav|header|footer|aside|form|iframe|button|svg|noscript|figure|section)[\s\S]*?<\/\1>/gi,
-      "",
+      .replace(/<(nav|header|footer|aside|form|iframe|button|svg|noscript)[\s\S]*?<\/\1>/gi, "")
     )
     .replace(
       /\b(class|id)="[^"]*(menu|newsletter|social|share|advert|ad-|banner|promo|sponsored)[^"]*"/gi,
@@ -333,7 +332,7 @@ function sanitizeHtml(html: string) {
    ========================= */
 function extractNewsLinks(
   html: string,
-  config: linkConfig,
+  config: PortalConfig,
   maxLinks = 15,
 ): string[] {
   const links: Set<string> = new Set();
@@ -347,7 +346,7 @@ function extractNewsLinks(
       const hrefPattern = selector.match(/\[href\*="([^"]+)"\]/);
       if (!hrefPattern) continue;
       pattern = new RegExp(
-        `<a[^>]+href=["']([^"']*${hrefPattern[1].replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^"']*)["'][^>]*>([\\s\\S]*?)<\\/a>`,
+        `<a[^>]+href=["']([^"']*${hrefPattern[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^"']*)["'][^>]*>([\\s\\S]*?)<\\/a>`,
         "gi",
       );
     } else {
@@ -419,7 +418,7 @@ function extractNewsLinks(
    ========================= */
 function extractContentWithRegex(
   html: string,
-  config: linkConfig,
+  config: PortalConfig,
 ): { titulo: string; conteudo: string; resumo: string; imagem: string } {
   const clean = sanitizeHtml(html).replace(
     /glb\.cdnConfig[\s\S]*?(?:;|\})/gi,
@@ -676,7 +675,7 @@ Se o texto base for anúncio/publieditorial, responda exatamente:
 /* =========================
    Detectar portal por hostname
    ========================= */
-function detectPortal(url: string): linkConfig | null {
+function detectPortal(url: string): PortalConfig | null {
   try {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.replace("www.", "");
@@ -754,15 +753,15 @@ Deno.serve(async (req) => {
     }
     console.log("Processando URL:", targetUrl);
 
-    // DETECTA PORTAL
-const linkConfig = detectPortal(newsUrl) || linkConfig;
-    if (!linkConfig) {
-      return new Response(JSON.stringify({ error: "Portal não suportado" }), {
-        status: 422,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    console.log("Portal detectado:", linkConfig.name);
+// DETECTA PORTAL
+const portal = detectPortal(targetUrl);
+if (!portal) {
+  return new Response(JSON.stringify({ error: "Portal não suportado" }), {
+    status: 422,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+console.log("Portal detectado:", portal.name);
 
     // EVITAR DUPLICATAS (últimos 7 dias)
     const { data: existingUrls } = await supabaseAdmin
@@ -831,7 +830,7 @@ const linkConfig = detectPortal(newsUrl) || linkConfig;
 
     // LINKS
    // Tenta coletar links extras em páginas 2..4 para alguns portais
-function buildPaginationUrls(config: linkConfig): string[] {
+function buildPaginationUrls(config: PortalConfig): string[] {
   const origin = new URL(config.baseUrl).origin;
   const base = config.baseUrl.replace(/\/+$/, "");
   const urls: string[] = [];
@@ -853,15 +852,15 @@ function buildPaginationUrls(config: linkConfig): string[] {
   return urls;
 }
 
-let newsLinks = extractNewsLinks(htmlContent, portalConfig, 20);
+let newsLinks = extractNewsLinks(htmlContent, portal, 20);
 
 // Se veio pouco, tenta páginas seguintes
 if (newsLinks.length < 8) {
-  const morePages = buildPaginationUrls(linkConfig);
+const morePages = buildPaginationUrls(portal);
   for (const u of morePages) {
     try {
       const html = await fetchHtmlPreferAmp(u, userAgent);
-      const extra = extractNewsLinks(html, linkConfig, 20);
+const extra = extractNewsLinks(html, portal, 20);
       newsLinks = Array.from(new Set([...newsLinks, ...extra]));
       if (newsLinks.length >= 20) break;
     } catch {
@@ -905,13 +904,13 @@ for (const newsUrl of newsLinks.slice(0, 12)) {
     console.log(`Processando: ${newsUrl}`);
 
     // NUNCA reatribua portalConfig (é const do escopo externo). Use uma variável local:
-    const linkConfig = detectPortal(newsUrl) || portalConfig;
+const cfg = detectPortal(newsUrl) || portal;          // <— usa cfg local
 
     // Preferir AMP quando disponível (G1 e cia)
-    const newsHtml = await fetchHtmlPreferAmp(newsUrl, userAgent);
+const newsHtml = await fetchHtmlPreferAmp(newsUrl, userAgent);
 
     // Extrai
-    const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, linkConfig);
+const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, cfg);
     if (titulo === "Título não encontrado" || !conteudo || conteudo.length < 120) {
       console.log(`Conteúdo insuficiente: ${newsUrl}`);
       continue;
@@ -942,11 +941,11 @@ for (const newsUrl of newsLinks.slice(0, 12)) {
       resumo_reescrito: resumoReescrito || null,
       conteudo_reescrito: conteudoReescrito || conteudo,
       url_original: newsUrl,
-      fonte: linkConfig.name,
+      fonte: cfg.name,
       status: "processado",
       data_coleta: new Date().toISOString(),
       imagem_url: imagem || null,
-      categoria: linkConfig.category
+      categoria: cfg.category
     };
 
     const { error } = await supabaseAdmin.from("noticias_scraped").insert(noticiaData);
@@ -983,7 +982,7 @@ for (const newsUrl of newsLinks.slice(0, 12)) {
           total_encontradas: newsLinks.length,
           processadas_com_sucesso: successCount,
           erros: errorCount,
-          portal: portalConfig.name,
+          portal: portal.name,
         },
         noticias: processedNews,
       }),
