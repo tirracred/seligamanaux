@@ -567,7 +567,7 @@ Responda APENAS em JSON:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-20b",
+        model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "user",
@@ -612,7 +612,7 @@ Responda APENAS em JSON:
     if (!textContent) {
       console.log(`[GROQ_EMPTY] Resposta vazia, retry...`);
       if (retryCount < 2) {
-        
+
         return rewriteWithGroq(title, content, apiKey, retryCount + 1);
       }
       return null;
