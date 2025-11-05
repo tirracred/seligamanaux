@@ -404,8 +404,20 @@ Ignorar páginas promocionais / institucionais (recomendado)
     const data = await response.json();
 
     if (response.ok) {
-      const ok = data.stats?.processadas_com_sucesso ?? 0;
-      const found = data.stats?.total_encontradas ?? 0;
+      /*
+       * Suporta tanto a resposta antiga (processadas_com_sucesso/total_encontradas) quanto a nova
+       * (processed/noticiasReescritas, noticiasEncontradas). Isso garante
+       * compatibilidade ao trocar o motor de scraping por leitura de RSS.
+       */
+      const ok =
+        data.processed ??
+        data.stats?.noticiasReescritas ??
+        data.stats?.processadas_com_sucesso ??
+        0;
+      const found =
+        data.stats?.noticiasEncontradas ??
+        data.stats?.total_encontradas ??
+        0;
       statusEl.textContent = `✅ ${sourceName}: ${ok}/${found} processadas.`;
       statusEl.style.color = 'green';
       setTimeout(() => loadScrapedNoticias(), 1000);
