@@ -314,101 +314,91 @@ async function fetchHtmlPreferAmp(url: string, ua: string) {
   return await r.text();
 }
 
-function sanitizeHtml(html: string): string {
-  return html
-    // remove scripts e styles
+function sanitizeHtml(html: string) {
+  // remove scripts/estilos/blocos claramente periféricos, mas
+  // PRESERVA o conteúdo dentro de <section> e <figure>
+  return (html || "")
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
-    // remove blocos estruturais que só poluem (sem backreference)
-    .replace(
-      /<(?:nav|header|footer|aside|form|iframe|button|svg|noscript)[\s\S]*?<\/(?:nav|header|footer|aside|form|iframe|button|svg|noscript)>/gi,
-      ""
-    )
-    // limpa elementos com classes/ids típicos de menu/ads
-    .replace(
-      /\b(?:class|id)="[^"]*(?:menu|newsletter|social|share|advert|ad-|banner|promo|sponsored)[^"]*"/gi,
-      ""
-    );
+    // remove blocos inteiros que raramente contém links de notícia
+    .replace(/<(nav|header|footer|aside|form|iframe|button|svg|noscript)[\s\S]*?<\/\1>/gi, "")
+    // para section/figure: remove apenas as tags, mantém o conteúdo
+    .replace(/<\/?(section|figure)\b[^>]*>/gi, "")
+    // tira classes “sujas” sem apagar o nó
+    .replace(/\b(class|id)="[^"]*(newsletter|social|share|advert|ad-|banner|promo|sponsored)[^"]*"/gi, "")
+    ;
 }
+
 
 /* =========================
    Extração de links
    ========================= */
-function extractNewsLinks(
-  html: string,
-  config: PortalConfig,
-  maxLinks = 15,
-): string[] {
-  const links: Set<string> = new Set();
+
+   function toAbsolute(url: string, base: string): string | null {
+  if (!url) return null;
+  try {
+    if (/^https?:\/\//i.test(url)) return url;
+    const b = new URL(base);
+    if (url.startsWith("/")) return b.origin + url;
+    return new URL(url, b.origin + "/").href;
+  } catch { return null; }
+}
+
+function looksNewsish(url: string, hostKey: string): boolean {
+  const u = url.toLowerCase();
+
+  // genéricos: data no caminho ou palavras “noticia(s)”
+  const generic = /(\/20\d{2}\/\d{2}\/\d{2}\/)|\/noticia(s)?\//.test(u);
+
+  // por portal: aceita editorias locais
+  const perHost: Record<string, RegExp[]> = {
+    "g1.globo.com": [
+      /\/am\/amazonas\/.*?noticia\//, /\/am\/amazonas\/20\d{2}\//
+    ],
+    "portaldoholanda.com.br": [
+      /\/amazonas\//, /\/manaus\//, /\/politica\//, /\/policia\//, /\/noticia(s)?\//
+    ],
+    "acritica.com": [
+      /\/amazonas\//, /\/manaus\//, /\/policia\//, /\/politica\//, /\/noticia(s)?\//
+    ],
+    "portalamazonia.com": [
+      /\/noticias\/amazonas\//, /\/amazonas\//
+    ],
+    "d24am.com": [
+      /\/amazonas\//, /\/manaus\//, /\/politica\//, /\/policia\//, /\/20\d{2}\//
+    ],
+  };
+
+  const rules = perHost[hostKey] || [];
+  const hostOk = rules.some(r => r.test(u));
+
+  return generic || hostOk;
+}
+
+function extractNewsLinks(html: string, config: linkConfig, maxLinks = 20): string[] {
+  const links = new Set<string>();
   const page = sanitizeHtml(html);
 
-  // tenta por seletores conhecidos
-  for (const selector of config.linkSelectors) {
-    let pattern: RegExp;
+  const re = /<a\s[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(page)) !== null && links.size < maxLinks * 3) {
+    let href = (m[1] || "").trim();
+    const abs = toAbsolute(href, config.baseUrl);
+    if (!abs) continue;
 
-    if (selector.includes('[href*=')) {
-      const hrefPattern = selector.match(/\[href\*="([^"]+)"\]/);
-      if (!hrefPattern) continue;
-      pattern = new RegExp(
-        `<a[^>]+href=["']([^"']*${hrefPattern[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^"']*)["'][^>]*>([\\s\\S]*?)<\\/a>`,
-        "gi",
-      );
-    } else {
-      const className = selector.replace(".", "").replace(/\s+img$/, "");
-      pattern = new RegExp(
-        `<a([^>]+class=["'][^"']*${className}[^"']*["'][^>]*)href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>`,
-        "gi",
-      );
+    if (isBlacklistedUrl(abs)) continue;
+
+    if (!looksNewsish(abs, Object.keys(PORTAIS_CONFIG).find(k => config.name.includes("G1") ? k==="g1.globo.com" : abs.includes(k)) || "")) {
+      continue;
     }
 
-    let m: RegExpExecArray | null;
-    while ((m = pattern.exec(page)) !== null && links.size < maxLinks * 3) {
-      let url = m[1]?.startsWith("class") ? (m[2] as string) : (m[1] as string);
-      const txt = (m[3] || "").replace(/<[^>]*>/g, " ").trim().toLowerCase();
-
-      if (!url) continue;
-      if (url.startsWith("/")) {
-        const base = new URL(config.baseUrl);
-        url = base.origin + url;
-      } else if (!/^https?:\/\//.test(url)) {
-        url = config.baseUrl + url;
-      }
-
-      if (isBlacklistedUrl(url)) continue;
-      if (txt && isBlacklistedTitle(txt)) continue;
-
-      const isNewsish =
-        /(\/20\d{2}\/\d{2}\/\d{2}\/|\/noticia\/|\/noticias\/|\/noticias\/amazonas\/|\/amazonas\/[^/]+$|\/manaus\/[^/]+$)/.test(
-          url,
-        );
-      if (!isNewsish) continue;
-
-      links.add(url);
-      if (links.size >= maxLinks * 2) break;
-    }
+    links.add(abs);
   }
 
-  // fallback amplo
-  if (links.size < 5) {
-    const general =
-      /<a[^>]+href=["']([^"']*(?:\/noticia\/|\/noticias\/|\/20\d{2}\/\d{2}\/\d{2}\/|\/noticias\/amazonas\/)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
-    let m: RegExpExecArray | null;
-    while ((m = general.exec(page)) !== null && links.size < maxLinks * 2) {
-      let url = m[1] as string;
-      const txt = (m[2] || "").replace(/<[^>]*>/g, " ").trim().toLowerCase();
-      if (url.startsWith("/")) {
-        const base = new URL(config.baseUrl);
-        url = base.origin + url;
-      }
-      if (!/^https?:\/\//.test(url)) continue;
-      if (isBlacklistedUrl(url) || isBlacklistedTitle(txt)) continue;
-      links.add(url);
-    }
-  }
-
+  // ordena por "cara de notícia": data/noticia e URL mais curta
   const arr = Array.from(links).sort((a, b) => {
     const score = (u: string) =>
-      (/(\/20\d{2}\/\d{2}\/\d{2}\/|\/noticia\/)/.test(u) ? 2 : 0) +
+      (/(\/20\d{2}\/\d{2}\/\d{2}\/|\/noticia\/|\/noticias\/)/.test(u) ? 2 : 0) +
       (u.length < 120 ? 1 : 0);
     return score(b) - score(a);
   });
@@ -778,6 +768,31 @@ Deno.serve(async (req) => {
       });
     }
     console.log("Portal detectado:", portalConfig.name);
+
+
+    // Se o usuário passou uma matéria específica, processe só ela
+const articleLike = /(\/20\d{2}\/\d{2}\/\d{2}\/)|\/noticia(s)?\/|\/amazonas\/[^/?#]+/.test(targetUrl.toLowerCase());
+let newsLinks: string[] = [];
+
+if (articleLike) {
+  newsLinks = [targetUrl];
+} else {
+  // fetch home/editoria, extrair links e paginar (sua lógica existente)
+  // ... (mantenha seu fetch da home aqui)
+  newsLinks = extractNewsLinks(htmlContent, portalConfig, 20);
+  // paginação extra se vier pouco:
+  if (newsLinks.length < 8) {
+    const morePages = buildPaginationUrls(portalConfig);  // sua função existente
+    for (const u of morePages) {
+      try {
+        const html = await fetchHtmlPreferAmp(u, userAgent);
+        const extra = extractNewsLinks(html, portalConfig, 20);
+        newsLinks = Array.from(new Set([...newsLinks, ...extra]));
+        if (newsLinks.length >= 20) break;
+      } catch { /* ignora */ }
+    }
+  }
+}
 
     // --- EVITAR DUPLICATAS (últimos 7 dias) ---
     const { data: existingUrls } = await supabaseAdmin
