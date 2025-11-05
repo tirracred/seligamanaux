@@ -44,15 +44,6 @@
     </div>
 
     <main class="container">
-        <section class="mais-vistos-section">
-            <h2 class="page-title" style="margin-bottom: 1.5rem; border: none;">Mais vistos</h2>
-            <div id="mais-vistos-loading" style="text-align:center; padding: 2rem 0; color: var(--texto-secundario);">Carregando notícias...</div>
-            <div class="carousel-container" id="mais-vistos-container" style="display: none;">
-                <button class="carousel-prev" id="carousel-prev">&#8249;</button>
-                <div class="carousel-track" id="mais-vistos-track"></div>
-                <button class="carousel-next" id="carousel-next">&#8250;</button>
-            </div>
-        </section>
         
         <div id="categories-loading" style="text-align:center; padding: 2rem 0; color: var(--texto-secundario);">Carregando notícias...</div>
         
@@ -101,15 +92,15 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script src="main.js"></script>
     
     <script>
-        // Colunas otimizadas para buscar o resumo limpo e o slug
-        const COLUNAS_SELECT = "id, title, resumo_reescrito, content, image_url, category, created_at, headline_color, canonical_path";
+        // === CORREÇÃO 1: Colunas que REALMENTE existem na tabela 'noticias' ===
+        // (Removido 'resumo_reescrito' e 'canonical_path' que causaram o erro 400)
+        const COLUNAS_SELECT = "id, title, content, image_url, category, created_at, headline_color";
 
         /**
-         * Cria o card de notícia (Versão Otimizada)
+         * Cria o card de notícia (Versão Corrigida)
          */
         function createNewsCard(post) {
             const article = document.createElement("article");
@@ -118,13 +109,13 @@
             const imageUrl = post.image_url || "https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux";
             const titleColorClass = post.headline_color === "red" ? "titulo-vermelho" : "titulo-azul";
             
-            // OTIMIZAÇÃO: Usa o link 'canonical_path' (slug) se existir
-            const articleUrl = post.canonical_path ? `artigo.html?slug=${post.canonical_path}` : `artigo.html?id=${post.id}`;
+            // === CORREÇÃO 2: Voltar a usar o ID, já que 'canonical_path' não existe aqui ===
+            const articleUrl = `artigo.html?id=${post.id}`;
             
-            // OTIMIZAÇÃO: Usa 'resumo_reescrito' (sem HTML) se existir
-            const summary = (post.resumo_reescrito || post.content || "")
-                .replace(/<[^>]+>/g, " ") // Remove tags HTML (caso venha do 'content')
-                .replace(/\s+/g, " ")     // Remove espaços extras
+            // === CORREÇÃO 3: Usar 'post.content' para o resumo, já que 'resumo_reescrito' não existe ===
+            const summary = (post.content || "") // Usando 'content' como fonte
+                .replace(/<[^>]+>/g, " ") // Remove tags HTML (importante)
+                .replace(/\s+/g, " ")     
                 .trim()
                 .substring(0, 100) + "...";
 
@@ -143,73 +134,29 @@
 
         /**
          * Normaliza nomes de categoria para IDs de HTML
-         * (Ex: "Manaus e Região" vira "manaus-e-regiao")
          */
         function getSafeCategoryId(categoryName) {
             if (!categoryName) return "geral";
             return categoryName
                 .toLowerCase()
-                .normalize("NFD") // Remove acentos
+                .normalize("NFD") 
                 .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-z0-9]+/g, "-") // Substitui espaços e símbolos por hífen
-                .replace(/^-+|-+$/g, ""); // Remove hífens no início/fim
+                .replace(/[^a-z0-9]+/g, "-") 
+                .replace(/^-+|-+$/g, ""); 
         }
 
         document.addEventListener("DOMContentLoaded", async () => {
-            // Lógica do Carrossel (Específica desta página)
-            const carouselTrack = document.getElementById("mais-vistos-track");
-            const prevBtn = document.getElementById("carousel-prev");
-            const nextBtn = document.getElementById("carousel-next");
             
-            if (prevBtn && nextBtn && carouselTrack) {
-                prevBtn.addEventListener("click", () => {
-                    carouselTrack.scrollBy({ left: -carouselTrack.clientWidth * 0.8, behavior: "smooth" });
-                });
-                nextBtn.addEventListener("click", () => {
-                    carouselTrack.scrollBy({ left: carouselTrack.clientWidth * 0.8, behavior: "smooth" });
-                });
-            }
-
             // --- Lógica de Carregamento de Notícias ---
             if (typeof supabase === 'undefined' || !supabase) {
                 console.error("ERRO GRAVE: 'main.js' falhou ao carregar ou definir 'supabase'.");
-                document.getElementById("mais-vistos-loading").innerText = "Erro fatal ao conectar.";
-                document.getElementById("categories-loading").style.display = "none";
+                document.getElementById("categories-loading").innerText = "Erro fatal ao conectar.";
                 return;
             }
 
-            let highlightPosts = [];
-
-            // 1. Carrega "Mais Vistos" (Carrossel)
-            try {
-                // (Idealmente, você teria uma coluna 'view_count' para ordenar)
-                const { data: highlightData, error: highlightError } = await supabase
-                    .from(DB_TABLE)
-                    .select(COLUNAS_SELECT)
-                    .order("created_at", { ascending: false }) 
-                    .limit(5);
-                
-                if (highlightError) throw highlightError;
-
-                if (highlightData && highlightData.length > 0) {
-                    highlightPosts = highlightData;
-                    const track = document.getElementById("mais-vistos-track");
-                    highlightData.forEach(post => {
-                        track.appendChild(createNewsCard(post));
-                    });
-                    document.getElementById("mais-vistos-loading").style.display = "none";
-                    document.getElementById("mais-vistos-container").style.display = "block";
-                } else {
-                    document.getElementById("mais-vistos-loading").innerText = "Nenhuma notícia disponível.";
-                }
-            } catch (err) {
-                console.error("Erro ao carregar notícias em destaque:", err);
-                document.getElementById("mais-vistos-loading").innerText = "Erro ao carregar notícias.";
-            }
-
-            // 2. Carrega Notícias Iniciais (Categorias)
-            let offset = highlightPosts.length; // Pula as que já estão no carrossel
-            const pageSize = 9; // Carrega 9 de cada vez (3 colunas)
+            // === CORREÇÃO 4: Remover lógica "Mais Vistos" e começar do zero ===
+            let offset = 0; // Começa do início
+            const pageSize = 9; 
             let reachedEnd = false;
 
             async function loadMoreNews(isInitialLoad = false) {
@@ -219,13 +166,14 @@
                 loadIndicator.style.display = "block";
 
                 try {
+                    // Busca usando as colunas corrigidas
                     const { data: newsData, error } = await supabase
                         .from(DB_TABLE)
-                        .select(COLUNAS_SELECT)
+                        .select(COLUNAS_SELECT) // <--- USANDO AS COLUNAS CORRIGIDAS
                         .order("created_at", { ascending: false })
                         .range(offset, offset + pageSize - 1);
 
-                    if (error) throw error;
+                    if (error) throw error; // O erro 400 acontecia aqui
 
                     if (newsData && newsData.length > 0) {
                         newsData.forEach(post => {
@@ -233,12 +181,9 @@
                             const container = document.getElementById(`category-${safeCategory}-container`);
                             
                             if (container) {
-                                // Adiciona na seção da categoria correta
                                 container.appendChild(createNewsCard(post));
-                                // Garante que a seção esteja visível
                                 container.closest('.category-section').style.display = 'block';
                             } else {
-                                // Fallback: Joga no 'Geral' se a categoria não existir
                                 const geralContainer = document.getElementById("category-geral-container");
                                 geralContainer.appendChild(createNewsCard(post));
                                 geralContainer.closest('.category-section').style.display = 'block';
@@ -253,7 +198,7 @@
                         }
                     } else {
                         reachedEnd = true;
-                        if (isInitialLoad) {
+                        if (isInitialLoad && offset === 0) { // Só mostra se for o primeiro carregamento e não vier nada
                             document.getElementById("categories-loading").innerText = "Nenhuma notícia encontrada.";
                         }
                     }
@@ -261,6 +206,9 @@
                 } catch (err) {
                     console.error("Erro ao carregar notícias:", err);
                     loadIndicator.innerText = "Erro ao carregar notícias.";
+                    if (err.message.includes("400")) {
+                        loadIndicator.innerText = "Erro (400): Verifique as colunas da tabela.";
+                    }
                 } finally {
                     loadIndicator.style.display = "none";
                 }
@@ -275,7 +223,6 @@
                     return;
                 }
                 
-                // Ativa 300px antes de chegar no fim
                 if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
                     loadMoreNews();
                 }
@@ -285,7 +232,12 @@
 </body>
 
 
+
+
+
 </html>
+
+
 
 
 
