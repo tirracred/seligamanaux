@@ -575,9 +575,11 @@ Responda APENAS em JSON:
           },
         ],
         temperature: temperature,
-        max_tokens: 2048,
+        max_tokens: 8192,
       }),
     });
+
+    "response_format": { "type": "json_object" },
 
     console.log(`[GROQ_RESPONSE] Status: ${response.status}`);
 
