@@ -538,7 +538,7 @@ Responda APENAS em JSON válido, sem markdown ou explicações:
 {"titulo": "novo título", "conteudo": "novo conteúdo reescrito"}`;
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetch("https://api.groq.com/openai/v1", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
