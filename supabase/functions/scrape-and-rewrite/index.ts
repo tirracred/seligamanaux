@@ -21,9 +21,7 @@ interface NoticiaScrapedData {
   data_publicacao?: string;
   imagem_url?: string | null;
   categoria: string;
-  // slug gerado para custom URL (opcional)
   slug?: string;
-  // caminho canônico baseado no slug (opcional)
   canonical_path?: string;
 }
 
@@ -56,39 +54,34 @@ const corsHeaders = {
 };
 
 /* =========================
-CONFIGURAÇÃO DE PORTAIS
+CONFIGURAÇÃO DE PORTAIS (AJUSTADA PARA FOCO)
 ========================= */
 
-// (Configuração PORTAIS_CONFIG... mantida exatamente como no original)
 const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   "g1.globo.com": {
     name: "G1 Amazonas",
     baseUrl: "https://g1.globo.com/am/amazonas/",
     linkSelectors: [
-      'a[href*="/am/amazonas/noticia/"]',
-      'a[href*="/amazonas/noticia/"]',
-      '.feed-post-link[href*="/noticia/"]',
-      'a[href*="/am/amazonas/"][href*="/noticia/"]',
-      'a[href*="/am/amazonas/20"]',
+      'a[href*="/am/amazonas/noticia/"]', // Foco principal
+      '.feed-post-link[href*="/noticia/"]', // Links de feed
+      'a[href*="/am/amazonas/cidade/"]', // Foco em cidades
+      'a[href*="/am/amazonas/policia/"]', // Foco em polícia
     ],
     titleSelectors: [
       "h1.content-head__title",
       "h1.gui-color-primary",
       "h1",
-      ".content-head__title",
     ],
     contentSelectors: [
       ".content-text__container",
       ".mc-article-body",
       ".post__content",
-      "article .content",
     ],
     imageSelectors: [
+      'meta[property="og:image"]', // Prioridade
       ".content-media__image img",
       ".progressive-img img",
       "figure img",
-      ".content-head__image img",
-      'meta[property="og:image"]',
     ],
     category: "Amazonas",
   },
@@ -99,26 +92,19 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
     linkSelectors: [
       'a[href*="/noticia/"]',
       'a[href*="/noticias/"]',
-      ".post-link",
-      "h2 a",
-      "h3 a",
       'a[href*="/amazonas/"]',
-      'a[href*="/policia/"]',
+      'a[href*="/policia/"]', // Foco em polícia
+      'a[href*="/cidades/"]', // Foco em cidades
+      'a[href*="/manaus/"]',
       'a[href*="/politica/"]',
     ],
-    titleSelectors: ["h1.entry-title", "h1.post-title", "h1", ".title"],
-    contentSelectors: [
-      ".entry-content",
-      ".post-content",
-      ".content",
-      "article .text",
-    ],
+    titleSelectors: ["h1.entry-title", "h1.post-title", "h1"],
+    contentSelectors: [".entry-content", ".post-content", "article .text"],
     imageSelectors: [
+      'meta[property="og:image"]',
       ".featured-image img",
       ".post-thumbnail img",
       "article img",
-      ".wp-post-image",
-      'meta[property="og:image"]',
     ],
     category: "Amazonas",
   },
@@ -130,26 +116,16 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
       'a[href*="/noticias/"]',
       'a[href*="/noticia/"]',
       'a[href*="/amazonas/"]',
-      'a[href*="/cidades/"]',
-      'a[href*="/economia/"]',
-      'a[href*="/esportes/"]',
-      ".post-item a",
-      "h2 a",
-      "h3 a",
+      'a[href*="/cidades/"]', // Foco em cidades
+      'a[href*="/policia/"]', // Foco em polícia
     ],
-    titleSelectors: ["h1.post-title", "h1.entry-title", "h1", ".article-title"],
-    contentSelectors: [
-      ".post-content",
-      ".entry-content",
-      ".article-content",
-      "article .content",
-    ],
+    titleSelectors: ["h1.post-title", "h1.entry-title", "h1"],
+    contentSelectors: [".post-content", ".entry-content", ".article-content"],
     imageSelectors: [
+      'meta[property="og:image"]',
       ".featured-image img",
       ".post-image img",
       "article img",
-      ".thumbnail img",
-      'meta[property="og:image"]',
     ],
     category: "Amazonas",
   },
@@ -159,35 +135,27 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
     baseUrl: "https://portalamazonia.com/noticias/amazonas",
     linkSelectors: [
       'a[href^="/noticias/amazonas/"]',
+      'a[href*="/noticias/cidades/"]', // Foco em cidades
+      'a[href*="/noticias/policia/"]', // Foco em polícia
       'a[href*="/noticias/"]',
-      'a[href*="/noticia/"]',
-      "h2 a",
-      "h3 a",
-      ".post-link",
-      'a[href*="/amazonas/"]',
-      'a[href*="/202"]',
     ],
     titleSelectors: [
       "h1.entry-title",
       "h1.post-title",
-      "h1",
-      ".article-title",
       "h1.td-post-title",
+      "h1",
     ],
     contentSelectors: [
       ".entry-content",
       ".post-content",
-      ".article-body",
-      "article .content",
-      'div[itemprop="articleBody"]',
       ".td-post-content",
+      'div[itemprop="articleBody"]',
     ],
     imageSelectors: [
+      'meta[property="og:image"]',
       ".featured-image img",
       ".post-thumbnail img",
       "article img",
-      ".wp-post-image",
-      'meta[property="og:image"]',
     ],
     category: "Amazônia",
   },
@@ -199,20 +167,13 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
       'a[href*="/amazonas/"]',
       'a[href*="/manaus/"]',
       'a[href*="/noticias/"]',
-      "article a",
-      "h2 a",
-      "h3 a",
+      'a[href*="/cidades/"]', // Foco em cidades
+      'a[href*="/policia/"]', // Foco em polícia
     ],
-    titleSelectors: [
-      "h1.entry-title",
-      "h1.post-title",
-      "h1",
-      ".article-title",
-    ],
+    titleSelectors: ["h1.entry-title", "h1.post-title", "h1"],
     contentSelectors: [
       ".entry-content",
       ".post-content",
-      "article .content",
       'div[itemprop="articleBody"]',
     ],
     imageSelectors: [
@@ -228,7 +189,6 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
 FILTROS ANTI-PROMO/INSTITUCIONAL
 ========================= */
 
-// (Funções de filtro... mantidas exatamente como no original)
 const URL_BLACKLIST = [
   "/sobre",
   "/institucional",
@@ -243,8 +203,8 @@ const URL_BLACKLIST = [
   "/contato",
   "/equipe",
   "/comercial",
-  "/videos/",
-  "/podcast/",
+  "/videos/", // Remove seções de vídeo
+  "/podcast/", // Remove seções de podcast
   "/ao-vivo/",
   "/classificados/",
   "/redacao",
@@ -253,6 +213,9 @@ const URL_BLACKLIST = [
   "/menu",
   "/globonews",
   "/programacao",
+  "/pme/", // Blacklist específico do G1
+  "/globo-reporter/", // Blacklist específico do G1
+  "/agronegocios/", // Blacklist específico do G1
 ];
 
 const TITLE_BLACKLIST = [
@@ -264,6 +227,8 @@ const TITLE_BLACKLIST = [
   "conheça a história do globo repórter",
   "programação",
   "assista",
+  "pequenas empresas",
+  "agronegócios",
 ];
 
 function isBlacklistedUrl(u: string): boolean {
@@ -276,7 +241,6 @@ function isBlacklistedTitle(t: string): boolean {
   return x.length < 8 || TITLE_BLACKLIST.some((b) => x.includes(b));
 }
 
-// ✅ ÚNICA DEFINIÇÃO de looksPromotional no arquivo
 function looksPromotional(text: string): boolean {
   const x = (text || "").toLowerCase();
   return /publieditorial|publicidade|assessoria de imprensa|assine|clique aqui|programação|assista ao|patrocinado|publipost|oferecimento|oferecido por|parceria/i.test(
@@ -284,26 +248,28 @@ function looksPromotional(text: string): boolean {
   );
 }
 
-// ✅ FUNÇÃO para detectar heurística de notícia
+// Regex para identificar URLs que são *provavelmente* artigos de notícia
+const ARTICLE_REGEX_PATTERNS = [
+  /\/noticia(s)?\//i,
+  /\/artigo(s)?\//i,
+  /\/post(s)?\//i,
+  /\/policia\//i,
+  /\/cidades\//i,
+  /\/manaus\//i,
+  /\/amazonas\//i,
+  /\/politica\//i,
+  /\/economia\//i,
+  /\/esportes\//i,
+  /\/\d{4}\/\d{2}\/\d{2}\//i, // Padrão /AAAA/MM/DD/
+];
+const ARTICLE_REGEX = new RegExp(ARTICLE_REGEX_PATTERNS.map(r => r.source).join('|'));
+
+
+// ✅ FUNÇÃO para detectar heurística de notícia (usada APENAS para filtrar links da lista)
 function looksNewsish(url: string): boolean {
-  const lower = url.toLowerCase();
-  const newsPatterns = [
-    /\/amazonas\//i,
-    /\/manaus\//i,
-    /\/noticia(s)?\//i,
-    /\/politica\//i,
-    /\/policia\//i,
-    /\/cidades\//i,
-    /\/economia\//i,
-    /\/esportes\//i,
-    /\/entretenimento\//i,
-    /\/saude\//i,
-    /\/cultura\//i,
-    /\d{4}-\d{2}-\d{2}/,
-    /\d{1,2}[.\/]\d{1,2}/,
-  ];
-  return newsPatterns.some((rx) => rx.test(lower)) && !isBlacklistedUrl(lower);
+  return ARTICLE_REGEX.test(url.toLowerCase()) && !isBlacklistedUrl(url);
 }
+
 
 /* =========================
 NORMALIZAÇÃO / HIGIENE DE TEXTO
@@ -426,7 +392,7 @@ function sanitizeHtml(html: string): string {
 }
 
 /* =========================
-NOVO HELPER DE EXTRAÇÃO
+HELPER DE EXTRAÇÃO (REGEX)
 ========================= */
 
 /**
@@ -449,9 +415,10 @@ function extractBySelectors(
       // 1. Seletor de Meta Tag: meta[property="og:image"]
       if (selector.startsWith("meta[")) {
         const metaMatch = selector.match(/\[property="([^"]+)"\]/);
-        if (metaMatch?.[1] && getAttribute === "content") {
-          regex = new RegExp(
-            `<meta[^>]*property="${metaMatch[1]}"[^>]*content="([^"]+)"`,
+        if (metaMatch?.[1]) {
+           const attrToGet = getAttribute || "content"; // Default 'content' for meta
+           regex = new RegExp(
+            `<meta[^>]*property="${metaMatch[1]}"[^>]*${attrToGet}="([^"]+)"`,
             "i"
           );
           match = regex.exec(html);
@@ -461,81 +428,64 @@ function extractBySelectors(
       }
 
       // 2. Seletor de Imagem (com classe no container ou na própria tag)
+      // Esta lógica agora é mais um fallback, 'meta[property="og:image"]' é prioridade
       if (selector.includes("img") && getAttribute === "src") {
-        // Caso A: Classe na própria tag <img (ex: "img.wp-post-image")
-        if (selector.startsWith("img.")) {
-          const className = selector.split(".")[1];
-          regex = new RegExp(
-            `<img[^>]*class="[^"]*${className}[^"]*"[^>]* (?:src|data-src)="([^"]+)"`,
-            "i"
-          );
-          match = regex.exec(html);
-          if (match?.[1]) return match[1];
-        }
-        // Caso B: Classe no container (ex: ".content-media__image img")
-        else if (selector.startsWith(".") && selector.endsWith(" img")) {
+         let searchHtml = html;
+         let containerRegex: RegExp;
+         
+        // Caso A: Classe no container (ex: ".content-media__image img")
+        if (selector.startsWith(".") && selector.endsWith(" img")) {
           const className = selector.split(" ")[0].replace(".", "");
-          // Regex para encontrar o container
-          const containerRegex = new RegExp(
+          containerRegex = new RegExp(
             `<[^>]+class="[^"]*${className}[^"]*"[^>]*>([\\s\\S]*?)<\\/(?:div|figure|picture)>`,
             "i"
           );
           const containerMatch = containerRegex.exec(html);
-          const searchHtml = containerMatch?.[1] || html; // Busca dentro do container ou no HTML todo (fallback)
+          if (containerMatch?.[1]) searchHtml = containerMatch[1]; // Busca dentro do container
+        }
+        // Caso B: Seletor genérico de tag (ex: "figure img")
+        else if (!selector.startsWith(".") && selector.endsWith(" img")) {
+           const tagName = selector.split(" ")[0];
+           containerRegex = new RegExp(
+            `<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i"
+           );
+           const containerMatch = containerRegex.exec(html);
+           if (containerMatch?.[1]) searchHtml = containerMatch[1]; // Busca dentro do container
+        }
 
-          // Regex para encontrar a primeira imagem dentro do container
-          regex = /(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i;
-          match = regex.exec(searchHtml);
-          if (match?.[1]) return match[1];
-        }
-        // Caso C: Seletor genérico de imagem (ex: "figure img")
-        else if (selector.endsWith(" img")) {
-          const tagName = selector.split(" ")[0];
-          const containerRegex = new RegExp(
-            `<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`,
-            "i"
-          );
-          const containerMatch = containerRegex.exec(html);
-          const searchHtml = containerMatch?.[1] || html;
-          
-          regex = /(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i;
-          match = regex.exec(searchHtml);
-          if (match?.[1]) return match[1];
-        }
+        // Regex para encontrar a primeira imagem (src ou data-src)
+        regex = /(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i;
+        match = regex.exec(searchHtml);
+        if (match?.[1]) return match[1];
         continue;
       }
 
       // 3. Seletor de Tag com Classe (ex: "h1.content-head__title") ou só Classe (ex: ".entry-content")
-      let tag = "div|article|section|h1|h2|h3|p|main"; // Tags comuns
-      let className = "";
+      if (!getAttribute) {
+        let tag = "div|article|section|h1|h2|h3|p|main"; // Tags comuns
+        let className = "";
 
-      if (selector.startsWith(".")) {
-        className = selector.replace(".", "").split(" ")[0]; // Pega só a classe (ex: .entry-content)
-      } else if (selector.includes(".")) {
-        [tag, className] = selector.split(".", 2);
-        className = className.split(" ")[0]; // Pega só a classe (ex: h1.title)
-      } else {
-        tag = selector.split(" ")[0]; // ex: "h1"
+        if (selector.startsWith(".")) {
+          className = selector.replace(".", "").split(" ")[0];
+        } else if (selector.includes(".")) {
+          [tag, className] = selector.split(".", 2);
+          className = className.split(" ")[0];
+        } else {
+          tag = selector.split(" ")[0];
+        }
+
+        // Regex para innerHTML
+        if (className) {
+          regex = new RegExp(
+            `<(${tag})[^>]*class="[^"]*${className}[^"]*"[^>]*>([\\s\\S]*?)<\\/\\1>`,
+            "i"
+          );
+        } else {
+          regex = new RegExp(`<(${tag})[^>]*>([\\s\\S]*?)<\\/\\1>`, "i");
+        }
+        match = regex.exec(html);
+        if (match?.[2]) return match[2].trim(); // Retorna o innerHTML (grupo 2)
       }
-
-      if (getAttribute) {
-        // Não suporta extrair atributo deste tipo de seletor (ainda)
-        continue;
-      }
-
-      // Regex para innerHTML
-      if (className) {
-        regex = new RegExp(
-          `<(${tag})[^>]*class="[^"]*${className}[^"]*"[^>]*>([\\s\\S]*?)<\\/\\1>`,
-          "i"
-        );
-      } else {
-        regex = new RegExp(`<(${tag})[^>]*>([\\s\\S]*?)<\\/\\1>`, "i");
-      }
-
-      match = regex.exec(html);
-      // Retorna o innerHTML (grupo 2)
-      if (match?.[2]) return match[2].trim();
     } catch (e) {
       console.log(`[REGEX_ERROR] Seletor: ${selector}, Erro: ${e.message}`);
     }
@@ -544,10 +494,13 @@ function extractBySelectors(
 }
 
 /* =========================
-EXTRAÇÃO DE LINKS / CONTEÚDO
+EXTRAÇÃO DE LINKS (CORRIGIDA)
 ========================= */
 
-// (Funções extractNewsLinks, deduplicateLinks, buildPaginationUrls... mantidas como no original)
+/**
+ * Extrai links da página de lista usando os seletores do PORTAIS_CONFIG.
+ * Esta é a correção principal para evitar links de "Globo Repórter", etc.
+ */
 function extractNewsLinks(
   htmlContent: string,
   portalConfig: PortalConfig,
@@ -558,26 +511,54 @@ function extractNewsLinks(
     return [];
   }
 
-  // Parser simples (node-based mock)
-  const linkPattern = /href=["']([^"']+)["']/gi;
-  const allHrefs: string[] = [];
+  const allLinks: string[] = [];
+  const hrefRegex = /href=["']([^"']+)["']/gi;
   let match;
 
-  while ((match = linkPattern.exec(htmlContent)) !== null) {
-    allHrefs.push(match[1]);
+  // 1. Regex genérica para encontrar *todos* os <a>...</a> blocos
+  const linkBlockRegex = /<a[^>]*>([\s\S]*?)<\/a>/gi;
+
+  while ((match = linkBlockRegex.exec(htmlContent)) !== null) {
+    const linkTag = match[0]; // O <a>...</a> completo
+
+    // 2. Verifica se o bloco <a> corresponde a algum seletor de link
+    const matchesSelector = portalConfig.linkSelectors.some(selector => {
+      if (selector.startsWith(".")) {
+        // Seletor de classe: .feed-post-link
+        const className = selector.replace(".", "");
+        return new RegExp(`class="[^"]*${className}[^"]*"`).test(linkTag);
+      }
+      if (selector.startsWith("a[href*=")) {
+         // Seletor de atributo: a[href*="/noticia/"]
+         const hrefPart = selector.match(/\[href\*="([^"]+)"\]/)?.[1];
+         return hrefPart ? linkTag.includes(hrefPart) : false;
+      }
+      return false;
+    });
+
+    // 3. Se correspondeu, extrai o href
+    if (matchesSelector) {
+        const hrefMatch = linkTag.match(hrefRegex);
+        if(hrefMatch?.[0]) {
+           const href = hrefMatch[0].replace(/href=["']|["']/g, "");
+           allLinks.push(href);
+        }
+    }
   }
 
-  console.log(
-    `[EXTRACT] Portal: ${portalConfig.name} | URLs extraídas: ${allHrefs.length}`
+   console.log(
+    `[EXTRACT] Portal: ${portalConfig.name} | Links brutos (pós-seletor): ${allLinks.length}`
   );
 
-  // Normalizar e filtrar URLs
+
+  // 4. Normalizar e filtrar URLs
   const newsLinks: string[] = [];
-  for (const href of allHrefs) {
+  for (const href of allLinks) {
     try {
       const fullUrl = new URL(href, sourceUrl).toString();
+      
+      // Filtro final: deve parecer uma notícia E não estar na blacklist
       if (
-        !isBlacklistedUrl(fullUrl) &&
         looksNewsish(fullUrl) &&
         !newsLinks.includes(fullUrl)
       ) {
@@ -587,7 +568,7 @@ function extractNewsLinks(
   }
 
   console.log(
-    `[EXTRACT_FILTERED] ${portalConfig.name}: ${newsLinks.length} links após filtro`
+    `[EXTRACT_FILTERED] ${portalConfig.name}: ${newsLinks.length} links após filtro final`
   );
   if (newsLinks.length > 0) {
     console.log(`[SAMPLE] Primeiros 3: ${newsLinks.slice(0, 3).join(" | ")}`);
@@ -595,6 +576,7 @@ function extractNewsLinks(
 
   return newsLinks;
 }
+
 
 function deduplicateLinks(links: string[]): string[] {
   return Array.from(new Set(links));
@@ -605,25 +587,26 @@ function buildPaginationUrls(
   portalName: string
 ): string[] {
   const urls = [baseUrl];
+  const maxPages = 4; // Limite de paginação
 
   if (portalName === "Portal do Holanda") {
-    for (let p = 2; p <= 4; p++) {
+    for (let p = 2; p <= maxPages; p++) {
       urls.push(
         `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}paged=${p}`
       );
     }
   } else if (portalName === "Portal Amazônia") {
-    for (let p = 2; p <= 4; p++) {
+    for (let p = 2; p <= maxPages; p++) {
       urls.push(baseUrl.replace(/\/$/, "") + `/page/${p}/`);
     }
   } else if (portalName === "A Crítica") {
-    for (let p = 2; p <= 4; p++) {
+    for (let p = 2; p <= maxPages; p++) {
       urls.push(
         `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}pag=${p}`
       );
     }
   } else if (portalName === "D24AM") {
-    for (let p = 2; p <= 4; p++) {
+    for (let p = 2; p <= maxPages; p++) {
       urls.push(baseUrl.replace(/\/$/, "") + `?page=${p}`);
     }
   }
@@ -635,13 +618,11 @@ function buildPaginationUrls(
 HELPERS DE REPARO/FORMATAÇÃO
 ========================= */
 
-// (Funções normalizeAsciiQuotes, ensureParagraphsHTML, repairGroqJsonString, makeSlug... mantidas como no original)
-// Normaliza aspas “inteligentes” para aspas ASCII
+// (Funções ... mantidas como no original)
 function normalizeAsciiQuotes(s: string): string {
   return s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 }
 
-// Garante que o texto tenha parágrafos em HTML (<p>...</p>). Se já houver tags <p>, retorna o texto intacto.
 function ensureParagraphsHTML(text: string): string {
   const hasHtmlP = /<p[\s>]/i.test(text) || /<\/p>/i.test(text);
   if (hasHtmlP) return text;
@@ -651,37 +632,25 @@ function ensureParagraphsHTML(text: string): string {
   return parts.map(p => `<p>${p}</p>`).join("");
 }
 
-/**
- * Repara respostas quase JSON retornadas pela LLM:
- * - Extrai apenas o primeiro objeto {...} do texto.
- * - Normaliza aspas “ ” para ".
- * - Se o valor de "conteudo" não estiver entre aspas, envolve em aspas e escapa.
- * - Converte campos com aspas simples para aspas duplas (caso raro).
- */
 function repairGroqJsonString(raw: string): string {
   if (!raw) return raw;
   let s = normalizeAsciiQuotes(raw).trim();
-  // recorta o primeiro {...}
   const m = s.match(/\{[\s\S]*\}/);
   if (m) s = m[0];
   try { JSON.parse(s); return s; } catch {}
-  // Força aspas ao redor do valor de "conteudo" se não houver
   const rxUnquotedConteudo = /("conteudo"\s*:\s*)(?!")(.*)\s*}\s*$/s;
   if (rxUnquotedConteudo.test(s)) {
     s = s.replace(rxUnquotedConteudo, (_full: string, prefix: string, val: string) => {
-      // Limpa espaços/linhas, escapa barras e aspas
       const cleaned = val.trim().replace(/\\|"/g, (m: string) => (m === '\\' ? '\\\\' : '\\"')).replace(/\n/g, "\\n");
       return `${prefix}\"${cleaned}\"}`;
     });
     try { JSON.parse(s); return s; } catch {}
   }
-  // Troca aspas simples em chaves por aspas duplas (caso raro)
   const maybeJson5 = s.replace(/(['"])(titulo|conteudo)\1\s*:/g, '"$2":');
   try { JSON.parse(maybeJson5); return maybeJson5; } catch {}
   return s;
 }
 
-// Gera um slug a partir do título (remove acentos, espaços e caracteres inválidos)
 function makeSlug(title: string): string {
   const base = title.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -690,12 +659,10 @@ function makeSlug(title: string): string {
     .slice(0, 80);
   return `${base}-${Date.now().toString(36)}`;
 }
-
 /* =========================
-REESCRITA VIA GROQ
+REESCRITA VIA GROQ (PROMPT AJUSTADO)
 ========================= */
 
-// (Função rewriteWithGroq... mantida exatamente como no original)
 async function rewriteWithGroq(
   title: string,
   content: string,
@@ -709,7 +676,6 @@ async function rewriteWithGroq(
 
   const temperature = retryCount === 0 ? 0.5 : retryCount === 1 ? 0.7 : 0.9;
 
-  // ✅ Sanitizar entrada
   const cleanTitle = (title || "")
     .replace(/\\/g, "\\\\")
     .replace(/"/g, '\\"')
@@ -724,16 +690,15 @@ async function rewriteWithGroq(
     .replace(/\n/g, "\\n")
     .replace(/\r/g, "\\r")
     .trim()
-    .slice(0, 5000);
+    .slice(0, 5000); // Manter 5k de contexto
 
+  // ✅ PROMPT AJUSTADO PARA FOCO EM NOTÍCIAS
   const prompt = `Reescreva o seguinte título e conteúdo em português, garantindo:
-1. Texto original (sem cópia acima de 80%)
-2. Nenhuma sequência de 12+ palavras idênticas
-3. Formatação em parágrafos (pode usar <p>...</p>)
-4. Entre 2000 e 5000 caracteres
-5. Tom jornalístico profissional 
-6. Atue como o "Se Liga Manaus": um jornal com identidade única, focado em máximo impacto, que explora tragédias e usa IMPACTOS inteligentes. 
-Mantenha um tom de alerta, incisivo e direto, focado 100% em Manaus. Use português padrão culto, sem gírias ou regionalismos, para chocar e informar o leitor.
+1. FOCO: O texto deve ser um fato noticioso, focado em Manaus. Priorize eventos de segurança pública, polícia, fatalidades, e impactos diretos na cidade, não apenas desenvolvimento ou artigos institucionais.
+2. ORIGINALIDADE: Texto original (sem cópia acima de 80%) e nenhuma sequência de 12+ palavras idênticas.
+3. FORMATO: Em parágrafos HTML (use <p>...</p>).
+4. TAMANHO: O conteúdo reescrito deve ter entre 2000 e 4000 caracteres.
+5. TOM: Atue como o "Se Liga Manaus": um jornal com identidade única, focado em máximo impacto. Mantenha um tom de alerta, incisivo e direto. Use português padrão culto.
 
 TÍTULO: ${cleanTitle}
 
@@ -745,7 +710,6 @@ Responda APENAS em JSON:
   try {
     console.log(`[GROQ_DEBUG] Retry: ${retryCount} | Temp: ${temperature}`);
 
-    // ✅ EXATAMENTE COMO FUNCIONOU NO CURL:
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -758,16 +722,16 @@ Responda APENAS em JSON:
           {
             role: "system",
             content:
-              'Responda ESTRITAMENTE com um único objeto JSON válido UTF-8, sem markdown, sem blocos de código, sem rótulos. ' +
+              'Responda ESTRITAMENTE com um único objeto JSON válido UTF-8, sem markdown. ' +
               'Formato exato: {"titulo":"...","conteudo":"..."}. ' +
-              'O "conteudo" deve ter entre 2000 e 5000 caracteres e estar em parágrafos (pode usar <p>...</p>). ' +
+              'O "conteudo" deve ter entre 2000 e 4000 caracteres e usar tags <p>. ' +
               'Não inclua nada além do objeto JSON.'
           },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
         temperature: Math.max(0.2, temperature ?? 0.5),
-        max_tokens: 3000,
+        max_tokens: 3000, // Permitir resposta longa
       }),
     });
 
@@ -776,22 +740,10 @@ Responda APENAS em JSON:
     if (!response.ok) {
       const errorText = await response.text();
       console.log(`[GROQ_ERROR] HTTP ${response.status} | ${errorText.slice(0, 200)}`);
-
-      // Detectar erro de autenticação
-      if (response.status === 401) {
-        console.log(`[GROQ_FATAL] 401 - API Key inválida!`);
-        return null;
-      }
-
-      // Detectar modelo não encontrado
-      if (response.status === 404) {
-        console.log(`[GROQ_FATAL] 404 - Modelo não encontrado!`);
-        return null;
-      }
-
-      // Retry para outros erros
+      if (response.status === 401) return null; // Key inválida
+      if (response.status === 404) return null; // Modelo não encontrado
+      
       if (retryCount < 2) {
-        console.log(`[GROQ_RETRY] Tentativa ${retryCount + 1}/3...`);
         await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
         return rewriteWithGroq(title, content, apiKey, retryCount + 1);
       }
@@ -804,7 +756,6 @@ Responda APENAS em JSON:
     if (!textContent) {
       console.log(`[GROQ_EMPTY] Resposta vazia, retry...`);
       if (retryCount < 2) {
-
         return rewriteWithGroq(title, content, apiKey, retryCount + 1);
       }
       return null;
@@ -812,7 +763,6 @@ Responda APENAS em JSON:
 
     console.log(`[GROQ_RAW] Resposta recebida: ${textContent.slice(0, 100)}...`);
 
-    // Parsear JSON de forma robusta: tenta JSON.parse; se falhar, tenta reparar
     let parsed: { titulo?: string; conteudo?: string } | null = null;
     try {
       parsed = JSON.parse(textContent);
@@ -831,16 +781,15 @@ Responda APENAS em JSON:
 
     const novoTitulo = (parsed?.titulo || "").trim();
     let novoConteudo = (parsed?.conteudo || "").trim();
-    // garante que o conteúdo tenha parágrafos HTML (<p>...</p>)
     novoConteudo = ensureParagraphsHTML(novoConteudo);
 
     console.log(
       `[REWRITE_OK] Título: ${novoTitulo.slice(0, 40)}... | Len: ${novoConteudo.length}`
     );
 
-    // ✅ VALIDAÇÃO ANTI-CÓPIA
+    // ✅ VALIDAÇÃO ANTI-CÓPIA E TAMANHO (AJUSTADO)
     if (
-      novoConteudo.length < 1800 ||
+      novoConteudo.length < 1900 || // Ajustado (era 1800)
       tooSimilar(content, novoConteudo) ||
       has12ConsecutiveMatches(content, novoConteudo)
     ) {
@@ -864,7 +813,7 @@ Responda APENAS em JSON:
 }
 
 /* =========================
-MAIN HANDLER
+MAIN HANDLER (LÓGICA CUSTOM URL CORRIGIDA)
 ========================= */
 
 Deno.serve(async (req: Request) => {
@@ -887,6 +836,8 @@ Deno.serve(async (req: Request) => {
       urlObj.hostname.includes(key)
     );
 
+    // Permitir scrape de URL customizada MESMO se não for portal de lista
+    // A config será usada para os seletores.
     if (!hostKey) {
       return new Response(
         JSON.stringify({ error: `Portal não suportado: ${urlObj.hostname}` }),
@@ -908,23 +859,24 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verificar se é URL de artigo
-    const articleRegex =
-      /noticia|artigo|post|article|story|news|conteudo|reportagem/i;
-    const isArticle = articleRegex.test(url);
+    // ✅ LÓGICA DE CUSTOM URL CORRIGIDA
+    // A URL é considerada "artigo" se BATER a regex de artigo (looksNewsish)
+    // E NÃO ESTIVER na blacklist (que é checado dentro de looksNewsish)
+    const isArticle = looksNewsish(url);
 
     let newsLinks: string[] = [];
 
     if (isArticle) {
-      // Processar artigo único
+      // Processar artigo único (Custom URL)
       newsLinks = [url];
-      console.log(`[MODE] Artigo único detectado: ${url}`);
+      console.log(`[MODE] Artigo único detectado (Custom URL): ${url}`);
     } else {
-      // Processar lista
+      // Processar lista (Botões do Admin)
+      console.log(`[MODE] Lista de portal detectada: ${url}`);
       let htmlContent = await fetchListHtml(url);
       console.log(`[FETCH] ${portalConfig.name}: ${htmlContent.length} bytes`);
 
-      // Fallback para A Crítica
+      // Fallback para A Crítica (mantido)
       if (
         portalConfig.name === "A Crítica" &&
         htmlContent.length < 15000
@@ -935,19 +887,18 @@ Deno.serve(async (req: Request) => {
           "https://www.acritica.com/noticias/",
           "https://www.acritica.com/politica/",
         ];
-
         for (const fallbackUrl of fallbackUrls) {
           try {
             htmlContent = await fetchListHtml(fallbackUrl);
-            console.log(`[FALLBACK] Tentado: ${fallbackUrl} (${htmlContent.length} bytes)`);
             if (htmlContent.length > 15000) break;
           } catch {}
         }
       }
 
+      // ✅ USA A NOVA FUNÇÃO DE EXTRAÇÃO DE LINKS
       newsLinks = extractNewsLinks(htmlContent, portalConfig, url);
 
-      // Paginação se <8 links
+      // Paginação (mantida)
       if (
         newsLinks.length < 8 &&
         !url.includes("pag=") &&
@@ -957,15 +908,11 @@ Deno.serve(async (req: Request) => {
           `[PAGINATION] ${portalConfig.name}: ${newsLinks.length} links, tentando páginas...`
         );
         const paginatedUrls = buildPaginationUrls(url, portalConfig.name);
-
         for (const pagUrl of paginatedUrls.slice(1)) {
           try {
             const pagHtml = await fetchListHtml(pagUrl);
             const pagLinks = extractNewsLinks(pagHtml, portalConfig, pagUrl);
             newsLinks.push(...pagLinks.filter((l) => !newsLinks.includes(l)));
-            console.log(
-              `[PAGINATION] Página ${pagUrl}: +${pagLinks.length} links, total: ${newsLinks.length}`
-            );
             if (newsLinks.length >= 8) break;
           } catch (err) {
             console.log(`[PAGINATION_ERROR] ${pagUrl}: ${err}`);
@@ -974,16 +921,15 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // ✅ Deduplicate (reatribuição, não redeclaração)
     newsLinks = deduplicateLinks(newsLinks);
-    console.log(`[DEDUPE] Links únicos: ${newsLinks.length}`);
+    console.log(`[DEDUPE] Links únicos para processar: ${newsLinks.length}`);
 
     if (newsLinks.length === 0) {
       return new Response(
         JSON.stringify({
           success: true,
           processed: 0,
-          message: `Nenhum link extraído para ${portalConfig.name}`,
+          message: `Nenhum link de notícia válido encontrado para ${portalConfig.name}`,
         }),
         { headers: corsHeaders }
       );
@@ -1003,20 +949,19 @@ Deno.serve(async (req: Request) => {
         const cleanHtml = sanitizeHtml(htmlContent);
 
         // ======================================================
-        // INÍCIO DA LÓGICA DE EXTRAÇÃO CORRIGIDA
+        // LÓGICA DE EXTRAÇÃO (USANDO SELETORES)
         // ======================================================
 
-        // 1. Extrair título usando seletores
+        // 1. Extrair título
         const titleHtml = extractBySelectors(
           cleanHtml,
           portalConfig.titleSelectors,
           null
         );
         let originalTitle = (titleHtml || "Sem título")
-          .replace(/<[^>]+>/g, "") // Limpa HTML interno (ex: <span>)
+          .replace(/<[^>]+>/g, "")
           .trim();
 
-        // Fallback se seletores falharem
         if (originalTitle === "Sem título") {
           const titleMatch = cleanHtml.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
           originalTitle = (titleMatch?.[1] || "Sem título")
@@ -1029,14 +974,13 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // 2. Extrair conteúdo usando seletores
+        // 2. Extrair conteúdo
         let originalContentHtml = extractBySelectors(
           cleanHtml,
           portalConfig.contentSelectors,
           null
         );
 
-        // Fallback se seletores falharem
         if (!originalContentHtml || originalContentHtml.length < 500) {
           const contentMatch = cleanHtml.match(
             /<article[^>]*>([\s\S]*?)<\/article>/is
@@ -1044,7 +988,6 @@ Deno.serve(async (req: Request) => {
           originalContentHtml = contentMatch?.[1] || cleanHtml;
         }
 
-        // Limpar o HTML para obter texto plano
         let originalContent = (originalContentHtml || "")
           .replace(/<[^>]+>/g, " ")
           .replace(/&[a-z]+;/gi, " ")
@@ -1058,12 +1001,12 @@ Deno.serve(async (req: Request) => {
           continue;
         }
         
-        // 3. Extrair imagem usando seletores
+        // 3. Extrair imagem (Priorizando OG:IMAGE)
         let imagemUrl =
-          extractBySelectors(cleanHtml, portalConfig.imageSelectors, "src") ||
-          extractBySelectors(cleanHtml, portalConfig.imageSelectors, "content"); // para meta tags
+          extractBySelectors(cleanHtml, ['meta[property="og:image"]'], "content") || // Prioridade 1
+          extractBySelectors(cleanHtml, portalConfig.imageSelectors, "src") ||  // Prioridade 2
+          extractBySelectors(cleanHtml, portalConfig.imageSelectors, "content"); // Fallback meta
 
-        // Fallback se seletores falharem
         if (!imagemUrl) {
           const imgMatch = cleanHtml.match(
             /(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i
@@ -1072,10 +1015,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // ======================================================
-        // FIM DA LÓGICA DE EXTRAÇÃO CORRIGIDA
-        // ======================================================
 
-        // Higienizar
         originalContent = stripSourceArtifacts(originalContent);
         if (
           looksPromotional(originalContent) ||
@@ -1085,7 +1025,6 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // Reescrever
         console.log(`[REWRITE_START] Título: ${originalTitle.slice(0, 50)}...`);
         const rewritten = await rewriteWithGroq(
           originalTitle,
@@ -1098,16 +1037,13 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // Gerar slug e caminho canônico para URL customizada
         const slug = makeSlug(rewritten.titulo);
         const canonicalPath = `/artigo/${slug}`;
 
-        // Montar registro com status "pendente" e slug
         const newRecord: NoticiaScrapedData = {
           titulo_original: originalTitle.slice(0, 255),
           titulo_reescrito: rewritten.titulo.slice(0, 255),
           resumo_original: originalContent.slice(0, 500),
-          // resumo em texto plano (remove tags HTML) para evitar cortar tags
           resumo_reescrito: rewritten.conteudo
             .replace(/<[^>]+>/g, " ")
             .replace(/\s+/g, " ")
@@ -1148,7 +1084,7 @@ Deno.serve(async (req: Request) => {
           { status: 500, headers: corsHeaders }
         );
       }
-
+      
       console.log(`[INSERT_SUCCESS] ${processedNews.length} registros salvos`);
     }
 
