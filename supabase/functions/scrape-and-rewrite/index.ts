@@ -572,107 +572,128 @@ function extractContentWithRegex(
 /* =========================
    Reescrita com Groq
    ========================= */
-async function rewriteWithGroq(titulo: string, conteudo: string, fonte: string): Promise<GroqResponse> {
+async function rewriteWithGroq(
+  titulo: string,
+  conteudo: string,
+  fonte: string
+): Promise<GroqResponse> {
   const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
   if (!GROQ_API_KEY) {
-    console.error("GROQ_API_KEY não está definida");
-    return { titulo, conteudo };
+    console.error("GROQ_API_KEY ausente no ambiente da Edge Function");
+    // não devolva o original aqui: devolva sentinela para que o caller pule
+    return { titulo: "", conteudo: "" };
   }
 
-  // Entrada já higienizada
+  // entrada higienizada
   const base = stripSourceArtifacts(conteudo);
-  const MIN_CHARS = 2000;
-  const MAX_CHARS = 4000;
+  const MIN = 2000;
+  const MAX = 4000;
 
   const system = [
     "Você é editor sênior do portal SeligaManaux.",
-    "Reescreva a matéria em PT-BR jornalístico, SEM copiar frases do original.",
+    "Reescreva em PT-BR jornalístico, SEM copiar frases do original.",
     "Proibido reproduzir 12+ palavras consecutivas do texto base.",
-    "Mantenha fatos e dados, mas mude ordem, estruturas e vocabulário.",
-    "Produza entre 2000 e 4000 caracteres.",
-    "Formatação: título forte + parágrafos curtos (2-3 frases). Nada de bullets.",
-    "Não inclua créditos de foto, chamadas de programação, 'leia mais', nem nomes de rede de TV.",
+    "Mantenha fatos e dados, mude ordem/estrutura/vocabulário.",
+    "Produza entre 2000 e 4000 caracteres em parágrafos (2–3 frases cada).",
+    "Não incluir créditos de foto, programação de TV, 'leia mais', nem marcas de TV.",
   ].join(" ");
 
-  function userPrompt(nivel: "normal" | "refaco") {
-    const reforco =
-      nivel === "refaco"
-        ? "Reescreva DE OUTRO JEITO, mude completamente a estrutura. Use sinônimos, variações sintáticas e altere a ordem das informações. Garanta novidade textual clara."
-        : "Reescreva com tom local (Manaus/AM) quando fizer sentido, abrindo com um lide que resuma o essencial em 2-3 frases.";
-
+  function userPrompt(refaco = false) {
+    const reforco = refaco
+      ? "REFAÇA de outro jeito, altere ordem das informações, varie sintaxe e escolha lexical; garanta novidade textual."
+      : "Abra com um lide forte (2–3 frases) e contextualize Manaus/AM quando fizer sentido.";
     return `FONTE: ${fonte}
 TÍTULO ORIGINAL: ${titulo}
 
-TEXTO BASE (higienizado):
-${base.slice(0, 7000)}
+TEXTO BASE (limpo):
+${base.slice(0, 8000)}
 
 TAREFA:
 ${reforco}
 
-Entregue APENAS um JSON válido:
+Responda APENAS um JSON válido:
 {
-  "titulo": "título novo, chamativo e diferente do original",
-  "conteudo": "artigo final entre ${MIN_CHARS} e ${MAX_CHARS} caracteres, em parágrafos. Sem créditos de foto ou chamadas de programação."
+  "titulo": "título novo, diferente do original",
+  "conteudo": "artigo final entre ${MIN} e ${MAX} caracteres, em parágrafos curtos; sem créditos de foto/TV."
 }
 
-Se o texto base for anúncio/publieditorial, responda exatamente:
+Se perceber anúncio/publieditorial, responda exatamente:
 {"titulo":"CONTEÚDO IGNORADO","conteudo":"publieditorial"}`;
   }
 
-  async function callGroq(model: string, nivel: "normal" | "refaco", temperature = 0.25) {
+  async function callGroq(model: string, refaco = false, temperature = 0.3) {
     const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: userPrompt(nivel) }
-        ],
         temperature,
         max_tokens: 1800,
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userPrompt(refaco) }
+        ]
       })
     });
-    if (!resp.ok) throw new Error(`Groq API ${resp.status}`);
+    if (!resp.ok) throw new Error(`Groq ${resp.status}`);
     const data = await resp.json();
     let content = data?.choices?.[0]?.message?.content || "";
-    if (!content.trim().startsWith("{")) content = content.match(/{[\s\S]*}/)?.[0] || "{}";
+    if (!content.trim().startsWith("{")) {
+      content = content.match(/{[\s\S]*}/)?.[0] || "{}";
+    }
     return JSON.parse(content) as GroqResponse;
   }
 
+  // util p/ medir similaridade (interseção de vocabulário)
+  const sim = (a: string, b: string) => {
+    const norm = (t: string) => (t||"").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu," ").replace(/\s+/g," ").trim();
+    const A = new Set(norm(a).split(" ")); const B = new Set(norm(b).split(" "));
+    let inter = 0; for (const w of A) if (B.has(w)) inter++;
+    const min = Math.max(1, Math.min(A.size, B.size));
+    return inter / min; // 0..1
+  };
+
   try {
-    // 1ª tentativa (modelo maior)
-    let out = await callGroq("llama-3.1-70b-versatile", "normal", 0.25);
+    // 1ª tentativa
+    let out = await callGroq("llama-3.1-70b-versatile", false, 0.28);
     if (out?.conteudo === "publieditorial") return out;
 
-    const len1 = (out?.conteudo || "").replace(/\s+/g, " ").length;
-    if (!out?.titulo || len1 < MIN_CHARS || tooSimilar(base, out.conteudo)) {
-      // 2ª tentativa: refazer com mais “novidade”
-      out = await callGroq("llama-3.1-70b-versatile", "refaco", 0.35);
+    let texto = stripSourceArtifacts(out?.conteudo || "");
+    let ratio = sim(base, texto);
+    let ok = out?.titulo && texto.length >= MIN && texto.length <= (MAX + 400) && ratio < 0.78;
+
+    // 2ª tentativa (refação) se ficou curto/parecido
+    if (!ok) {
+      out = await callGroq("llama-3.1-70b-versatile", true, 0.35);
+      texto = stripSourceArtifacts(out?.conteudo || "");
+      ratio = sim(base, texto);
+      ok = out?.titulo && texto.length >= MIN && texto.length <= (MAX + 400) && ratio < 0.78;
     }
 
-    // Fallback: 8b
-    let len2 = (out?.conteudo || "").replace(/\s+/g, " ").length;
-    if (!out?.titulo || len2 < MIN_CHARS || tooSimilar(base, out.conteudo)) {
-      out = await callGroq("llama-3.1-8b-instant", "refaco", 0.4);
-      len2 = (out?.conteudo || "").replace(/\s+/g, " ").length;
-      if (!out?.titulo || len2 < MIN_CHARS || tooSimilar(base, out.conteudo)) {
-        throw new Error("Reescrita insuficiente/parecida");
-      }
+    // 3ª tentativa (8b)
+    if (!ok) {
+      out = await callGroq("llama-3.1-8b-instant", true, 0.4);
+      texto = stripSourceArtifacts(out?.conteudo || "");
+      ratio = sim(base, texto);
+      ok = out?.titulo && texto.length >= MIN && texto.length <= (MAX + 400) && ratio < 0.78;
     }
 
-    // Limitar teto (evita resposta grande demais)
-    if (out.conteudo.length > MAX_CHARS + 300) {
-      const cut = out.conteudo.slice(0, MAX_CHARS);
-      out.conteudo = cut.slice(0, cut.lastIndexOf("\n\n") > 0 ? cut.lastIndexOf("\n\n") : cut.length);
+    if (!ok) {
+      console.warn("Reescrita inválida: len=", texto.length, " sim=", ratio);
+      return { titulo: "", conteudo: "" }; // devolve vazio para o caller pular
     }
-    // última limpeza
-    out.conteudo = stripSourceArtifacts(out.conteudo);
-    return out;
+
+    // corta teto com elegância em quebra de parágrafo
+    if (texto.length > MAX + 50) {
+      const cut = texto.slice(0, MAX);
+      texto = cut.slice(0, cut.lastIndexOf("\n\n") > 0 ? cut.lastIndexOf("\n\n") : cut.length);
+    }
+
+    return { titulo: out.titulo, conteudo: texto };
   } catch (e) {
     console.error("Erro Groq:", e);
-    return { titulo, conteudo: base }; // fallback
+    return { titulo: "", conteudo: "" }; // força o caller a pular
   }
 }
 
@@ -878,36 +899,45 @@ Deno.serve(async (req) => {
         }
 
         // Reescrita robusta + antissimilaridade
-        const rewritten = await rewriteWithGroq(titulo, conteudo, articleConfig.name);
-        if (rewritten?.conteudo === "publieditorial") {
-          console.log(`Publieditorial marcado pela IA: ${newsUrl}`);
+        const re = await rewriteWithGroq(titulo, conteudo, portalConfig.name);
+
+        // se IA marcou como publieditorial, descarte
+        if (re.conteudo === "publieditorial") {
+          console.log("IA marcou publieditorial:", newsUrl);
           continue;
         }
 
-        // Enforça tamanho (usa preferências do admin, se enviadas)
-        const finalTxt = (rewritten?.conteudo || "").trim();
-        const lenMin   = Math.max(1200, requireLength.min || 2000);
-        const lenMax   = Math.min(6000, requireLength.max || 4000);
-        if (finalTxt.length < lenMin) {
-          console.log(`Reescrita curta (${finalTxt.length} chars): ${newsUrl}`);
+        // se veio vazio/curto/sem título, PULE (não salve original!)
+        if (!re.titulo || !re.conteudo || re.conteudo.length < 1800) {
+          console.warn("Reescrita ausente/insuficiente; pulando:", newsUrl);
           continue;
         }
-        const resumoReescrito = finalTxt.slice(0, 300) + (finalTxt.length > 300 ? "..." : "");
 
-        // Salva no banco
+
+
+        const resumoReescrito = re.conteudo.slice(0, 300) + (re.conteudo.length > 300 ? "..." : "");
+
+        // SALVE **APENAS** a versão reescrita
         const noticiaData: NoticiaScrapedData = {
           titulo_original: titulo,
-          titulo_reescrito: rewritten?.titulo || titulo,
-          resumo_original: resumo || undefined,
+          titulo_reescrito: re.titulo,
+          resumo_original: resumo || null,
           resumo_reescrito: resumoReescrito,
-          conteudo_reescrito: finalTxt,
+          conteudo_reescrito: re.conteudo,
           url_original: newsUrl,
-          fonte: articleConfig.name,
+          fonte: portalConfig.name,
           status: "processado",
           data_coleta: new Date().toISOString(),
           imagem_url: imagem || null,
-          categoria: articleConfig.category
+          categoria: portalConfig.category
         };
+
+        console.log("DEBUG_REWRITE", {
+        url: newsUrl,
+        in_len: conteudo.length,
+        out_len: re?.conteudo?.length || 0,
+        has_title: !!re?.titulo
+      });
 
         const { error } = await supabaseAdmin.from("noticias_scraped").insert(noticiaData);
         if (error) {
