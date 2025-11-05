@@ -450,7 +450,7 @@ async function scrapeCustom() {
                 const { data, error } = await supabaseClient
                     .from('noticias_scraped')
                     .select('*')
-                    .eq('status', 'processado')
+                    .eq('status', 'pendente')
                     .order('created_at', { ascending: false })
                     .limit(20);
 

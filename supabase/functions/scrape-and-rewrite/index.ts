@@ -544,7 +544,7 @@ async function rewriteWithGroq(
 1. Texto original (sem cópia acima de 80%)
 2. Nenhuma sequência de 12+ palavras idênticas
 3. Formatação em parágrafos
-4. Entre 2000 e 4000 caracteres
+4. Entre 2000 e 5000 caracteres
 5. Tom jornalístico profissional 
 6. Atue como o "Se Liga Manaus": um jornal com identidade única, focado em máximo impacto, que explora tragédias e usa IMPACTOS inteligentes. 
 Mantenha um tom de alerta, incisivo e direto, focado 100% em Manaus. Use português padrão culto, sem gírias ou regionalismos, para chocar e informar o leitor.
@@ -567,16 +567,25 @@ Responda APENAS em JSON:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: temperature,
-        max_tokens: 8192,
-      }),
+  model: "llama-3.1-8b-instant",
+  messages: [
+    {
+      role: "system",
+      content:
+        'Você responde ESTRITAMENTE com um único objeto JSON válido UTF-8, sem markdown, sem blocos de código, sem rótulos. ' +
+        'O formato é exatamente {"titulo":"...","conteudo":"..."}. ' +
+        'O "conteudo" deve ter entre 2000 e 5000 caracteres, em parágrafos (pode usar <p>...</p>). ' +
+        'Não inclua nada além do objeto JSON.'
+    },
+    {
+      role: "user",
+      content: prompt,
+    },
+  ],
+  response_format: { type: "json_object" },
+  temperature: temperature,
+  max_tokens: 3000
+}),
     });
 
     "response_format": { "type": "json_object" },
@@ -622,17 +631,36 @@ Responda APENAS em JSON:
 
     console.log(`[GROQ_RAW] Resposta recebida: ${textContent.slice(0, 100)}...`);
 
-    // ✅ PARSEAR JSON
-    let parsed;
-    try {
-      parsed = JSON.parse(textContent);
-    } catch (e) {
-      console.log(`[GROQ_JSON_ERROR] Não é JSON válido: ${textContent.slice(0, 100)}`);
-      if (retryCount < 2) {
-        return rewriteWithGroq(title, content, apiKey, retryCount + 1);
-      }
-      return null;
+   // ✅ PARSEAR JSON com reparos de formato
+let parsed: any;
+try {
+  let textToParse = (textContent || "").trim();
+
+  // 1) Se houver um objeto JSON dentro do texto, recorta só o primeiro {...}
+  const brace = textToParse.match(/\{[\s\S]*\}/);
+  if (brace) textToParse = brace[0];
+
+  // 2) Se vier em formato markdown "**Título:** ... **Conteúdo:** ...", converte para JSON
+  if (!brace && /\*\*?\s*t[íi]tulo\s*:/i.test(textToParse) && /conte[úu]do\s*:?/i.test(textToParse)) {
+    const parts = textToParse.split(/conte[úu]do\s*:?/i);
+    const tituloPart = parts[0].replace(/^\s*\*+\s*t[íi]tulo\s*:\s*/i, "").trim();
+    const conteudoPart = (parts[1] || "").trim();
+    if (tituloPart && conteudoPart) {
+      textToParse = JSON.stringify({
+        titulo: tituloPart.replace(/^[“”"']|[“”"']$/g, ""),
+        conteudo: conteudoPart
+      });
     }
+  }
+
+  parsed = JSON.parse(textToParse);
+} catch (e) {
+  console.log(`[GROQ_JSON_ERROR] Não é JSON válido: ${textContent.slice(0, 100)}`);
+  if (retryCount < 2) {
+    return rewriteWithGroq(title, content, apiKey, retryCount + 1);
+  }
+  return null;
+}
 
     const novoTitulo = (parsed.titulo || "").trim();
     const novoConteudo = (parsed.conteudo || "").trim();
