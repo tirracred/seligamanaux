@@ -6,172 +6,91 @@
     <title>Admin - SeligaManaux</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --cor-primaria: #dc2626; /* Vermelho */
-            --cor-primaria-hover: #b91c1c;
-            --cor-secundaria: #059669; /* Verde */
-            --cor-secundaria-hover: #047857;
-            --cor-terciaria: #7c3aed; /* Roxo */
-            --cor-terciaria-hover: #6d28d9;
-            --cor-aviso: #f59e0b; /* Amarelo */
-            --cor-perigo: #ef4444;
-            --cor-fundo: #f9fafb; /* Fundo "branco" */
-            --cor-card: #ffffff;
-            --cor-borda: #e5e7eb;
-            --texto-principal: #1f2937;
-            --texto-secundario: #4b5563;
-            --texto-claro: #ffffff;
-            --font-principal: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-        
+        /* CSS ORIGINAL (TEMA ESCURO) */
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 30px; color: #dc2626; }
+        h2 { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #404040; }
+        h3 { font-size: 1.25rem; margin-bottom: 15px; color: #fff; }
         
-        body {
-            font-family: var(--font-principal);
-            background: var(--cor-fundo);
-            color: var(--texto-principal);
-            padding: 20px;
-            line-height: 1.6;
-        }
+        .auth-section { background: #262626; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .admin-section { background: #262626; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .scraped-section { background: #1f2937; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #059669; }
         
-        .container { max-width: 1400px; margin: 0 auto; }
-        
-        h1 { text-align: center; margin-bottom: 20px; color: var(--cor-primaria); }
-        h2 { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--cor-borda); }
-        h3 { font-size: 1.25rem; margin-bottom: 15px; color: var(--texto-principal); }
-        
-        input[type="text"], input[type="email"], input[type="password"],
-        input[type="url"], input[type="file"], input[type="datetime-local"],
-        input[type="number"], textarea, select {
+        input, textarea, button, select {
             width: 100%;
             padding: 12px;
-            margin: 5px 0 15px 0;
-            border: 1px solid var(--cor-borda);
-            background: #fff;
-            color: var(--texto-principal);
-            border-radius: 6px;
+            margin: 10px 0;
+            border: 1px solid #404040;
+            background: #333;
+            color: #fff;
+            border-radius: 4px;
             font-size: 1rem;
-            font-family: var(--font-principal);
         }
-        
+
         input:focus, textarea:focus, select:focus {
             outline: none;
-            border-color: var(--cor-terciaria);
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
         }
 
-        textarea { min-height: 150px; }
-
-        button {
-            padding: 12px 20px;
-            margin: 10px 5px 10px 0;
-            border: none;
-            background: var(--cor-primaria);
-            color: var(--texto-claro);
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1rem;
-            transition: background-color 0.2s ease;
-        }
-        button:hover { background: var(--cor-primaria-hover); }
-
-        .btn-primary { background: var(--cor-terciaria); }
-        .btn-primary:hover { background: var(--cor-terciaria-hover); }
-        .btn-secondary { background: var(--texto-secundario); }
-        .btn-secondary:hover { background: #374151; }
-        .btn-success { background: var(--cor-secundaria); }
-        .btn-success:hover { background: var(--cor-secundaria-hover); }
-        .btn-danger { background: var(--cor-perigo); }
+        button { background: #dc2626; cursor: pointer; font-weight: bold; }
+        button:hover { background: #b91c1c; }
+        
+        .btn-primary { background: #7c3aed; }
+        .btn-primary:hover { background: #6d28d9; }
+        .btn-secondary { background: #6b7280; }
+        .btn-secondary:hover { background: #4b5563; }
+        .btn-success { background: #059669; }
+        .btn-success:hover { background: #047857; }
+        .btn-danger { background: #ef4444; }
         .btn-danger:hover { background: #dc2626; }
-        .btn-warning { background: var(--cor-aviso); color: var(--texto-principal); }
+        .btn-warning { background: #f59e0b; color: #1f2937; }
         .btn-warning:hover { background: #d97706; }
-        
-        .auth-section {
-            background: var(--cor-card);
-            padding: 25px;
-            border-radius: 8px;
-            margin: 20px auto;
-            max-width: 500px;
-            border: 1px solid var(--cor-borda);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-        }
-        
-        .admin-section {
-            background: var(--cor-card);
-            padding: 25px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            border: 1px solid var(--cor-borda);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-        }
-        .scraped-section {
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-        }
+
+        .scrape-button { background: #059669; }
+        .scrape-button:hover { background: #047857; }
+        .publish-button { background: #7c3aed; }
+        .publish-button:hover { background: #6d28d9; }
+        .danger-button { background: #ef4444; }
+        .danger-button:hover { background: #dc2626; }
         
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: 600; }
-        small { color: var(--texto-secundario); margin-top: -10px; display: block; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        small { color: #9ca3af; margin-top: -5px; display: block; }
+
+        .noticias-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .noticia-card { background: #333; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626; display: flex; flex-direction: column; }
+        .scraped-card { background: #1f2937; border-left: 4px solid #059669; }
         
-        .noticias-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .noticia-card {
-            background: var(--cor-card);
-            border-radius: 8px;
-            border: 1px solid var(--cor-borda);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .noticia-card.scraped-card { background: #fefce8; border-color: #fde047; }
-        
-        .noticia-image {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            background-color: var(--cor-borda);
-        }
+        .noticia-image { width: 100%; height: 160px; object-fit: cover; border-radius: 4px; margin-bottom: 10px; background-color: #4b5563; }
         .noticia-image[src=""] { display: none; }
         
-        .noticia-card-content { padding: 15px; flex-grow: 1; }
-        .noticia-title { font-weight: bold; margin-bottom: 10px; color: var(--texto-principal); font-size: 1.1rem; }
-        .noticia-content { color: var(--texto-secundario); margin-bottom: 10px; font-size: 0.9rem; max-height: 100px; overflow: hidden; }
-        .noticia-meta { font-size: 0.8rem; color: #6b7280; margin-bottom: 10px; }
-        .noticia-actions { padding: 15px; border-top: 1px solid var(--cor-borda); display: flex; flex-wrap: wrap; gap: 10px; }
+        .noticia-card-content { padding-top: 10px; flex-grow: 1; }
+        .noticia-title { font-weight: bold; margin-bottom: 10px; color: #fff; font-size: 1.1rem; }
+        .noticia-content { color: #ccc; margin-bottom: 10px; max-height: 100px; overflow: hidden; font-size: 0.9rem; }
+        .noticia-meta { font-size: 12px; color: #888; margin-bottom: 10px; }
+        .noticia-actions { display: flex; gap: 10px; margin-top: auto; }
         .noticia-actions button { width: auto; padding: 8px 16px; margin: 0; font-size: 0.9rem; }
         
         .hidden { display: none; }
-        .loading { text-align: center; color: var(--texto-secundario); padding: 30px; font-size: 1.1rem; }
-        
-        .source-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .loading { text-align: center; color: #888; padding: 20px; }
+        .source-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .source-buttons button { margin: 0; }
         
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            display: inline-block;
-        }
-        .status-pendente { background: var(--cor-aviso); color: var(--texto-principal); }
-        .status-publicado { background: var(--cor-terciaria); color: var(--texto-claro); }
-
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .status-pendente { background: #f59e0b; color: #1f2937; }
+        .status-publicado { background: #7c3aed; color: white; }
+        
         .message { padding: 15px; border-radius: 6px; margin: 15px 0; font-weight: 600; }
-        .message.error { background: #fee2e2; color: #b91c1c; }
-        .message.warning { background: #fefce8; color: #a16207; }
-        .message.success { background: #f0fdf4; color: #15803d; }
+        .message.error { background: #991b1b; color: #fee2e2; }
+        .message.warning { background: #fde68a; color: #78350f; }
+        .message.success { background: #166534; color: #dcfce7; }
+        
+        .api-config { display: none !important; }
 
-        .api-config { display: none !important; } /* Oculta a configuração de API */
-
-        /* Estilos do Modal de Edição */
+        /* ESTILOS DO MODAL (NOVOS) */
         .modal {
             position: fixed;
             z-index: 2000;
@@ -180,26 +99,26 @@
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0,0,0,0.7);
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .modal-content {
-            background-color: var(--cor-fundo);
+            background-color: #262626;
+            border: 1px solid #404040;
             margin: auto;
             padding: 30px;
-            border: 1px solid var(--cor-borda);
             border-radius: 8px;
             width: 90%;
             max-width: 900px;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             position: relative;
         }
         .close-button {
-            color: var(--texto-secundario);
+            color: #888;
             position: absolute;
             top: 15px;
             right: 25px;
@@ -207,10 +126,10 @@
             font-weight: bold;
             cursor: pointer;
         }
-        .close-button:hover { color: var(--texto-principal); }
+        .close-button:hover { color: #fff; }
 
         .modal-actions {
-            border-top: 1px solid var(--cor-borda);
+            border-top: 1px solid #404040;
             padding-top: 20px;
             margin-top: 20px;
             display: flex;
@@ -230,8 +149,9 @@
             width: 100%;
             max-width: 400px;
             border-radius: 6px;
-            border: 1px solid var(--cor-borda);
+            border: 1px solid #404040;
             margin-top: 10px;
+            background-color: #333;
         }
         #editImagePreview:not([src]) { display: none; }
         
@@ -240,7 +160,6 @@
             .modal-content { padding: 20px; width: 95%; }
             .close-button { right: 15px; }
         }
-
     </style>
 </head>
 <body>
@@ -250,14 +169,8 @@
         <div class="auth-section">
             <div id="loginForm">
                 <h3>Login</h3>
-                <div class="form-group">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" placeholder="Email" value="tirra@tirracred.com.br">
-                </div>
-                <div class="form-group">
-                    <label for="password">Senha:</label>
-                    <input type="password" id="password" placeholder="Senha" required>
-                </div>
+                <input type="email" id="email" placeholder="Email" value="tirra@tirracred.com.br">
+                <input type="password" id="password" placeholder="Senha" required>
                 <button onclick="login()">Entrar</button>
                 <p id="loginStatus"></p>
             </div>
@@ -268,18 +181,18 @@
         </div>
 
         <div id="adminPanel" class="hidden">
-
-            <div class="admin-section scraped-section">
+            
+            <div class="scraped-section">
                 <h2>🤖 Buscar Notícias Automáticas</h2>
                 <p>Buscar, reescrever e salvar notícias dos principais portais de Manaus/Amazonas.</p>
                 
-                <div class="source-buttons">
-                    <button class="btn-success" onclick="scrapePortal('https://g1.globo.com/am/amazonas/', 'G1 Amazonas', { sourceKey:'g1' })">📰 G1 Amazonas</button>
-                    <button class="btn-success" onclick="scrapePortal('https://g1.globo.com/am/amazonas/cidade/manaus/', 'G1 Manaus', { sourceKey:'g1-manaus' })">🏙️ G1 Manaus</button>
-                    <button class="btn-success" onclick="scrapePortal('https://www.portaldoholanda.com.br/amazonas', 'Portal do Holanda', { sourceKey:'holanda' })">🌐 Portal do Holanda</button>
-                    <button class="btn-success" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia', { sourceKey:'amazonia' })">🌿 Portal Amazônia</button>
-                    <button class="btn-success" onclick="scrapePortal('https://d24am.com/', 'D24AM', { sourceKey:'d24am' })">🗞️ D24AM</button>
-                </div>
+             <div class="source-buttons">
+                <button class="scrape-button" onclick="scrapePortal('https://g1.globo.com/am/amazonas/', 'G1 Amazonas', { sourceKey:'g1' })">📰 G1 Amazonas</button>
+                <button class="scrape-button" onclick="scrapePortal('https://g1.globo.com/am/amazonas/cidade/manaus/', 'G1 Manaus', { sourceKey:'g1-manaus' })">🏙️ G1 Manaus</button>
+                <button class="scrape-button" onclick="scrapePortal('https://www.portaldoholanda.com.br/amazonas', 'Portal do Holanda', { sourceKey:'holanda' })">🌐 Portal do Holanda</button>
+                <button class="scrape-button" onclick="scrapePortal('https://portalamazonia.com/', 'Portal Amazônia', { sourceKey:'amazonia' })">🌿 Portal Amazônia</button>
+                <button class="scrape-button" onclick="scrapePortal('https://d24am.com/', 'D24AM', { sourceKey:'d24am' })">🗞️ D24AM</button>
+            </div>
 
                 <div id="scrapeControls" class="form-group" style="margin-top:10px">
                     <div class="grid-2">
@@ -291,7 +204,7 @@
                             <label for="limitePorPortal">Máximo de artigos por portal (por rodada):</label>
                             <input type="number" id="limitePorPortal" min="1" max="15" value="6">
                         </div>
-                        <div class="form-group">
+                         <div class="form-group">
                             <label for="paginateEnd">Paginar até a página:</label>
                             <input type="number" id="paginateEnd" min="1" max="6" value="4">
                         </div>
@@ -301,12 +214,18 @@
                         </div>
                     </div>
                     
-                    <label for="customUrl">Ou buscar por uma URL de listagem específica:</label>
+                    <label style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                    <input type="checkbox" id="ampPreferred" checked style="width: auto; margin: 0;">
+                    Preferir versão AMP quando disponível (G1, etc.)
+                    </label>
+
+                    <label for="customUrl" style="margin-top: 15px;">Ou buscar por uma URL de listagem específica:</label>
                     <input type="url" id="customUrl" placeholder="Cole aqui uma URL de listagem (ex.: https://www.portaldoholanda.com.br/amazonas?page=2)">
-                    <button class="btn-secondary" onclick="scrapeCustom()">🔎 Buscar pela URL informada</button>
-                    
-                    <div style="margin-top:20px">
-                        <button class="btn-primary" onclick="scrapeAll()" style="width: 100%; padding: 15px;">🚀 Buscar de todos os portais (auto)</button>
+                    <button class="btn-secondary" onclick="scrapeCustom()" style="margin: 0;">🔎 Buscar pela URL informada</button>
+
+
+                    <div class="source-buttons" style="margin-top:20px">
+                    <button class="btn-primary" onclick="scrapeAll()" style="padding: 15px;">🚀 Buscar de todos os portais (auto)</button>
                     </div>
                 </div>
 
@@ -325,7 +244,7 @@
             </div>
 
             <div class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <h2>📰 Notícias Publicadas (e Agendadas)</h2>
                     <div>
                         <button onclick="openEditModal(null)" class="btn-primary">✍️ Criar Nova Notícia</button>
@@ -400,7 +319,7 @@
             </div>
 
             <h3 style="margin-top: 10px;">Publicação</h3>
-            <div class="message warning">
+            <div class="message warning" style="background: #4b3200; color: #fef3c7; border: 1px solid #78350f;">
                 <strong>Atenção:</strong> Para o agendamento funcionar, sua tabela "noticias" precisa da coluna `publish_at` (do tipo `timestamp`) e seu site (index.html, etc) precisa filtrar por ela.
             </div>
             
@@ -424,13 +343,10 @@
         let supabaseClient = null;
         let currentSession = null;
         
-        // Nome da tabela de notícias publicadas (do main.js)
+        // Nomes das tabelas e bucket
         const DB_TABLE_PUBLISHED = 'noticias';
-        // Nome da tabela de notícias scraped (nova)
         const DB_TABLE_SCRAPED = 'noticias_scraped';
-        // Nome do bucket de storage (do main.js)
         const STORAGE_BUCKET = 'midia';
-
 
         // Portais padronizados
         const PORTAIS = [
@@ -444,18 +360,25 @@
 
 
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
         
         // -------------------------------------------------------------------
-        // INICIALIZAÇÃO E AUTENTICAÇÃO (Sem alterações)
+        // INICIALIZAÇÃO E AUTENTICAÇÃO (COM A CORREÇÃO)
         // -------------------------------------------------------------------
 
         function initSupabase() {
             const savedUrl = localStorage.getItem('supabase_url') || 'https://xtnqypmezntjcidglblc.supabase.co';
             const savedKey = localStorage.getItem('supabase_anon_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODEwMDksImV4cCI6MjA3NzU1NzAwOX0.fz__YKaMuEWjoXVansGZnLgUhsdsg7J1tLCriMhV8Ls';
 
-            if (savedKey) {
-                try {
-                    const { createClient } = supabase;
+            // O campo 'anonKey' do HTML não existe mais, então removemos a linha
+            // document.getElementById('anonKey').value = savedKey;
+                
+            try {
+                // *** A CORREÇÃO CRÍTICA ESTÁ AQUI ***
+                // Usamos 'window.supabase' para garantir que estamos acessando
+                // o objeto da biblioteca Supabase carregada pela tag <script>
+                if (window.supabase) {
+                    const { createClient } = window.supabase; 
                     supabaseClient = createClient(savedUrl, savedKey, {
                         auth: {
                             persistSession: true,
@@ -464,8 +387,9 @@
                         }
                     });
 
-                    console.log('Supabase inicializado');
+                    console.log('Supabase inicializado com sucesso.');
                     
+                    // Verifica se já está logado
                     supabaseClient.auth.onAuthStateChange((event, session) => {
                         console.log('Auth state changed:', event, session?.user?.email || 'No user');
                         
@@ -484,14 +408,14 @@
                             document.getElementById('adminPanel').classList.add('hidden');
                         }
                     });
-                    
-                } catch (error) {
-                    console.error('Erro na inicialização:', error);
-                    alert('Erro fatal ao inicializar o Supabase. Verifique o console.');
+                } else {
+                    console.error('Falha ao carregar a biblioteca Supabase (window.supabase não existe). Verifique a tag <script> da CDN.');
+                    alert('Erro fatal: A biblioteca Supabase não foi carregada.');
                 }
-            } else {
-                console.log('Erro: Anon key não encontrada.');
-                alert('Erro: Anon key não encontrada. Verifique a configuração.');
+                    
+            } catch (error) {
+                console.error('Erro na inicialização:', error);
+                alert('Erro fatal ao inicializar o Supabase. Verifique o console.');
             }
         }
 
@@ -504,8 +428,8 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const statusEl = document.getElementById('loginStatus');
-            statusEl.style.color = 'var(--texto-secundario)';
             statusEl.textContent = 'Autenticando...';
+            statusEl.style.color = '#888';
 
             try {
                 const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -517,11 +441,11 @@
 
                 currentSession = data.session;
                 statusEl.textContent = 'Login realizado com sucesso!';
-                statusEl.style.color = 'var(--cor-secundaria)';
+                statusEl.style.color = 'green';
 
             } catch (error) {
                 statusEl.textContent = 'Erro: ' + error.message;
-                statusEl.style.color = 'var(--cor-perigo)';
+                statusEl.style.color = 'red';
                 console.error('Erro de login:', error);
             }
         }
@@ -535,26 +459,27 @@
         }
         
         // -------------------------------------------------------------------
-        // LÓGICA DE SCRAPE (Sem alterações)
+        // LÓGICA DE SCRAPE
         // -------------------------------------------------------------------
 
-        async function scrapeAll() {
+       async function scrapeAll() {
             if (!supabaseClient || !currentSession) {
                 alert('Faça login primeiro!');
                 return;
             }
             const rounds = parseInt(document.getElementById('rodadas')?.value || '1', 10);
             const limit  = parseInt(document.getElementById('limitePorPortal')?.value || '6', 10);
-
+            
             const statusEl = document.getElementById('scrapeStatus');
             statusEl.classList.remove('hidden');
             statusEl.className = 'message success';
+            statusEl.style.color = '#dcfce7'; // Corrigindo cor do texto
 
             for (let r = 1; r <= rounds; r++) {
                 for (const p of PORTAIS) {
-                    statusEl.textContent = `Rodada ${r}/${rounds} — buscando ${p.name}...`;
-                    await scrapePortal(p.url, p.name, { sourceKey: p.key, limit });
-                    await sleep(1200);
+                statusEl.textContent = `Rodada ${r}/${rounds} — buscando ${p.name}...`;
+                await scrapePortal(p.url, p.name, { sourceKey: p.key, limit });
+                await sleep(1200);
                 }
             }
 
@@ -563,7 +488,7 @@
             await loadScrapedNoticias();
         }
 
-        async function scrapePortal(url, sourceName, opts = {}) {
+       async function scrapePortal(url, sourceName, opts = {}) {
             if (!supabaseClient || !currentSession) {
                 alert('Faça login primeiro!');
                 return;
@@ -575,28 +500,32 @@
             statusEl.textContent = `Buscando notícias do ${sourceName}... Aguarde.`;
 
             try {
-                const anonKey  = supabaseClient.auth.headers.apikey;
+                // Pega a anonKey do cliente Supabase já inicializado
+                const anonKey = supabaseClient.options.global.headers.apikey;
+
                 const limit    = opts.limit ?? parseInt(document.getElementById('limitePorPortal')?.value || '6', 10);
                 const endPage  = parseInt(document.getElementById('paginateEnd')?.value || '1', 10);
                 const minLen   = parseInt(document.getElementById('minLen')?.value || '2000', 10);
+                const ampPref  = document.getElementById('ampPreferred')?.checked ?? true;
 
                 const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/scrape-and-rewrite', {
-                    method: 'POST',
-                    mode: 'cors',
-                    credentials: 'omit',
-                    headers: {
-                        'Authorization': `Bearer ${currentSession.access_token}`,
-                        'Content-Type': 'application/json',
-                        'apikey': anonKey
-                    },
-                    body: JSON.stringify({
-                        url,
-                        sourceName,
-                        sourceKey: opts.sourceKey || null,
-                        limit,
-                        paginate: { start: 1, end: endPage },
-                        requireLength: { min: minLen },
-                    })
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'omit',
+                headers: {
+                    'Authorization': `Bearer ${currentSession.access_token}`,
+                    'Content-Type': 'application/json',
+                    'apikey': anonKey
+                },
+                body: JSON.stringify({
+                    url,
+                    sourceName,
+                    sourceKey: opts.sourceKey || null,
+                    limit,
+                    paginate: { start: 1, end: endPage },
+                    ampPreferred: ampPref,
+                    requireLength: { min: minLen },
+                })
                 });
 
                 const data = await response.json();
@@ -606,7 +535,6 @@
                     const found = data.stats?.total_encontradas ?? 'N/A';
                     statusEl.textContent = `✅ ${sourceName}: ${ok} notícias processadas.`;
                     statusEl.className = 'message success';
-                    setTimeout(() => loadScrapedNoticias(), 1000);
                 } else {
                     statusEl.textContent = `❌ ${sourceName}: ${data.error || data.message || 'Erro desconhecido'}`;
                     statusEl.className = 'message error';
@@ -630,9 +558,9 @@
             } catch {}
             await scrapePortal(u, name, { sourceKey: 'custom' });
         }
-
+        
         // -------------------------------------------------------------------
-        // CARREGAR NOTÍCIAS (HTML Alterado)
+        // CARREGAR NOTÍCIAS (HTML Alterado para o Modal)
         // -------------------------------------------------------------------
 
         async function loadScrapedNoticias() {
@@ -640,7 +568,7 @@
             container.innerHTML = '<div class="loading">Carregando notícias scraped...</div>';
 
             if (!supabaseClient) {
-                container.innerHTML = '<div class="message error">❌ Supabase não configurado.</div>';
+                container.innerHTML = '<div class="error-message">❌ Supabase não configurado.</div>';
                 return;
             }
 
@@ -684,7 +612,7 @@
 
             } catch (error) {
                 console.error('Erro ao carregar notícias scraped:', error);
-                container.innerHTML = `<div class="message error">❌ Erro ao carregar: ${error.message}</div>`;
+                container.innerHTML = `<div class="error-message">❌ Erro ao carregar: ${error.message}</div>`;
             }
         }
 
@@ -693,7 +621,7 @@
             container.innerHTML = '<div class="loading">Carregando notícias publicadas...</div>';
 
             if (!supabaseClient) {
-                container.innerHTML = '<div class="message error">❌ Supabase não configurado.</div>';
+                container.innerHTML = '<div class="error-message">❌ Supabase não configurado.</div>';
                 return;
             }
 
@@ -749,12 +677,12 @@
 
             } catch (error) {
                 console.error('Erro ao carregar notícias publicadas:', error);
-                container.innerHTML = `<div class="message error">❌ Erro ao carregar: ${error.message}</div>`;
+                container.innerHTML = `<div class="error-message">❌ Erro ao carregar: ${error.message}</div>`;
             }
         }
         
         // -------------------------------------------------------------------
-        // LÓGICA DO MODAL DE EDIÇÃO (NOVO)
+        // LÓGICA DO MODAL DE EDIÇÃO (NOVA)
         // -------------------------------------------------------------------
 
         function resetModal() {
@@ -829,7 +757,7 @@
         }
         
         // -------------------------------------------------------------------
-        // LÓGICA DE IMAGEM E SALVAMENTO (NOVO)
+        // LÓGICA DE IMAGEM E SALVAMENTO (NOVA)
         // -------------------------------------------------------------------
 
         function updateImagePreview() {
@@ -850,7 +778,7 @@
 
             const statusEl = document.getElementById('uploadStatus');
             statusEl.textContent = 'Enviando imagem...';
-            statusEl.style.color = 'var(--texto-secundario)';
+            statusEl.style.color = '#888';
             
             try {
                 const fileExt = file.name.split('.').pop();
@@ -873,14 +801,14 @@
                 }
 
                 statusEl.textContent = 'Upload concluído!';
-                statusEl.style.color = 'var(--cor-secundaria)';
+                statusEl.style.color = 'green';
                 document.getElementById('editImageUrl').value = data.publicUrl;
                 updateImagePreview();
 
             } catch (error) {
                 console.error('Erro no upload:', error);
                 statusEl.textContent = `Erro no upload: ${error.message}`;
-                statusEl.style.color = 'var(--cor-perigo)';
+                statusEl.style.color = 'red';
             }
         }
 
@@ -984,7 +912,7 @@
         }
         
         // -------------------------------------------------------------------
-        // FUNÇÕES DE EXCLUSÃO
+        // FUNÇÕES DE EXCLUSÃO (DO CÓDIGO ANTIGO, MAS APONTANDO PARA CONSTANTES)
         // -------------------------------------------------------------------
 
         async function deleteNoticia(id) {
@@ -1021,8 +949,13 @@
             }
         }
 
+        // Funções antigas removidas (publishNoticia, editNoticia, publishScrapedNoticia)
+        // pois foram substituídas pelo novo modal.
+
         // Inicializa quando a página carrega
         window.addEventListener('DOMContentLoaded', initSupabase);
     </script>
+
+
 </body>
 </html>
