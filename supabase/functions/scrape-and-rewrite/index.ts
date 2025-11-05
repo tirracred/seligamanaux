@@ -582,12 +582,12 @@ Responda APENAS em JSON:
       content: prompt,
     },
   ],
-  response_format: { type: "null" },
+  response_format: { type: "json_object" },
   temperature: 0.5,
 }),
     });
 
-    "response_format": { "type": "null" },
+    "response_format": { "type": "json_object" },
 
     console.log(`[GROQ_RESPONSE] Status: ${response.status}`);
 
