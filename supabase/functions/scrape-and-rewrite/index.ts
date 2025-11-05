@@ -1,11 +1,15 @@
 // Importa o 'edge-runtime' para tipos Deno
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-// Supabase JS v2
+
+// Importa o createClient da biblioteca supabase-js v2
 import { createClient } from "npm:@supabase/supabase-js@2";
+
+
 
 /* =========================
 TIPOS
 ========================= */
+
 interface NoticiaScrapedData {
   titulo_original: string;
   titulo_reescrito: string;
@@ -19,8 +23,10 @@ interface NoticiaScrapedData {
   data_publicacao?: string;
   imagem_url?: string | null;
   categoria: string;
-  slug?: string;            // ← novo
-  canonical_path?: string;  // ← novo
+  // slug gerado para custom URL (opcional)
+  slug?: string;
+  // caminho canônico baseado no slug (opcional)
+  canonical_path?: string;
 }
 
 interface GroqResponse {
@@ -41,6 +47,7 @@ interface PortalConfig {
 /* =========================
 CORS
 ========================= */
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -53,6 +60,7 @@ const corsHeaders = {
 /* =========================
 CONFIGURAÇÃO DE PORTAIS
 ========================= */
+
 const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   "g1.globo.com": {
     name: "G1 Amazonas",
@@ -220,6 +228,7 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
 /* =========================
 FILTROS ANTI-PROMO/INSTITUCIONAL
 ========================= */
+
 const URL_BLACKLIST = [
   "/sobre",
   "/institucional",
@@ -267,7 +276,7 @@ function isBlacklistedTitle(t: string): boolean {
   return x.length < 8 || TITLE_BLACKLIST.some((b) => x.includes(b));
 }
 
-// ÚNICA DEFINIÇÃO
+// ✅ ÚNICA DEFINIÇÃO de looksPromotional no arquivo
 function looksPromotional(text: string): boolean {
   const x = (text || "").toLowerCase();
   return /publieditorial|publicidade|assessoria de imprensa|assine|clique aqui|programação|assista ao|patrocinado|publipost|oferecimento|oferecido por|parceria/i.test(
@@ -275,6 +284,7 @@ function looksPromotional(text: string): boolean {
   );
 }
 
+// ✅ FUNÇÃO para detectar heurística de notícia
 function looksNewsish(url: string): boolean {
   const lower = url.toLowerCase();
   const newsPatterns = [
@@ -290,7 +300,7 @@ function looksNewsish(url: string): boolean {
     /\/saude\//i,
     /\/cultura\//i,
     /\d{4}-\d{2}-\d{2}/,
-   /\d{1,2}[.\/]\d{1,2}/,
+    /\d{1,2}[.\/]\d{1,2}/,
   ];
   return newsPatterns.some((rx) => rx.test(lower)) && !isBlacklistedUrl(lower);
 }
@@ -298,6 +308,7 @@ function looksNewsish(url: string): boolean {
 /* =========================
 NORMALIZAÇÃO / HIGIENE DE TEXTO
 ========================= */
+
 function stripSourceArtifacts(t: string): string {
   return (t || "")
     .replace(/\s+—\s*Foto:.*?(?=\.|$)/gi, "")
@@ -326,16 +337,19 @@ function tooSimilar(a: string, b: string): boolean {
   let inter = 0;
   for (const w of A) if (B.has(w)) inter++;
   const min = Math.max(1, Math.min(A.size, B.size));
-  return inter / min > 0.8; // >80% = muito similar
+  return inter / min > 0.8; // > 80% palavras em comum = muito similar
 }
 
-function has12ConsecutiveMatches(original: string, rewritten: string): boolean {
+function has12ConsecutiveMatches(
+  original: string,
+  rewritten: string
+): boolean {
   const origWords = original.toLowerCase().split(/\s+/);
   const rewritWords = rewritten.toLowerCase().split(/\s+/);
-  const joined = rewritWords.join(" ");
+
   for (let i = 0; i <= origWords.length - 12; i++) {
     const window = origWords.slice(i, i + 12).join(" ");
-    if (joined.includes(window)) {
+    if (rewritWords.join(" ").includes(window)) {
       console.log(`[WARN_COPY] 12+ palavras consecutivas: "${window}"`);
       return true;
     }
@@ -346,15 +360,19 @@ function has12ConsecutiveMatches(original: string, rewritten: string): boolean {
 /* =========================
 UTILITÁRIOS DE FETCH (AMP + IDIOMA)
 ========================= */
+
 function ampCandidates(u: string): string[] {
   const clean = u.replace(/#.*$/, "");
   const arr: string[] = [];
+
   if (!/outputType=amp/.test(clean)) {
     arr.push(clean + (clean.includes("?") ? "&" : "?") + "outputType=amp");
   }
+
   if (!/\/amp\/?$/.test(clean)) {
     arr.push(clean.replace(/\/$/, "") + "/amp");
   }
+
   arr.push(clean);
   return arr;
 }
@@ -365,13 +383,21 @@ async function fetchHtmlPreferAmp(url: string, ua: string): Promise<string> {
     Accept: "text/html",
     "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
   };
+
   for (const cand of ampCandidates(url)) {
     try {
-      const r = await fetch(cand, { headers: common, signal: AbortSignal.timeout(20000) });
+      const r = await fetch(cand, {
+        headers: common,
+        signal: AbortSignal.timeout(20000),
+      });
       if (r.ok) return await r.text();
     } catch {}
   }
-  const r = await fetch(url, { headers: common, signal: AbortSignal.timeout(20000) });
+
+  const r = await fetch(url, {
+    headers: common,
+    signal: AbortSignal.timeout(20000),
+  });
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
   return await r.text();
 }
@@ -400,6 +426,7 @@ function sanitizeHtml(html: string): string {
 /* =========================
 EXTRAÇÃO DE LINKS / CONTEÚDO
 ========================= */
+
 function extractNewsLinks(
   htmlContent: string,
   portalConfig: PortalConfig,
@@ -409,26 +436,42 @@ function extractNewsLinks(
     console.log(`[DEBUG] HTML vazio para ${sourceUrl}`);
     return [];
   }
+
+  // Parser simples (node-based mock)
   const linkPattern = /href=["']([^"']+)["']/gi;
   const allHrefs: string[] = [];
   let match;
+
   while ((match = linkPattern.exec(htmlContent)) !== null) {
     allHrefs.push(match[1]);
   }
-  console.log(`[EXTRACT] Portal: ${portalConfig.name} | URLs extraídas: ${allHrefs.length}`);
+
+  console.log(
+    `[EXTRACT] Portal: ${portalConfig.name} | URLs extraídas: ${allHrefs.length}`
+  );
+
+  // Normalizar e filtrar URLs
   const newsLinks: string[] = [];
   for (const href of allHrefs) {
     try {
       const fullUrl = new URL(href, sourceUrl).toString();
-      if (!isBlacklistedUrl(fullUrl) && looksNewsish(fullUrl) && !newsLinks.includes(fullUrl)) {
+      if (
+        !isBlacklistedUrl(fullUrl) &&
+        looksNewsish(fullUrl) &&
+        !newsLinks.includes(fullUrl)
+      ) {
         newsLinks.push(fullUrl);
       }
     } catch {}
   }
-  console.log(`[EXTRACT_FILTERED] ${portalConfig.name}: ${newsLinks.length} links após filtro`);
+
+  console.log(
+    `[EXTRACT_FILTERED] ${portalConfig.name}: ${newsLinks.length} links após filtro`
+  );
   if (newsLinks.length > 0) {
     console.log(`[SAMPLE] Primeiros 3: ${newsLinks.slice(0, 3).join(" | ")}`);
   }
+
   return newsLinks;
 }
 
@@ -436,27 +479,47 @@ function deduplicateLinks(links: string[]): string[] {
   return Array.from(new Set(links));
 }
 
-function buildPaginationUrls(baseUrl: string, portalName: string): string[] {
+function buildPaginationUrls(
+  baseUrl: string,
+  portalName: string
+): string[] {
   const urls = [baseUrl];
+
   if (portalName === "Portal do Holanda") {
-    for (let p = 2; p <= 4; p++) urls.push(`${baseUrl}${baseUrl.includes("?") ? "&" : "?"}paged=${p}`);
+    for (let p = 2; p <= 4; p++) {
+      urls.push(
+        `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}paged=${p}`
+      );
+    }
   } else if (portalName === "Portal Amazônia") {
-    for (let p = 2; p <= 4; p++) urls.push(baseUrl.replace(/\/$/, "") + `/page/${p}/`);
+    for (let p = 2; p <= 4; p++) {
+      urls.push(baseUrl.replace(/\/$/, "") + `/page/${p}/`);
+    }
   } else if (portalName === "A Crítica") {
-    for (let p = 2; p <= 4; p++) urls.push(`${baseUrl}${baseUrl.includes("?") ? "&" : "?"}pag=${p}`);
+    for (let p = 2; p <= 4; p++) {
+      urls.push(
+        `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}pag=${p}`
+      );
+    }
   } else if (portalName === "D24AM") {
-    for (let p = 2; p <= 4; p++) urls.push(baseUrl.replace(/\/$/, "") + `?page=${p}`);
+    for (let p = 2; p <= 4; p++) {
+      urls.push(baseUrl.replace(/\/$/, "") + `?page=${p}`);
+    }
   }
+
   return urls;
 }
 
 /* =========================
 HELPERS DE REPARO/FORMATAÇÃO
 ========================= */
+
+// Normaliza aspas “inteligentes” para aspas ASCII
 function normalizeAsciiQuotes(s: string): string {
   return s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 }
 
+// Garante que o texto tenha parágrafos em HTML (<p>...</p>). Se já houver tags <p>, retorna o texto intacto.
 function ensureParagraphsHTML(text: string): string {
   const hasHtmlP = /<p[\s>]/i.test(text) || /<\/p>/i.test(text);
   if (hasHtmlP) return text;
@@ -467,53 +530,48 @@ function ensureParagraphsHTML(text: string): string {
 }
 
 /**
- * Repara respostas "quase JSON" do LLM:
- * - Pega só o primeiro {...}
- * - Normaliza aspas “ ” para "
- * - Se "conteudo": não vier entre aspas, envolve e escapa
+ * Repara respostas quase JSON retornadas pela LLM:
+ * - Extrai apenas o primeiro objeto {...} do texto.
+ * - Normaliza aspas “ ” para ".
+ * - Se o valor de "conteudo" não estiver entre aspas, envolve em aspas e escapa.
+ * - Converte campos com aspas simples para aspas duplas (caso raro).
  */
 function repairGroqJsonString(raw: string): string {
   if (!raw) return raw;
   let s = normalizeAsciiQuotes(raw).trim();
-
-  // recorta primeiro objeto
+  // recorta o primeiro {...}
   const m = s.match(/\{[\s\S]*\}/);
   if (m) s = m[0];
-
   try { JSON.parse(s); return s; } catch {}
-
-  // "conteudo": sem aspas → envolve
+  // Força aspas ao redor do valor de "conteudo" se não houver
   const rxUnquotedConteudo = /("conteudo"\s*:\s*)(?!")(.*)\s*}\s*$/s;
   if (rxUnquotedConteudo.test(s)) {
-    s = s.replace(rxUnquotedConteudo, (_full, prefix, val) => {
-      const cleaned = val.trim()
-        .replace(/\\|"/g, m => (m === '\\' ? '\\\\' : '\\"'))
-        .replace(/\n/g, "\\n");
-      return `${prefix}"${cleaned}"}`;
+    s = s.replace(rxUnquotedConteudo, (_full: string, prefix: string, val: string) => {
+      // Limpa espaços/linhas, escapa barras e aspas
+      const cleaned = val.trim().replace(/\\|"/g, (m: string) => (m === '\\' ? '\\\\' : '\\"')).replace(/\n/g, "\\n");
+      return `${prefix}\"${cleaned}\"}`;
     });
     try { JSON.parse(s); return s; } catch {}
   }
-
-  // chaves com aspas simples → duplas (raro)
+  // Troca aspas simples em chaves por aspas duplas (caso raro)
   const maybeJson5 = s.replace(/(['"])(titulo|conteudo)\1\s*:/g, '"$2":');
   try { JSON.parse(maybeJson5); return maybeJson5; } catch {}
-
   return s;
 }
 
+// Gera um slug a partir do título (remove acentos, espaços e caracteres inválidos)
 function makeSlug(title: string): string {
-  const base = title
-    .toLowerCase()
+  const base = title.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/gi, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
   return `${base}-${Date.now().toString(36)}`;
 }
-
 /* =========================
 REESCRITA VIA GROQ
 ========================= */
+
 async function rewriteWithGroq(
   title: string,
   content: string,
@@ -525,33 +583,45 @@ async function rewriteWithGroq(
     return null;
   }
 
-  const temperature = retryCount === 0 ? 0.5 : (retryCount === 1 ? 0.7 : 0.9);
+  const temperature = retryCount === 0 ? 0.5 : retryCount === 1 ? 0.7 : 0.9;
 
+  // ✅ Sanitizar entrada
   const cleanTitle = (title || "")
-    .replace(/\\/g, "\\\\").replace(/"/g, '\\"')
-    .replace(/\n/g, "\\n").replace(/\r/g, "\\r")
-    .trim().slice(0, 300);
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .trim()
+    .slice(0, 300);
 
   const cleanContent = (content || "")
-    .replace(/\\/g, "\\\\").replace(/"/g, '\\"')
-    .replace(/\n/g, "\\n").replace(/\r/g, "\\r")
-    .trim().slice(0, 5000);
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .trim()
+    .slice(0, 5000);
 
-  const prompt =
-`Reescreva o seguinte título e conteúdo em português, garantindo:
+  const prompt = `Reescreva o seguinte título e conteúdo em português, garantindo:
 1. Texto original (sem cópia acima de 80%)
 2. Nenhuma sequência de 12+ palavras idênticas
 3. Formatação em parágrafos (pode usar <p>...</p>)
 4. Entre 2000 e 5000 caracteres
-5. Tom jornalístico profissional
-6. Atue como o "Se Liga Manaus": jornal de impacto, alerta e incisivo, focado em Manaus.
+5. Tom jornalístico profissional 
+6. Atue como o "Se Liga Manaus": um jornal com identidade única, focado em máximo impacto, que explora tragédias e usa IMPACTOS inteligentes. 
+Mantenha um tom de alerta, incisivo e direto, focado 100% em Manaus. Use português padrão culto, sem gírias ou regionalismos, para chocar e informar o leitor.
+
 TÍTULO: ${cleanTitle}
+
 CONTEÚDO: ${cleanContent}
-Responda APENAS em JSON: {"titulo":"novo título","conteudo":"novo conteúdo"}`;
+
+Responda APENAS em JSON:
+{"titulo": "novo título", "conteudo": "novo conteúdo"}`;
 
   try {
     console.log(`[GROQ_DEBUG] Retry: ${retryCount} | Temp: ${temperature}`);
 
+    // ✅ EXATAMENTE COMO FUNCIONOU NO CURL:
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -564,7 +634,7 @@ Responda APENAS em JSON: {"titulo":"novo título","conteudo":"novo conteúdo"}`;
           {
             role: "system",
             content:
-              'Responda ESTRITAMENTE com um único objeto JSON válido UTF-8, sem markdown, sem blocos de código e sem rótulos. ' +
+              'Responda ESTRITAMENTE com um único objeto JSON válido UTF-8, sem markdown, sem blocos de código, sem rótulos. ' +
               'Formato exato: {"titulo":"...","conteudo":"..."}. ' +
               'O "conteudo" deve ter entre 2000 e 5000 caracteres e estar em parágrafos (pode usar <p>...</p>). ' +
               'Não inclua nada além do objeto JSON.'
@@ -582,14 +652,20 @@ Responda APENAS em JSON: {"titulo":"novo título","conteudo":"novo conteúdo"}`;
     if (!response.ok) {
       const errorText = await response.text();
       console.log(`[GROQ_ERROR] HTTP ${response.status} | ${errorText.slice(0, 200)}`);
+
+      // Detectar erro de autenticação
       if (response.status === 401) {
         console.log(`[GROQ_FATAL] 401 - API Key inválida!`);
         return null;
       }
+
+      // Detectar modelo não encontrado
       if (response.status === 404) {
         console.log(`[GROQ_FATAL] 404 - Modelo não encontrado!`);
         return null;
       }
+
+      // Retry para outros erros
       if (retryCount < 2) {
         console.log(`[GROQ_RETRY] Tentativa ${retryCount + 1}/3...`);
         await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
@@ -604,6 +680,7 @@ Responda APENAS em JSON: {"titulo":"novo título","conteudo":"novo conteúdo"}`;
     if (!textContent) {
       console.log(`[GROQ_EMPTY] Resposta vazia, retry...`);
       if (retryCount < 2) {
+
         return rewriteWithGroq(title, content, apiKey, retryCount + 1);
       }
       return null;
@@ -611,7 +688,7 @@ Responda APENAS em JSON: {"titulo":"novo título","conteudo":"novo conteúdo"}`;
 
     console.log(`[GROQ_RAW] Resposta recebida: ${textContent.slice(0, 100)}...`);
 
-    // Parse robusto do JSON retornado pelo LLM
+    // Parsear JSON de forma robusta: tenta JSON.parse; se falhar, tenta reparar
     let parsed: { titulo?: string; conteudo?: string } | null = null;
     try {
       parsed = JSON.parse(textContent);
@@ -619,7 +696,7 @@ Responda APENAS em JSON: {"titulo":"novo título","conteudo":"novo conteúdo"}`;
       const repaired = repairGroqJsonString(textContent);
       try {
         parsed = JSON.parse(repaired);
-      } catch {
+      } catch (e) {
         console.log(`[GROQ_JSON_ERROR] Não é JSON válido: ${textContent.slice(0, 120)}`);
         if (retryCount < 2) {
           return rewriteWithGroq(title, content, apiKey, retryCount + 1);
@@ -630,11 +707,14 @@ Responda APENAS em JSON: {"titulo":"novo título","conteudo":"novo conteúdo"}`;
 
     const novoTitulo = (parsed?.titulo || "").trim();
     let novoConteudo = (parsed?.conteudo || "").trim();
+    // garante que o conteúdo tenha parágrafos HTML (<p>...</p>)
     novoConteudo = ensureParagraphsHTML(novoConteudo);
 
-    console.log(`[REWRITE_OK] Título: ${novoTitulo.slice(0, 40)}... | Len: ${novoConteudo.length}`);
+    console.log(
+      `[REWRITE_OK] Título: ${novoTitulo.slice(0, 40)}... | Len: ${novoConteudo.length}`
+    );
 
-    // Validação anti-cópia
+    // ✅ VALIDAÇÃO ANTI-CÓPIA
     if (
       novoConteudo.length < 1800 ||
       tooSimilar(content, novoConteudo) ||
@@ -648,6 +728,7 @@ Responda APENAS em JSON: {"titulo":"novo título","conteudo":"novo conteúdo"}`;
     }
 
     return { titulo: novoTitulo, conteudo: novoConteudo };
+
   } catch (err) {
     console.log(`[GROQ_EXCEPTION] ${err}`);
     if (retryCount < 2) {
@@ -661,6 +742,7 @@ Responda APENAS em JSON: {"titulo":"novo título","conteudo":"novo conteúdo"}`;
 /* =========================
 MAIN HANDLER
 ========================= */
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders, status: 204 });
@@ -670,10 +752,10 @@ Deno.serve(async (req: Request) => {
     const { url, ampPreferred = false } = await req.json();
 
     if (!url) {
-      return new Response(JSON.stringify({ error: "URL obrigatória" }), {
-        status: 400,
-        headers: corsHeaders,
-      });
+      return new Response(
+        JSON.stringify({ error: "URL obrigatória" }),
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     const urlObj = new URL(url);
@@ -702,28 +784,34 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Artigo único x lista
-    const articleRegex = /noticia|artigo|post|article|story|news|conteudo|reportagem/i;
+    // Verificar se é URL de artigo
+    const articleRegex =
+      /noticia|artigo|post|article|story|news|conteudo|reportagem/i;
     const isArticle = articleRegex.test(url);
 
     let newsLinks: string[] = [];
 
     if (isArticle) {
+      // Processar artigo único
       newsLinks = [url];
       console.log(`[MODE] Artigo único detectado: ${url}`);
     } else {
-      // Página de lista
+      // Processar lista
       let htmlContent = await fetchListHtml(url);
       console.log(`[FETCH] ${portalConfig.name}: ${htmlContent.length} bytes`);
 
-      // Fallback para A Crítica (às vezes lista curta)
-      if (portalConfig.name === "A Crítica" && htmlContent.length < 15000) {
+      // Fallback para A Crítica
+      if (
+        portalConfig.name === "A Crítica" &&
+        htmlContent.length < 15000
+      ) {
         console.log(`[FALLBACK] A Crítica: HTML curto, tentando editorias...`);
         const fallbackUrls = [
           "https://www.acritica.com/amazonas/",
           "https://www.acritica.com/noticias/",
           "https://www.acritica.com/politica/",
         ];
+
         for (const fallbackUrl of fallbackUrls) {
           try {
             htmlContent = await fetchListHtml(fallbackUrl);
@@ -736,15 +824,24 @@ Deno.serve(async (req: Request) => {
       newsLinks = extractNewsLinks(htmlContent, portalConfig, url);
 
       // Paginação se <8 links
-      if (newsLinks.length < 8 && !url.includes("pag=") && !url.includes("page=")) {
-        console.log(`[PAGINATION] ${portalConfig.name}: ${newsLinks.length} links, tentando páginas...`);
+      if (
+        newsLinks.length < 8 &&
+        !url.includes("pag=") &&
+        !url.includes("page=")
+      ) {
+        console.log(
+          `[PAGINATION] ${portalConfig.name}: ${newsLinks.length} links, tentando páginas...`
+        );
         const paginatedUrls = buildPaginationUrls(url, portalConfig.name);
+
         for (const pagUrl of paginatedUrls.slice(1)) {
           try {
             const pagHtml = await fetchListHtml(pagUrl);
             const pagLinks = extractNewsLinks(pagHtml, portalConfig, pagUrl);
             newsLinks.push(...pagLinks.filter((l) => !newsLinks.includes(l)));
-            console.log(`[PAGINATION] Página ${pagUrl}: +${pagLinks.length} links, total: ${newsLinks.length}`);
+            console.log(
+              `[PAGINATION] Página ${pagUrl}: +${pagLinks.length} links, total: ${newsLinks.length}`
+            );
             if (newsLinks.length >= 8) break;
           } catch (err) {
             console.log(`[PAGINATION_ERROR] ${pagUrl}: ${err}`);
@@ -753,7 +850,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Deduplicação
+    // ✅ Deduplicate (reatribuição, não redeclaração)
     newsLinks = deduplicateLinks(newsLinks);
     console.log(`[DEDUPE] Links únicos: ${newsLinks.length}`);
 
@@ -775,11 +872,9 @@ Deno.serve(async (req: Request) => {
       try {
         console.log(`[PROCESS] Artigo: ${newsUrl.slice(0, 60)}...`);
 
-        // Prefira AMP para artigos (função já tenta AMP e cai no original)
-        const htmlContent =
-          isArticle || ampPreferred
-            ? await fetchHtmlPreferAmp(newsUrl, "Mozilla/5.0")
-            : await fetchListHtml(newsUrl);
+        const htmlContent = ampPreferred
+          ? await fetchHtmlPreferAmp(newsUrl, "Mozilla/5.0")
+          : await fetchListHtml(newsUrl);
 
         const cleanHtml = sanitizeHtml(htmlContent);
 
@@ -795,10 +890,13 @@ Deno.serve(async (req: Request) => {
         }
 
         // Extrair conteúdo
-        const contentMatch =
-          cleanHtml.match(/<article[^>]*>(.*?)<\/article>/is) ||
-          cleanHtml.match(/<!-- .* -->(.*?)<!-- .*/is) || [null, cleanHtml];
-
+        const contentMatch = cleanHtml.match(
+          /<article[^>]*>(.*?)<\/article>/is
+        ) ||
+          cleanHtml.match(/<!-- .* -->(.*?)<!-- .*/is) || [
+            null,
+            cleanHtml,
+          ];
         let originalContent = contentMatch[1] || cleanHtml;
         originalContent = originalContent
           .replace(/<[^>]+>/g, " ")
@@ -807,10 +905,13 @@ Deno.serve(async (req: Request) => {
           .trim();
 
         if (originalContent.length < 500) {
-          console.log(`[SKIP] Conteúdo muito curto (${originalContent.length} chars)`);
+          console.log(
+            `[SKIP] Conteúdo muito curto (${originalContent.length} chars)`
+          );
           continue;
         }
 
+        // Higienizar
         originalContent = stripSourceArtifacts(originalContent);
         if (looksPromotional(originalContent) || looksPromotional(originalTitle)) {
           console.log(`[SKIP] Promotional/institutional`);
@@ -819,25 +920,33 @@ Deno.serve(async (req: Request) => {
 
         // Reescrever
         console.log(`[REWRITE_START] Título: ${originalTitle.slice(0, 50)}...`);
-        const rewritten = await rewriteWithGroq(originalTitle, originalContent, groqApiKey);
+        const rewritten = await rewriteWithGroq(
+          originalTitle,
+          originalContent,
+          groqApiKey
+        );
+
         if (!rewritten) {
           console.log(`[SKIP] Reescrita falhou`);
           continue;
         }
 
         // Extrair imagem
-        const imgMatch = cleanHtml.match(/(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i);
+        const imgMatch = cleanHtml.match(
+          /(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i
+        );
         const imagemUrl = imgMatch?.[1] || null;
 
-        // Slug e path
+        // Gerar slug e caminho canônico para URL customizada
         const slug = makeSlug(rewritten.titulo);
         const canonicalPath = `/artigo/${slug}`;
 
-        // Registrar pendente
+        // Montar registro com status "pendente" e slug
         const newRecord: NoticiaScrapedData = {
           titulo_original: originalTitle.slice(0, 255),
           titulo_reescrito: rewritten.titulo.slice(0, 255),
           resumo_original: originalContent.slice(0, 500),
+          // resumo em texto plano (remove tags HTML) para evitar cortar tags
           resumo_reescrito: rewritten.conteudo
             .replace(/<[^>]+>/g, " ")
             .replace(/\s+/g, " ")
@@ -861,18 +970,24 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Inserir no Supabase
+    // Salvar no Supabase
     if (processedNews.length > 0) {
-      const { error } = await supabase.from("noticias_scraped").insert(processedNews);
+      const { error } = await supabase
+        .from("noticias_scraped")
+        .insert(processedNews);
+
       if (error) {
         console.log(`[INSERT_ERROR] ${error.message}`);
         return new Response(
-          JSON.stringify({ success: false, error: error.message, inserted: processedNews.length }),
+          JSON.stringify({
+            success: false,
+            error: error.message,
+            inserted: processedNews.length,
+          }),
           { status: 500, headers: corsHeaders }
         );
       }
 
-      
       console.log(`[INSERT_SUCCESS] ${processedNews.length} registros salvos`);
     }
 
@@ -887,9 +1002,9 @@ Deno.serve(async (req: Request) => {
     );
   } catch (err) {
     console.error("[MAIN_ERROR]", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: corsHeaders,
-    });
+    return new Response(
+      JSON.stringify({ error: String(err) }),
+      { status: 500, headers: corsHeaders }
+    );
   }
 });
