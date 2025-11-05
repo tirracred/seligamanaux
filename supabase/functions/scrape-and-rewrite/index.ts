@@ -23,10 +23,6 @@ interface NoticiaScrapedData {
   data_publicacao?: string;
   imagem_url?: string | null;
   categoria: string;
-  // slug gerado para custom URL (opcional)
-  slug?: string;
-  // caminho canônico baseado no slug (opcional)
-  canonical_path?: string;
 }
 
 interface GroqResponse {
@@ -511,64 +507,6 @@ function buildPaginationUrls(
 }
 
 /* =========================
-HELPERS DE REPARO/FORMATAÇÃO
-========================= */
-
-// Normaliza aspas “inteligentes” para aspas ASCII
-function normalizeAsciiQuotes(s: string): string {
-  return s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-}
-
-// Garante que o texto tenha parágrafos em HTML (<p>...</p>). Se já houver tags <p>, retorna o texto intacto.
-function ensureParagraphsHTML(text: string): string {
-  const hasHtmlP = /<p[\s>]/i.test(text) || /<\/p>/i.test(text);
-  if (hasHtmlP) return text;
-  const blocks = text.replace(/\r/g, "").split(/\n{2,}/).map(x => x.trim()).filter(Boolean);
-  const parts = (blocks.length ? blocks : text.split(/(?<=[.!?])\s{2,}/))
-    .map(x => x.trim()).filter(Boolean);
-  return parts.map(p => `<p>${p}</p>`).join("");
-}
-
-/**
- * Repara respostas quase JSON retornadas pela LLM:
- * - Extrai apenas o primeiro objeto {...} do texto.
- * - Normaliza aspas “ ” para ".
- * - Se o valor de "conteudo" não estiver entre aspas, envolve em aspas e escapa.
- * - Converte campos com aspas simples para aspas duplas (caso raro).
- */
-function repairGroqJsonString(raw: string): string {
-  if (!raw) return raw;
-  let s = normalizeAsciiQuotes(raw).trim();
-  // recorta o primeiro {...}
-  const m = s.match(/\{[\s\S]*\}/);
-  if (m) s = m[0];
-  try { JSON.parse(s); return s; } catch {}
-  // Força aspas ao redor do valor de "conteudo" se não houver
-  const rxUnquotedConteudo = /("conteudo"\s*:\s*)(?!")(.*)\s*}\s*$/s;
-  if (rxUnquotedConteudo.test(s)) {
-    s = s.replace(rxUnquotedConteudo, (_full: string, prefix: string, val: string) => {
-      // Limpa espaços/linhas, escapa barras e aspas
-      const cleaned = val.trim().replace(/\\|"/g, (m: string) => (m === '\\' ? '\\\\' : '\\"')).replace(/\n/g, "\\n");
-      return `${prefix}\"${cleaned}\"}`;
-    });
-    try { JSON.parse(s); return s; } catch {}
-  }
-  // Troca aspas simples em chaves por aspas duplas (caso raro)
-  const maybeJson5 = s.replace(/(['"])(titulo|conteudo)\1\s*:/g, '"$2":');
-  try { JSON.parse(maybeJson5); return maybeJson5; } catch {}
-  return s;
-}
-
-// Gera um slug a partir do título (remove acentos, espaços e caracteres inválidos)
-function makeSlug(title: string): string {
-  const base = title.toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/gi, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-  return `${base}-${Date.now().toString(36)}`;
-}
-/* =========================
 REESCRITA VIA GROQ
 ========================= */
 
@@ -605,8 +543,8 @@ async function rewriteWithGroq(
   const prompt = `Reescreva o seguinte título e conteúdo em português, garantindo:
 1. Texto original (sem cópia acima de 80%)
 2. Nenhuma sequência de 12+ palavras idênticas
-3. Formatação em parágrafos (pode usar <p>...</p>)
-4. Entre 2000 e 5000 caracteres
+3. Formatação em parágrafos
+4. Entre 2000 e 4000 caracteres
 5. Tom jornalístico profissional 
 6. Atue como o "Se Liga Manaus": um jornal com identidade única, focado em máximo impacto, que explora tragédias e usa IMPACTOS inteligentes. 
 Mantenha um tom de alerta, incisivo e direto, focado 100% em Manaus. Use português padrão culto, sem gírias ou regionalismos, para chocar e informar o leitor.
@@ -632,18 +570,12 @@ Responda APENAS em JSON:
         model: "llama-3.1-8b-instant",
         messages: [
           {
-            role: "system",
-            content:
-              'Responda ESTRITAMENTE com um único objeto JSON válido UTF-8, sem markdown, sem blocos de código, sem rótulos. ' +
-              'Formato exato: {"titulo":"...","conteudo":"..."}. ' +
-              'O "conteudo" deve ter entre 2000 e 5000 caracteres e estar em parágrafos (pode usar <p>...</p>). ' +
-              'Não inclua nada além do objeto JSON.'
+            role: "user",
+            content: prompt,
           },
-          { role: "user", content: prompt },
         ],
-        response_format: { type: "json_object" },
-        temperature: Math.max(0.2, temperature ?? 0.5),
-        max_tokens: 3000,
+        temperature: temperature,
+        max_tokens: 2048,
       }),
     });
 
@@ -688,27 +620,20 @@ Responda APENAS em JSON:
 
     console.log(`[GROQ_RAW] Resposta recebida: ${textContent.slice(0, 100)}...`);
 
-    // Parsear JSON de forma robusta: tenta JSON.parse; se falhar, tenta reparar
-    let parsed: { titulo?: string; conteudo?: string } | null = null;
+    // ✅ PARSEAR JSON
+    let parsed;
     try {
       parsed = JSON.parse(textContent);
-    } catch {
-      const repaired = repairGroqJsonString(textContent);
-      try {
-        parsed = JSON.parse(repaired);
-      } catch (e) {
-        console.log(`[GROQ_JSON_ERROR] Não é JSON válido: ${textContent.slice(0, 120)}`);
-        if (retryCount < 2) {
-          return rewriteWithGroq(title, content, apiKey, retryCount + 1);
-        }
-        return null;
+    } catch (e) {
+      console.log(`[GROQ_JSON_ERROR] Não é JSON válido: ${textContent.slice(0, 100)}`);
+      if (retryCount < 2) {
+        return rewriteWithGroq(title, content, apiKey, retryCount + 1);
       }
+      return null;
     }
 
-    const novoTitulo = (parsed?.titulo || "").trim();
-    let novoConteudo = (parsed?.conteudo || "").trim();
-    // garante que o conteúdo tenha parágrafos HTML (<p>...</p>)
-    novoConteudo = ensureParagraphsHTML(novoConteudo);
+    const novoTitulo = (parsed.titulo || "").trim();
+    const novoConteudo = (parsed.conteudo || "").trim();
 
     console.log(
       `[REWRITE_OK] Título: ${novoTitulo.slice(0, 40)}... | Len: ${novoConteudo.length}`
@@ -937,30 +862,19 @@ Deno.serve(async (req: Request) => {
         );
         const imagemUrl = imgMatch?.[1] || null;
 
-        // Gerar slug e caminho canônico para URL customizada
-        const slug = makeSlug(rewritten.titulo);
-        const canonicalPath = `/artigo/${slug}`;
-
-        // Montar registro com status "pendente" e slug
+        // ✅ Montar registro com status "pendente"
         const newRecord: NoticiaScrapedData = {
           titulo_original: originalTitle.slice(0, 255),
           titulo_reescrito: rewritten.titulo.slice(0, 255),
           resumo_original: originalContent.slice(0, 500),
-          // resumo em texto plano (remove tags HTML) para evitar cortar tags
-          resumo_reescrito: rewritten.conteudo
-            .replace(/<[^>]+>/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .slice(0, 500),
+          resumo_reescrito: rewritten.conteudo.slice(0, 500),
           conteudo_reescrito: rewritten.conteudo,
           url_original: newsUrl,
           fonte: portalConfig.name,
-          status: "pendente",
+          status: "pendente", // ✅ CORRIGIDO: era "processado"
           data_coleta: new Date().toISOString(),
           imagem_url: imagemUrl,
           categoria: portalConfig.category,
-          slug,
-          canonical_path: canonicalPath,
         };
 
         processedNews.push(newRecord);
