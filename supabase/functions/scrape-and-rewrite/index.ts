@@ -707,21 +707,18 @@ Deno.serve(async (req) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
   if (req.method !== "POST") {
-    return new Response("Método não permitido", {
-      status: 405,
-      headers: corsHeaders,
-    });
+    return new Response("Método não permitido", { status: 405, headers: corsHeaders });
   }
 
   try {
-    // AUTENTICAÇÃO (permanece igual ao original)
+    // --- AUTH ---
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Sem autorização" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
+
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -729,245 +726,229 @@ Deno.serve(async (req) => {
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
+      { global: { headers: { Authorization: authHeader } } }
     );
+
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Usuário não autenticado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    // PARSE BODY
+    // --- BODY ---
     const body = await req.json();
-    const targetUrl = body.url as string;
+    const targetUrl = (body?.url || "").toString().trim();
+    const requireLength = body?.requireLength || { min: 2000, max: 4000 };
+    const ampPreferred  = !!body?.ampPreferred;
+    const paginate      = body?.paginate || { start: 1, end: 1 };
     if (!targetUrl) {
       return new Response(JSON.stringify({ error: "URL obrigatória" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
     console.log("Processando URL:", targetUrl);
 
-    // DETECTA PORTAL
-    const linkConfig = detectPortal(targetUrl);
-    if (!linkConfig) {
+    // --- DETECTA PORTAL CORRETAMENTE (SEM newsUrl!) ---
+    const portalConfig = detectPortal(targetUrl);
+    if (!portalConfig) {
       return new Response(JSON.stringify({ error: "Portal não suportado" }), {
-        status: 422,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
-    console.log("Portal detectado:", linkConfig.name);
+    console.log("Portal detectado:", portalConfig.name);
 
-    // EVITAR DUPLICATAS (últimos 7 dias)
+    // --- EVITAR DUPLICATAS (últimos 7 dias) ---
     const { data: existingUrls } = await supabaseAdmin
       .from("noticias_scraped")
       .select("url_original")
-      .eq("fonte", linkConfig.name)
-      .gte(
-        "created_at",
-        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      );
-    const existingUrlsSet = new Set(existingUrls?.map((item) => item.url_original) || []);
-    console.log(`URLs já processadas (7 dias): ${existingUrlsSet.size}`);
+      .eq("fonte", portalConfig.name)
+      .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+    const existingUrlsSet = new Set(existingUrls?.map(x => x.url_original) || []);
+    console.log(`URLs já processadas: ${existingUrlsSet.size}`);
 
-    // BAIXA PÁGINA INICIAL (com fallback para Portal Amazônia)
+    // --- BAIXA A LISTAGEM (TENTA targetUrl e, se vier magra, tenta baseUrl/editoria) ---
     const userAgent =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-    let htmlContent: string;
-    try {
-      const response = await fetch(targetUrl, {
-        headers: {
-          "User-Agent": userAgent,
-          "Accept": "text/html",
-          "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-        },
-        signal: AbortSignal.timeout(30000),
+
+    async function fetchListHtml(u: string) {
+      const r = await fetch(u, {
+        headers: { "User-Agent": userAgent, "Accept": "text/html", "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8" },
+        signal: AbortSignal.timeout(30000)
       });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      htmlContent = await response.text();
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      return await r.text();
+    }
+
+    let htmlContent = "";
+    try {
+      htmlContent = await fetchListHtml(targetUrl);
       console.log("HTML recebido, tamanho:", htmlContent.length);
-    } catch (error: any) {
-      console.error("Erro no scraping:", error);
-      return new Response(
-        JSON.stringify({ error: `Erro ao acessar ${linkConfig.name}: ${error.message}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    } catch (e) {
+      console.error("Erro no scraping da listagem:", e);
+      return new Response(JSON.stringify({ error: `Erro ao acessar ${portalConfig.name}: ${e.message}` }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
-    // Fallback específico para Portal Amazônia (tenta URLs alternativas se conteúdo insuficiente)
-    if (linkConfig.name === "Portal Amazônia") {
-      if (!htmlContent || htmlContent.length < 15000) {
-        const alts = [
-          "https://portalamazonia.com/noticias/amazonas",
-          "https://portalamazonia.com/amazonas",
-        ];
-        for (const alt of alts) {
-          try {
-            const altHtml = await fetchHtmlPreferAmp(alt, userAgent);
-            if (altHtml && altHtml.length > 15000) {
-              htmlContent = altHtml;
-              break;
-            }
-          } catch {
-            // Ignora erros nas URLs alternativas
-          }
-        }
-      }
-    }
-
-    // EXTRAI LINKS DE NOTÍCIAS
-    function buildPaginationUrls(config: linkConfig): string[] {
-      const origin = new URL(config.baseUrl).origin;
-      const base = config.baseUrl.replace(/\/+$/, "");
-      const urls: string[] = [];
-      for (let i = 2; i <= 4; i++) {
-        if (base.includes("portaldoholanda.com.br")) {
-          urls.push(`${origin}/amazonas?page=${i}`);
-        } else if (base.includes("portalamazonia.com")) {
-          urls.push(`${origin}/noticias/amazonas?page=${i}`);
-          urls.push(`${origin}/noticias/amazonas/page/${i}`);
-        } else if (base.includes("acritica.com")) {
-          urls.push(`${origin}/page/${i}`);
-          urls.push(`${origin}/noticias/page/${i}`);
-        } else if (base.includes("d24am.com")) {
-          urls.push(`${origin}/amazonas/page/${i}`);
-          urls.push(`${origin}/page/${i}`);
-        }
-      }
-      return urls;
-    }
-
-    let newsLinks = extractNewsLinks(htmlContent, linkConfig, 20);
-    // Se poucos links encontrados, tenta coletar páginas 2..4
-    if (newsLinks.length < 8) {
-      const morePages = buildPaginationUrls(linkConfig);
-      for (const pageUrl of morePages) {
+    // Fallback para editoria se a home vier com pouco conteúdo
+    if (!htmlContent || htmlContent.length < 15000) {
+      if (portalConfig.name === "Portal Amazônia" && !/\/noticias\/amazonas/.test(targetUrl)) {
         try {
-          const html = await fetchHtmlPreferAmp(pageUrl, userAgent);
-          const extraLinks = extractNewsLinks(html, linkConfig, 20);
-          newsLinks = Array.from(new Set([...newsLinks, ...extraLinks]));
-          if (newsLinks.length >= 20) break;
-        } catch {
-          // Ignora erros em páginas de paginação inexistentes
-        }
+          htmlContent = await fetchListHtml("https://portalamazonia.com/noticias/amazonas");
+          console.log("Fallback editoria Portalamazonia OK:", htmlContent.length);
+        } catch {}
+      }
+      if (portalConfig.name === "D24AM" && !/\/amazonas/.test(targetUrl)) {
+        try {
+          htmlContent = await fetchListHtml("https://d24am.com/amazonas/");
+          console.log("Fallback editoria D24AM OK:", htmlContent.length);
+        } catch {}
       }
     }
-    // Remove URLs já processadas recentemente
-    newsLinks = newsLinks.filter((url) => !existingUrlsSet.has(url));
 
-    if (newsLinks.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: `Todas as notícias recentes do ${linkConfig.name} já foram processadas.`,
-          stats: {
-            total_encontradas: 0,
-            processadas_com_sucesso: 0,
-            erros: 0,
-            portal: linkConfig.name,
-          },
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    // --- PAGINAÇÃO SIMPLES (2..4) QUANDO PRECISAR ---
+    function buildPaginationUrls(config: typeof portalConfig): string[] {
+      const origin = new URL(config.baseUrl).origin;
+      const base   = config.baseUrl.replace(/\/+$/, "");
+      const out: string[] = [];
+      for (let i = Math.max(2, paginate.start || 2); i <= Math.max(2, paginate.end || 2); i++) {
+        if (base.includes("portaldoholanda.com.br")) {
+          out.push(`${origin}/amazonas?page=${i}`);
+        } else if (base.includes("portalamazonia.com")) {
+          out.push(`${origin}/noticias/amazonas?page=${i}`);
+          out.push(`${origin}/noticias/amazonas/page/${i}`);
+        } else if (base.includes("acritica.com")) {
+          out.push(`${origin}/page/${i}`);
+          out.push(`${origin}/noticias/page/${i}`);
+        } else if (base.includes("d24am.com")) {
+          out.push(`${origin}/amazonas/page/${i}`);
+          out.push(`${origin}/page/${i}`);
+        }
+      }
+      return out;
     }
 
-    console.log(`Processando ${newsLinks.length} notícias novas de ${linkConfig.name}`);
+    let newsLinks = extractNewsLinks(htmlContent, portalConfig, 20);
+    if (newsLinks.length < 8) {
+      for (const u of buildPaginationUrls(portalConfig)) {
+        try {
+          const html = await fetchListHtml(u);
+          const extra = extractNewsLinks(html, portalConfig, 20);
+          newsLinks = Array.from(new Set([...newsLinks, ...extra]));
+          if (newsLinks.length >= 20) break;
+        } catch { /* ignora */ }
+      }
+    }
+    // remove duplicadas já salvas
+    newsLinks = newsLinks.filter(u => !existingUrlsSet.has(u));
+    if (newsLinks.length === 0) {
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Todas as notícias recentes do ${portalConfig.name} já foram processadas.`,
+        stats: { total_encontradas: 0, processadas_com_sucesso: 0, erros: 0, portal: portalConfig.name }
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" }});
+    }
 
-    // PROCESSA CADA NOTÍCIA
-    const processedNews: { titulo: string; fonte: string; url: string; imagem: string }[] = [];
-    let successCount = 0;
-    let errorCount = 0;
+    console.log(`Processando ${newsLinks.length} notícias novas de ${portalConfig.name}`);
+
+    // --- LOOP DE ARTIGOS ---
+    const processedNews: Array<{ titulo: string; fonte: string; url: string; imagem: string }> = [];
+    let successCount = 0, errorCount = 0;
 
     for (const newsUrl of newsLinks.slice(0, 12)) {
       try {
         console.log(`Processando: ${newsUrl}`);
-        const newsHtml = await fetchHtmlPreferAmp(newsUrl, userAgent);
-        const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, linkConfig);
+
+        // Se link “saltar” de domínio (ex.: caderno específico), detecta novamente, mas mantêm portalConfig como fallback
+        const articleConfig = detectPortal(newsUrl) || portalConfig;
+
+        // Preferência de AMP (especialmente G1)
+        const newsHtml = ampPreferred ? await fetchHtmlPreferAmp(newsUrl, userAgent)
+                                      : await (await fetch(newsUrl, { headers: { "User-Agent": userAgent, "Accept": "text/html" }})).text();
+
+        const { titulo, conteudo, resumo, imagem } = extractContentWithRegex(newsHtml, articleConfig);
         if (titulo === "Título não encontrado" || !conteudo || conteudo.length < 120) {
-          console.log(`Conteúdo insuficiente: ${newsUrl} — pulando`);
+          console.log(`Conteúdo insuficiente: ${newsUrl}`);
           continue;
         }
         if (isBlacklistedTitle(titulo) || looksPromotional(conteudo)) {
           console.log(`Descartado (promo/institucional): ${newsUrl}`);
           continue;
         }
-        const conteudoLimpo = stripSourceArtifacts(conteudo);  // higieniza conteúdo
-        const { titulo: tituloReescrito, conteudo: conteudoReescrito } = 
-              await rewriteWithGroq(titulo, conteudoLimpo, linkConfig.name);
-        if (conteudoReescrito === "publieditorial") {
-          console.log(`Publieditorial identificado pela IA: ${newsUrl} — pulando`);
-          continue;
-        }
-        if (!conteudoReescrito || conteudoReescrito.trim().length < 1700) {
-          console.log(`Reescrita vazia/curta em ${newsUrl} — pulando`);
+
+        // Reescrita robusta + antissimilaridade
+        const rewritten = await rewriteWithGroq(titulo, conteudo, articleConfig.name);
+        if (rewritten?.conteudo === "publieditorial") {
+          console.log(`Publieditorial marcado pela IA: ${newsUrl}`);
           continue;
         }
 
-        const resumoReescrito = conteudoReescrito.slice(0, 300) + 
-                                 (conteudoReescrito.length > 300 ? "..." : "");
+        // Enforça tamanho (usa preferências do admin, se enviadas)
+        const finalTxt = (rewritten?.conteudo || "").trim();
+        const lenMin   = Math.max(1200, requireLength.min || 2000);
+        const lenMax   = Math.min(6000, requireLength.max || 4000);
+        if (finalTxt.length < lenMin) {
+          console.log(`Reescrita curta (${finalTxt.length} chars): ${newsUrl}`);
+          continue;
+        }
+        const resumoReescrito = finalTxt.slice(0, 300) + (finalTxt.length > 300 ? "..." : "");
+
+        // Salva no banco
         const noticiaData: NoticiaScrapedData = {
           titulo_original: titulo,
-          titulo_reescrito: tituloReescrito || titulo,
-          resumo_original: resumo || null,
-          resumo_reescrito: resumoReescrito || null,
-          conteudo_reescrito: conteudoReescrito || conteudoLimpo,
+          titulo_reescrito: rewritten?.titulo || titulo,
+          resumo_original: resumo || undefined,
+          resumo_reescrito: resumoReescrito,
+          conteudo_reescrito: finalTxt,
           url_original: newsUrl,
-          fonte: linkConfig.name,
+          fonte: articleConfig.name,
           status: "processado",
           data_coleta: new Date().toISOString(),
           imagem_url: imagem || null,
-          categoria: linkConfig.category,
+          categoria: articleConfig.category
         };
 
         const { error } = await supabaseAdmin.from("noticias_scraped").insert(noticiaData);
         if (error) {
-          console.error("Erro ao salvar no Supabase:", error);
-          errorCount++;
-          continue;
+          console.error("Erro ao salvar:", newsUrl, error);
+          errorCount++; continue;
         }
 
-        // Sucesso ao salvar notícia
         processedNews.push({
-          titulo: tituloReescrito || titulo,
-          fonte: linkConfig.name,
+          titulo: rewritten?.titulo || titulo,
+          fonte: articleConfig.name,
           url: newsUrl,
           imagem: imagem ? "Sim" : "Não",
         });
         successCount++;
-        console.log(`✅ Notícia salva: ${titulo.substring(0, 50)}...`);
-        // Intervalo curto para evitar sobrecarga no site de origem
-        await new Promise((r) => setTimeout(r, 1500));
+
+        // pausa de cortesia
+        await new Promise(r => setTimeout(r, 1200));
       } catch (err) {
         console.error(`Erro ao processar ${newsUrl}:`, err);
         errorCount++;
       }
     }
 
-    // RESPOSTA FINAL
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: `Processamento do ${linkConfig.name} concluído!`,
-        stats: {
-          total_encontradas: newsLinks.length,
-          processadas_com_sucesso: successCount,
-          erros: errorCount,
-          portal: linkConfig.name,
-        },
-        noticias: processedNews,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({
+      success: true,
+      message: `Processamento do ${portalConfig.name} concluído!`,
+      stats: {
+        total_encontradas: newsLinks.length,
+        processadas_com_sucesso: successCount,
+        erros: errorCount,
+        portal: portalConfig.name
+      },
+      noticias: processedNews
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" }});
+
   } catch (error: any) {
     console.error("Erro geral:", error);
-    return new Response(
-      JSON.stringify({ error: `Erro interno: ${error.message}` }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: `Erro interno: ${error.message}` }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 });
+ 
 
