@@ -3,7 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 // Importa o createClient da biblioteca supabase-js v2
 import { createClient } from "npm:@supabase/supabase-js@2";
-import Groq from "npm:groq-sdk@0.6.2";
+
 
 
 /* =========================
@@ -523,61 +523,109 @@ async function rewriteWithGroq(
 
   const temperature = retryCount === 0 ? 0.5 : retryCount === 1 ? 0.7 : 0.9;
 
-  try {
-    // ✅ INSTANCIAR CLIENTE GROQ (FORMA CORRETA)
-    const client = new Groq({
-      apiKey: apiKey,
-      baseURL: "https://api.groq.com/openai/v1",
-    });
+  // ✅ Sanitizar entrada
+  const cleanTitle = (title || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .trim()
+    .slice(0, 300);
 
-    console.log(`[GROQ_DEBUG] Usando SDK Groq | Retry: ${retryCount} | Temp: ${temperature}`);
+  const cleanContent = (content || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .trim()
+    .slice(0, 5000);
 
-    const prompt = `Reescreva o seguinte título e conteúdo em português, garantindo:
+  const prompt = `Reescreva o seguinte título e conteúdo em português, garantindo:
 1. Texto original (sem cópia acima de 80%)
 2. Nenhuma sequência de 12+ palavras idênticas
 3. Formatação em parágrafos
 4. Entre 2000 e 4000 caracteres
-5. Tom jornalístico profissional
+5. Tom jornalístico profissional 
+6. Atue como o "Se Liga Manaus": um jornal com identidade única, focado em máximo impacto, que explora tragédias e usa IMPACTOS inteligentes. 
+Mantenha um tom de alerta, incisivo e direto, focado 100% em Manaus. Use português padrão culto, sem gírias ou regionalismos, para chocar e informar o leitor.
 
-TÍTULO: ${title.slice(0, 300)}
+TÍTULO: ${cleanTitle}
 
-CONTEÚDO: ${content.slice(0, 5000)}
+CONTEÚDO: ${cleanContent}
 
 Responda APENAS em JSON:
 {"titulo": "novo título", "conteudo": "novo conteúdo"}`;
 
-    // ✅ CHAMAR A API GROQ COM SDK (FORMA CORRETA)
-    const message = await client.messages.create({
-      model: "openai/gpt-oss-20b",
-      max_tokens: 2048,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: temperature,
+  try {
+    console.log(`[GROQ_DEBUG] Retry: ${retryCount} | Temp: ${temperature}`);
+
+    // ✅ EXATAMENTE COMO FUNCIONOU NO CURL:
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-oss-20b",
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: temperature,
+        max_tokens: 2048,
+      }),
     });
 
-    const textContent = message.content?.[0]?.text || "";
+    console.log(`[GROQ_RESPONSE] Status: ${response.status}`);
 
-    if (!textContent) {
-      console.log(`[GROQ_EMPTY] Resposta vazia, retry...`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`[GROQ_ERROR] HTTP ${response.status} | ${errorText.slice(0, 200)}`);
+
+      // Detectar erro de autenticação
+      if (response.status === 401) {
+        console.log(`[GROQ_FATAL] 401 - API Key inválida!`);
+        return null;
+      }
+
+      // Detectar modelo não encontrado
+      if (response.status === 404) {
+        console.log(`[GROQ_FATAL] 404 - Modelo não encontrado!`);
+        return null;
+      }
+
+      // Retry para outros erros
       if (retryCount < 2) {
+        console.log(`[GROQ_RETRY] Tentativa ${retryCount + 1}/3...`);
         await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
         return rewriteWithGroq(title, content, apiKey, retryCount + 1);
       }
       return null;
     }
 
-    console.log(`[GROQ_RESPONSE] Status: OK | Content len: ${textContent.length}`);
+    const data = await response.json();
+    const textContent = data.choices?.[0]?.message?.content || "";
 
-    // ✅ PARSEAR RESPOSTA JSON
+    if (!textContent) {
+      console.log(`[GROQ_EMPTY] Resposta vazia, retry...`);
+      if (retryCount < 2) {
+        
+        return rewriteWithGroq(title, content, apiKey, retryCount + 1);
+      }
+      return null;
+    }
+
+    console.log(`[GROQ_RAW] Resposta recebida: ${textContent.slice(0, 100)}...`);
+
+    // ✅ PARSEAR JSON
     let parsed;
     try {
       parsed = JSON.parse(textContent);
     } catch (e) {
-      console.log(`[GROQ_JSON_ERROR] Não é JSON válido, retry...`);
+      console.log(`[GROQ_JSON_ERROR] Não é JSON válido: ${textContent.slice(0, 100)}`);
       if (retryCount < 2) {
         return rewriteWithGroq(title, content, apiKey, retryCount + 1);
       }
@@ -597,7 +645,7 @@ Responda APENAS em JSON:
       tooSimilar(content, novoConteudo) ||
       has12ConsecutiveMatches(content, novoConteudo)
     ) {
-      console.log(`[REWRITE_REJECTED] Similar ou curto, retry...`);
+      console.log(`[REWRITE_REJECTED] Similar ou curto (${novoConteudo.length} chars), retry...`);
       if (retryCount < 2) {
         return rewriteWithGroq(title, content, apiKey, retryCount + 1);
       }
@@ -606,20 +654,8 @@ Responda APENAS em JSON:
 
     return { titulo: novoTitulo, conteudo: novoConteudo };
 
-  } catch (err: any) {
-    // ✅ DEBUG DETALHADO DE ERROS
-    console.log(`[GROQ_ERROR] ${err?.message || err}`);
-    
-    if (err?.status === 401) {
-      console.log(`[GROQ_FATAL] 401 - API Key inválida!`);
-      return null;
-    }
-    
-    if (err?.status === 404) {
-      console.log(`[GROQ_FATAL] 404 - Modelo não encontrado!`);
-      return null;
-    }
-
+  } catch (err) {
+    console.log(`[GROQ_EXCEPTION] ${err}`);
     if (retryCount < 2) {
       await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
       return rewriteWithGroq(title, content, apiKey, retryCount + 1);
