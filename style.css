@@ -97,6 +97,27 @@ a:hover {
     color: white; /* Texto "SELIGAMANAUX" em BRANCO */
     text-decoration: none;
 }
+
+/* === NOVO ESTILO WHATSAPP === */
+.whatsapp-denuncia {
+    display: inline-block;
+    vertical-align: middle;
+    opacity: 0.7; /* Deixa o ícone discreto */
+    transition: opacity 0.2s ease;
+    color: #ffffff; /* Cor BRANCA para combinar com o header */
+    margin-left: 10px; /* Espaço depois do logo */
+    padding: 5px;
+    line-height: 0; /* Alinha o SVG */
+}
+.whatsapp-denuncia svg {
+    vertical-align: middle;
+}
+.whatsapp-denuncia:hover {
+    opacity: 1; /* Opacidade total ao passar o mouse */
+}
+/* === FIM NOVO ESTILO WHATSAPP === */
+
+
 .nav-toggle {
     display: none;
     background: none;
@@ -158,15 +179,31 @@ a:hover {
 
 /* --- Navegação Mobile --- */
 @media (max-width: 768px) {
+    /* === AJUSTE LAYOUT HEADER MOBILE === */
+    .header-container {
+        flex-wrap: wrap; 
+    }
+    .logo {
+        flex-grow: 1; /* Faz o logo ocupar o espaço */
+    }
+    .whatsapp-denuncia {
+        order: 2; /* Posição do ícone */
+        margin-left: auto; /* Empurra para a direita */
+        margin-right: 15px; /* Espaço do menu hamburguer */
+    }
     .nav-toggle {
         display: block;
+        order: 3; /* Posição do menu */
     }
     .nav-principal {
+        order: 4; /* Posição do menu aberto */
+        width: 100%; /* Ocupa a largura toda */
+    /* === FIM AJUSTE === */
         display: none;
         position: absolute;
         top: 100%;
         left: 0;
-        width: 100%;
+        /* width: 100%; -> movido para cima */
         background-color: var(--cor-primaria);
         border-top: 1px solid var(--cor-primaria-hover);
         flex-direction: column;
