@@ -3,6 +3,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 // Importa o createClient da biblioteca supabase-js v2
 import { createClient } from "npm:@supabase/supabase-js@2";
+import Groq from "npm:groq-sdk@0.6.2";
+
 
 /* =========================
 TIPOS
@@ -521,65 +523,75 @@ async function rewriteWithGroq(
 
   const temperature = retryCount === 0 ? 0.5 : retryCount === 1 ? 0.7 : 0.9;
 
-  const prompt = `Você é um jornalista experiente. Reescreva o seguinte título e conteúdo de notícia em português, garantindo:
-- Texto original e único (sem cópia acima de 80% de similaridade)
-- Nenhuma sequência de 12+ palavras idênticas à original
-- Formatação em parágrafos bem estruturados
-- Entre 2000 e 4000 caracteres
-- Tom jornalístico profissional
-
-TÍTULO ORIGINAL:
-${title}
-
-CONTEÚDO ORIGINAL:
-${content}
-
-Responda APENAS em JSON válido, sem markdown ou explicações:
-{"titulo": "novo título", "conteudo": "novo conteúdo reescrito"}`;
-
   try {
-    const response = await fetch("https://api.groq.com/openai/v1", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-20b",
-        messages: [{ role: "user", content: prompt }],
-        temperature: temperature,
-        max_tokens: 2048,
-      }),
+    // ✅ INSTANCIAR CLIENTE GROQ (FORMA CORRETA)
+    const client = new Groq({
+      apiKey: apiKey,
+      baseURL: "https://api.groq.com/openai/v1",
     });
 
-    if (!response.ok) {
-      console.log(`[GROQ_ERROR] HTTP ${response.status}`);
-      if (retryCount < 2) {
-        return rewriteWithGroq(title, content, apiKey, retryCount + 1);
-      }
-      return null;
-    }
+    console.log(`[GROQ_DEBUG] Usando SDK Groq | Retry: ${retryCount} | Temp: ${temperature}`);
 
-    const data: any = await response.json();
-    const textContent = data.choices?.[0]?.message?.content || "";
+    const prompt = `Reescreva o seguinte título e conteúdo em português, garantindo:
+1. Texto original (sem cópia acima de 80%)
+2. Nenhuma sequência de 12+ palavras idênticas
+3. Formatação em parágrafos
+4. Entre 2000 e 4000 caracteres
+5. Tom jornalístico profissional
+
+TÍTULO: ${title.slice(0, 300)}
+
+CONTEÚDO: ${content.slice(0, 5000)}
+
+Responda APENAS em JSON:
+{"titulo": "novo título", "conteudo": "novo conteúdo"}`;
+
+    // ✅ CHAMAR A API GROQ COM SDK (FORMA CORRETA)
+    const message = await client.messages.create({
+      model: "openai/gpt-oss-20b",
+      max_tokens: 2048,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: temperature,
+    });
+
+    const textContent = message.content?.[0]?.text || "";
 
     if (!textContent) {
       console.log(`[GROQ_EMPTY] Resposta vazia, retry...`);
       if (retryCount < 2) {
+        await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
         return rewriteWithGroq(title, content, apiKey, retryCount + 1);
       }
       return null;
     }
 
-    const parsed = JSON.parse(textContent);
+    console.log(`[GROQ_RESPONSE] Status: OK | Content len: ${textContent.length}`);
+
+    // ✅ PARSEAR RESPOSTA JSON
+    let parsed;
+    try {
+      parsed = JSON.parse(textContent);
+    } catch (e) {
+      console.log(`[GROQ_JSON_ERROR] Não é JSON válido, retry...`);
+      if (retryCount < 2) {
+        return rewriteWithGroq(title, content, apiKey, retryCount + 1);
+      }
+      return null;
+    }
+
     const novoTitulo = (parsed.titulo || "").trim();
     const novoConteudo = (parsed.conteudo || "").trim();
 
     console.log(
-      `[REWRITE_DONE] Retry #${retryCount} | Título: ${novoTitulo.slice(0, 40)}... | Content len: ${novoConteudo.length}`
+      `[REWRITE_OK] Título: ${novoTitulo.slice(0, 40)}... | Len: ${novoConteudo.length}`
     );
 
-    // Validação anti-cópia
+    // ✅ VALIDAÇÃO ANTI-CÓPIA
     if (
       novoConteudo.length < 1800 ||
       tooSimilar(content, novoConteudo) ||
@@ -593,9 +605,23 @@ Responda APENAS em JSON válido, sem markdown ou explicações:
     }
 
     return { titulo: novoTitulo, conteudo: novoConteudo };
-  } catch (err) {
-    console.log(`[GROQ_EXCEPTION] ${err}`);
+
+  } catch (err: any) {
+    // ✅ DEBUG DETALHADO DE ERROS
+    console.log(`[GROQ_ERROR] ${err?.message || err}`);
+    
+    if (err?.status === 401) {
+      console.log(`[GROQ_FATAL] 401 - API Key inválida!`);
+      return null;
+    }
+    
+    if (err?.status === 404) {
+      console.log(`[GROQ_FATAL] 404 - Modelo não encontrado!`);
+      return null;
+    }
+
     if (retryCount < 2) {
+      await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
       return rewriteWithGroq(title, content, apiKey, retryCount + 1);
     }
     return null;
