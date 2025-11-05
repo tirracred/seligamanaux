@@ -4,31 +4,95 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SeligaManaux - Notícias de Manaus</title>
-    
-    <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4935884639623224"
-     crossorigin="anonymous"></script>
+    <style>
+        body {
+            font-family: "Inter", sans-serif; background: #f4f4f5; color: #111827; margin: 0; line-height: 1.6;
+        }
+        body.dark-mode { background: #1f2937; color: #f3f4f6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+        img { max-width: 100%; height: auto; display: block; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { color: #1e40af; }
+        .titulo-vermelho { color: #e53e3e !important; }
+        .titulo-azul { color: #3b82f6 !important; }
+        .site-header { background-color: #b91c1c; color: white; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; border-bottom: 3px solid #991b1b; }
+        .header-container { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+        .logo h1 { margin: 0; font-size: 1.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; }
+        .logo a { color: white; text-decoration: none; }
+        .nav-principal { display: flex; align-items: center; gap: 1.5rem; }
+        .nav-principal ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; }
+        .nav-principal a { color: white; font-weight: 700; font-size: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid transparent; }
+        .nav-principal a:hover, .nav-principal a.ativo { border-bottom-color: white; opacity: 0.8; }
+        .nav-toggle { display: none; background: none; border: none; cursor: pointer; }
+        .hamburger { width: 25px; height: 3px; background-color: white; position: relative; }
+        .hamburger::before, .hamburger::after { content: ""; position: absolute; width: 100%; height: 3px; background-color: white; left: 0; }
+        .hamburger::before { top: -8px; }
+        .hamburger::after { bottom: -8px; }
+        .hamburger.ativo { background-color: transparent; }
+        .hamburger.ativo::before { transform: rotate(45deg); top: 0; }
+        .hamburger.ativo::after { transform: rotate(-45deg); bottom: 0; }
+        @media (max-width: 768px) {
+            .nav-toggle { display: block; }
+            .nav-principal { display: none; position: absolute; top: 100%; left: 0; width: 100%; background-color: #b91c1c; flex-direction: column; }
+            .nav-principal.ativo { display: flex; }
+            .nav-principal ul { flex-direction: column; width: 100%; }
+            .nav-principal li { border-bottom: 1px solid #991b1b; width: 100%; }
+            .nav-principal a { display: block; padding: 1rem; }
+        }
+        .card-noticia { background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
+        .card-noticia:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+        .card-noticia a { color: #111827; display: flex; flex-direction: column; height: 100%; }
+        .card-noticia img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-bottom: 1px solid #e5e7eb; transition: transform 0.3s; }
+        .card-noticia a:hover img { transform: scale(1.05); }
+        .card-conteudo { padding: 1rem; display: flex; flex-direction: column; flex-grow: 1; }
+        .categoria-tag { display: inline-block; font-size: 0.75rem; font-weight: 700; color: #2563eb; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .card-conteudo h3, .card-conteudo h4 { font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin: 0 0 0.5rem 0; }
+        .card-conteudo p { font-size: 0.95rem; color: #6b7280; margin: 0; flex-grow: 1; line-height: 1.5; }
+        .card-noticia a:hover h3, .card-noticia a:hover h4 { color: #2563eb; }
+        .feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .category-section { margin-top: 2rem; }
+        .category-section h2 { font-size: 2rem; font-weight: 800; margin: 1.5rem 0 1rem; color: #111827; border-bottom: 3px solid #b91c1c; padding-bottom: 0.25rem; }
+        .denuncia-banner { background: #25D366; text-align: center; padding: 0.5rem 1rem; }
+        .denuncia-banner a { color: white; font-weight: 700; font-size: 1.1rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .mais-vistos-section { margin: 2rem 0; }
+        .mais-vistos-section h2 { font-size: 2rem; font-weight: 800; margin-bottom: 1rem; color: #111827; }
+        .carousel-container { position: relative; }
+        .carousel-track { display: flex; gap: 1rem; overflow-x: auto; scroll-behavior: smooth; -ms-overflow-style: none; scrollbar-width: none; }
+        .carousel-track::-webkit-scrollbar { display: none; }
+        .carousel-track .card-noticia { flex: 0 0 300px; }
+        @media (max-width: 768px) {
+            .carousel-track .card-noticia { flex: 0 0 80%; }
+        }
+        .carousel-prev, .carousel-next { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; font-size: 2rem; width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .carousel-prev { left: 0.5rem; }
+        .carousel-next { right: 0.5rem; }
+        .carousel-prev:hover, .carousel-next:hover { background: rgba(0,0,0,0.8); }
+        .theme-switch-wrapper { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; }
+        .theme-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .theme-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #777; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .4s; }
+        input:checked + .slider { background-color: #2563eb; }
+        input:checked + .slider:before { transform: translateX(20px); }
+        @media (max-width: 768px) {
+            .theme-switch-wrapper { border-top: 1px solid #991b1b; }
+        }
+    </style>
 </head>
 <body>
-
     <header class="site-header">
         <div class="header-container">
-            <div class="logo">
-                <a href="/"><h1>SELIGAMANAUX</h1></a>
-            </div>
-            <button class="nav-toggle" aria-label="Abrir menu">
-                <span class="hamburger"></span>
-            </button>
+            <div class="logo"><a href="/"><h1>SELIGAMANAUX</h1></a></div>
+            <button class="nav-toggle" aria-label="Abrir menu"><span class="hamburger"></span></button>
             <nav class="nav-principal">
                 <ul>
                     <li><a href="/" class="ativo">Início</a></li>
                     <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
                     <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
                 </ul>
-                
                 <div class="theme-switch-wrapper">
                     <label class="theme-switch" for="theme-toggle">
                         <input type="checkbox" id="theme-toggle" />
@@ -38,91 +102,244 @@
             </nav>
         </div>
     </header>
-
-    
+    <div class="denuncia-banner">
+        <a href="https://wa.me/+5516993003322" target="_blank">
+            <!-- WhatsApp Icon -->
+            <svg width="24" height="24" fill="#ffffff" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+            </svg>
+            Quero fazer uma denúncia!
+        </a>
+    </div>
     <main class="container">
-        <section class="hero-grid-g1" id="hero-grid-container">
-            <div id="loading-message" style="text-align: center; padding: 4rem 0;">
-                <p style="font-size: 1.2rem; color: var(--texto-secundario);">Carregando notícias...</p>
+        <section class="mais-vistos-section">
+            <h2>Mais vistos</h2>
+            <div id="mais-vistos-loading" style="text-align:center; padding: 2rem 0;">Carregando notícias...</div>
+            <div class="carousel-container" id="mais-vistos-container" style="display: none;">
+                <button class="carousel-prev" id="carousel-prev">&#8249;</button>
+                <div class="carousel-track" id="mais-vistos-track"></div>
+                <button class="carousel-next" id="carousel-next">&#8250;</button>
             </div>
         </section>
+        <div id="categories-loading" style="text-align:center; padding: 2rem 0;">Carregando notícias...</div>
+        <div id="categories-sections" style="display:none;">
+            <section class="category-section" id="category-geral">
+                <h2>Geral</h2>
+                <div class="feed-grid" id="category-geral-container">
+                </div>
+            </section>
+            <section class="category-section" id="category-politica">
+                <h2>Política</h2>
+                <div class="feed-grid" id="category-politica-container">
+                </div>
+            </section>
+            <section class="category-section" id="category-economia">
+                <h2>Economia</h2>
+                <div class="feed-grid" id="category-economia-container">
+                </div>
+            </section>
+            <section class="category-section" id="category-esportes">
+                <h2>Esportes</h2>
+                <div class="feed-grid" id="category-esportes-container">
+                </div>
+            </section>
+            <section class="category-section" id="category-cultura">
+                <h2>Cultura</h2>
+                <div class="feed-grid" id="category-cultura-container">
+                </div>
+            </section>
+            <section class="category-section" id="category-amazonas">
+                <h2>Amazonas</h2>
+                <div class="feed-grid" id="category-amazonas-container">
+                </div>
+            </section>
+        </div>
+        <div id="load-more" style="text-align:center; padding: 1rem; display:none; color: #6b7280;">Carregando mais...</div>
     </main>
-
-
     <footer class="site-footer">
-        <p>&copy; 2025 SeligaManaux. Grupo Tirracred 61.811.560/0001-10 - Todos os direitos reservados.</p>
+        <p style="text-align:center; padding: 1rem 0; color: #6b7280;">&copy; 2025 SeligaManaux. Todos os direitos reservados.</p>
     </footer>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="main.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const gridContainer = document.getElementById('hero-grid-container');
-            const loadingMessage = document.getElementById('loading-message');
-            
-            async function loadHeroNews() {
-                if (!supabase) {
-                    console.error("Supabase client not initialized.");
-                    loadingMessage.innerHTML = "Erro ao conectar com o banco de dados.";
-                    return;
+        const SUPABASE_URL = "https://YOUR_SUPABASE_URL";
+        const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+        const DB_TABLE = "noticias";
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+            console.error("Erro ao inicializar Supabase:", e);
+        }
+        function createNewsCard(post) {
+            const article = document.createElement("article");
+            article.className = "card-noticia";
+            const imageUrl = post.image_url || "https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux";
+            const titleColorClass = post.headline_color === "red" ? "titulo-vermelho" : "titulo-azul";
+            article.innerHTML = `
+                <a href="artigo.html?id=${post.id}">
+                    <img src="${imageUrl}" alt="${post.title}">
+                    <div class="card-conteudo">
+                        <span class="categoria-tag">${post.category || "Geral"}</span>
+                        <h4 class="${titleColorClass}">${post.title}</h4>
+                        <p>${post.content ? post.content.substring(0, 100) + "..." : ""}</p>
+                    </div>
+                </a>
+            `;
+            return article;
+        }
+        document.addEventListener("DOMContentLoaded", async () => {
+            const navToggle = document.querySelector(".nav-toggle");
+            const navPrincipal = document.querySelector(".nav-principal");
+            if (navToggle && navPrincipal) {
+                navToggle.addEventListener("click", () => {
+                    navPrincipal.classList.toggle("ativo");
+                    const hamburger = navToggle.querySelector(".hamburger");
+                    hamburger.classList.toggle("ativo");
+                });
+            }
+            const currentPath = window.location.pathname.split("/").pop() || "index.html";
+            let activeLink;
+            if (currentPath === "" || currentPath === "index.html") {
+                activeLink = document.querySelector('.nav-principal a[href="/"]');
+            } else {
+                activeLink = document.querySelector(`.nav-principal a[href*="${currentPath}"]`);
+            }
+            if (activeLink) activeLink.classList.add("ativo");
+            const themeToggle = document.getElementById("theme-toggle");
+            const body = document.body;
+            function applyTheme(theme) {
+                if (theme === "dark") {
+                    body.classList.add("dark-mode");
+                    if (themeToggle) themeToggle.checked = true;
+                } else {
+                    body.classList.remove("dark-mode");
+                    if (themeToggle) themeToggle.checked = false;
                 }
-
-                // Busca as 5 notícias mais recentes
-                const { data: posts, error } = await supabase
-                    .from(DB_TABLE)
-                    .select('id, title, content, image_url, category, created_at, headline_color') // Pegando a nova coluna de cor
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-
-                if (error) {
-                    console.error("Erro ao carregar notícias:", error);
-                    loadingMessage.innerHTML = "Erro ao carregar notícias.";
-                    return;
-                }
-                
-                if (posts.length === 0) {
-                    loadingMessage.innerHTML = "Nenhuma notícia publicada ainda.";
-                    return;
-                }
-
-                loadingMessage.style.display = 'none';
-                gridContainer.innerHTML = '';
-                
-                // Mapeia os posts para os cards do grid G1
-                const cardClasses = ['card-principal', 'card-secundaria-1', 'card-secundaria-2', 'card-terciaria-1', 'card-terciaria-2'];
-                
-                posts.forEach((post, index) => {
-                    if (cardClasses[index]) {
-                        gridContainer.appendChild(createNewsCard(post, cardClasses[index]));
+            }
+            function saveTheme(theme) {
+                localStorage.setItem("theme", theme);
+            }
+            if (themeToggle) {
+                themeToggle.addEventListener("change", () => {
+                    if (themeToggle.checked) {
+                        applyTheme("dark"); saveTheme("dark");
+                    } else {
+                        applyTheme("light"); saveTheme("light");
                     }
                 });
             }
-
-            function createNewsCard(post, cardClass) {
-                const article = document.createElement('article');
-                article.className = `card-noticia ${cardClass}`;
-                
-                const titleTag = (cardClass === 'card-principal') ? 'h3' : 'h4';
-                const showSummary = (cardClass === 'card-principal') && post.content;
-                const imageUrl = post.image_url || 'https://placehold.co/600x400/1f2937/9ca3af?text=SeligaManaux';
-                
-                // Define a classe de cor do título
-                const titleColorClass = post.headline_color === 'red' ? 'titulo-vermelho' : 'titulo-azul';
-
-                article.innerHTML = `
-                    <a href="artigo.html?id=${post.id}">
-                        <img src="${imageUrl}" alt="${post.title}">
-                        <div class="card-conteudo">
-                            <span class="categoria-tag">${post.category || 'Geral'}</span>
-                            <${titleTag} class="${titleColorClass}">${post.title}</${titleTag}>
-                            ${showSummary ? `<p>${post.content.substring(0, 150)}...</p>` : ''}
-                        </div>
-                    </a>
-                `;
-                return article;
+            const savedTheme = localStorage.getItem("theme");
+            if (savedTheme) {
+                applyTheme(savedTheme);
+            } else {
+                applyTheme("light");
             }
-
-            loadHeroNews();
+            const carouselTrack = document.getElementById("mais-vistos-track");
+            const prevBtn = document.getElementById("carousel-prev");
+            const nextBtn = document.getElementById("carousel-next");
+            if (prevBtn && nextBtn && carouselTrack) {
+                prevBtn.addEventListener("click", () => {
+                    carouselTrack.scrollBy({ left: -carouselTrack.clientWidth * 0.8, behavior: "smooth" });
+                });
+                nextBtn.addEventListener("click", () => {
+                    carouselTrack.scrollBy({ left: carouselTrack.clientWidth * 0.8, behavior: "smooth" });
+                });
+            }
+            let highlightPosts = [];
+            try {
+                const { data: highlightData, error: highlightError } = await supabase
+                    .from(DB_TABLE)
+                    .select("id, title, content, image_url, category, created_at, headline_color")
+                    .order("created_at", { ascending: false })
+                    .limit(5);
+                if (highlightError) {
+                    console.error("Erro ao carregar notícias em destaque:", highlightError);
+                    document.getElementById("mais-vistos-loading").innerText = "Erro ao carregar notícias.";
+                } else if (highlightData && highlightData.length > 0) {
+                    highlightPosts = highlightData;
+                } else {
+                    document.getElementById("mais-vistos-loading").innerText = "Nenhuma notícia disponível.";
+                }
+            } catch (err) {
+                console.error("Erro na requisição de destaque:", err);
+            }
+            if (highlightPosts.length > 0) {
+                const track = document.getElementById("mais-vistos-track");
+                highlightPosts.forEach(post => {
+                    track.appendChild(createNewsCard(post));
+                });
+                document.getElementById("mais-vistos-loading").style.display = "none";
+                document.getElementById("mais-vistos-container").style.display = "block";
+            }
+            let offset = highlightPosts.length;
+            const pageSize = 10;
+            let reachedEnd = false;
+            try {
+                const { data: initialData, error: initialError } = await supabase
+                    .from(DB_TABLE)
+                    .select("id, title, content, image_url, category, created_at, headline_color")
+                    .order("created_at", { ascending: false })
+                    .range(offset, offset + pageSize - 1);
+                if (initialError) {
+                    console.error("Erro ao carregar notícias:", initialError);
+                    document.getElementById("categories-loading").innerText = "Erro ao carregar notícias.";
+                } else if (initialData && initialData.length > 0) {
+                    initialData.forEach(post => {
+                        const container = document.getElementById(`category-${post.category ? post.category.toLowerCase().normalize("NFD").replace(/[^\\w-]+/g,"") : "geral"}-container`);
+                        if (container) {
+                            container.appendChild(createNewsCard(post));
+                        }
+                    });
+                    document.getElementById("categories-loading").style.display = "none";
+                    document.getElementById("categories-sections").style.display = "block";
+                    offset += initialData.length;
+                    if (initialData.length < pageSize) {
+                        reachedEnd = true;
+                    }
+                } else {
+                    document.getElementById("categories-loading").innerText = "Nenhuma notícia encontrada.";
+                    reachedEnd = true;
+                }
+            } catch (err) {
+                console.error("Erro na requisição inicial:", err);
+            }
+            window.addEventListener("scroll", async () => {
+                if (reachedEnd || !supabase) return;
+                if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+                    const loadMoreIndicator = document.getElementById("load-more");
+                    loadMoreIndicator.style.display = "block";
+                    try {
+                        const { data: moreData, error: moreError } = await supabase
+                            .from(DB_TABLE)
+                            .select("id, title, content, image_url, category, created_at, headline_color")
+                            .order("created_at", { ascending: false })
+                            .range(offset, offset + pageSize - 1);
+                        if (moreError) {
+                            console.error("Erro ao carregar mais notícias:", moreError);
+                            loadMoreIndicator.innerText = "Erro ao carregar mais notícias.";
+                            reachedEnd = true;
+                        } else if (moreData && moreData.length > 0) {
+                            moreData.forEach(post => {
+                                const container = document.getElementById(`category-${post.category ? post.category.toLowerCase().normalize("NFD").replace(/[^\\w-]+/g,"") : "geral"}-container`);
+                                if (container) {
+                                    container.appendChild(createNewsCard(post));
+                                }
+                            });
+                            offset += moreData.length;
+                            loadMoreIndicator.style.display = "none";
+                            if (moreData.length < pageSize) {
+                                reachedEnd = true;
+                            }
+                        } else {
+                            reachedEnd = true;
+                            loadMoreIndicator.style.display = "none";
+                        }
+                    } catch (err) {
+                        console.error("Erro na requisição de mais notícias:", err);
+                        loadMoreIndicator.style.display = "none";
+                    }
+                }
+            });
         });
     </script>
 </body>
