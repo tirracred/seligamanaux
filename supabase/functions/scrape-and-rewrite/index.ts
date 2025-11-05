@@ -560,11 +560,11 @@ Responda APENAS em JSON:
     console.log(`[GROQ_DEBUG] Retry: ${retryCount} | Temp: ${temperature}`);
 
     // ✅ EXATAMENTE COMO FUNCIONOU NO CURL:
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${Deno.env.get("GROQ_API_KEY")}`,
+    "Content-Type": "application/json"
       },
       body: JSON.stringify({
   model: "llama-3.1-8b-instant",
@@ -582,13 +582,12 @@ Responda APENAS em JSON:
       content: prompt,
     },
   ],
-  response_format: { type: "json_object" },
-  temperature: temperature,
-  max_tokens: 3000
+  response_format: { type: "null" },
+  temperature: 0.5,
 }),
     });
 
-    "response_format": { "type": "json_object" },
+    "response_format": { "type": "null" },
 
     console.log(`[GROQ_RESPONSE] Status: ${response.status}`);
 
