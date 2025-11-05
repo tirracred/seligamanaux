@@ -26,7 +26,7 @@ interface GroqResponse {
   conteudo: string;
 }
 
-interface linkConfig {
+interface PortalConfig {
   name: string;
   baseUrl: string;
   linkSelectors: string[];
@@ -375,7 +375,7 @@ function looksNewsish(url: string, hostKey: string): boolean {
   return generic || hostOk;
 }
 
-function extractNewsLinks(html: string, config: linkConfig, maxLinks = 20): string[] {
+function extractNewsLinks(html: string, config: PortalConfig, maxLinks = 20): string[] {
   const links = new Set<string>();
   const page = sanitizeHtml(html);
 
@@ -770,16 +770,7 @@ Deno.serve(async (req) => {
     console.log("Portal detectado:", portalConfig.name);
 
 
-    // Se o usuário passou uma matéria específica, processe só ela
-const articleLike = /(\/20\d{2}\/\d{2}\/\d{2}\/)|\/noticia(s)?\/|\/amazonas\/[^/?#]+/.test(targetUrl.toLowerCase());
-let newsLinks: string[] = [];
-
-if (articleLike) {
-  newsLinks = [targetUrl];
-} else {
-  // fetch home/editoria, extrair links e paginar (sua lógica existente)
-  // ... (mantenha seu fetch da home aqui)
-  newsLinks = extractNewsLinks(htmlContent, portalConfig, 20);
+    
   // paginação extra se vier pouco:
   if (newsLinks.length < 8) {
     const morePages = buildPaginationUrls(portalConfig);  // sua função existente
