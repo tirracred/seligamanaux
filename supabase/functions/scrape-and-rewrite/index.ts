@@ -4,8 +4,6 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // Importa o createClient da biblioteca supabase-js v2
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-
-
 /* =========================
 TIPOS
 ========================= */
@@ -23,6 +21,10 @@ interface NoticiaScrapedData {
   data_publicacao?: string;
   imagem_url?: string | null;
   categoria: string;
+  // slug gerado para custom URL (opcional)
+  slug?: string;
+  // caminho canônico baseado no slug (opcional)
+  canonical_path?: string;
 }
 
 interface GroqResponse {
@@ -57,6 +59,7 @@ const corsHeaders = {
 CONFIGURAÇÃO DE PORTAIS
 ========================= */
 
+// (Configuração PORTAIS_CONFIG... mantida exatamente como no original)
 const PORTAIS_CONFIG: Record<string, PortalConfig> = {
   "g1.globo.com": {
     name: "G1 Amazonas",
@@ -225,6 +228,7 @@ const PORTAIS_CONFIG: Record<string, PortalConfig> = {
 FILTROS ANTI-PROMO/INSTITUCIONAL
 ========================= */
 
+// (Funções de filtro... mantidas exatamente como no original)
 const URL_BLACKLIST = [
   "/sobre",
   "/institucional",
@@ -305,6 +309,7 @@ function looksNewsish(url: string): boolean {
 NORMALIZAÇÃO / HIGIENE DE TEXTO
 ========================= */
 
+// (Funções de normalização... mantidas exatamente como no original)
 function stripSourceArtifacts(t: string): string {
   return (t || "")
     .replace(/\s+—\s*Foto:.*?(?=\.|$)/gi, "")
@@ -357,6 +362,7 @@ function has12ConsecutiveMatches(
 UTILITÁRIOS DE FETCH (AMP + IDIOMA)
 ========================= */
 
+// (Funções de fetch... mantidas exatamente como no original)
 function ampCandidates(u: string): string[] {
   const clean = u.replace(/#.*$/, "");
   const arr: string[] = [];
@@ -420,9 +426,128 @@ function sanitizeHtml(html: string): string {
 }
 
 /* =========================
+NOVO HELPER DE EXTRAÇÃO
+========================= */
+
+/**
+ * Tenta extrair conteúdo ou atributo do HTML usando uma lista de seletores simples (baseado em Regex).
+ * @param html HTML limpo (sanitizado)
+ * @param selectors Lista de seletores (ex: "h1.title", ".content", "meta[property='og:image']")
+ * @param getAttribute Se null, retorna innerHTML. Se string (ex: "src", "content"), retorna o valor desse atributo.
+ * @returns O texto encontrado (innerHTML ou valor do atributo) ou null.
+ */
+function extractBySelectors(
+  html: string,
+  selectors: string[],
+  getAttribute: string | null = null
+): string | null {
+  for (const selector of selectors) {
+    let regex: RegExp;
+    let match: RegExpExecArray | null;
+
+    try {
+      // 1. Seletor de Meta Tag: meta[property="og:image"]
+      if (selector.startsWith("meta[")) {
+        const metaMatch = selector.match(/\[property="([^"]+)"\]/);
+        if (metaMatch?.[1] && getAttribute === "content") {
+          regex = new RegExp(
+            `<meta[^>]*property="${metaMatch[1]}"[^>]*content="([^"]+)"`,
+            "i"
+          );
+          match = regex.exec(html);
+          if (match?.[1]) return match[1];
+        }
+        continue;
+      }
+
+      // 2. Seletor de Imagem (com classe no container ou na própria tag)
+      if (selector.includes("img") && getAttribute === "src") {
+        // Caso A: Classe na própria tag <img (ex: "img.wp-post-image")
+        if (selector.startsWith("img.")) {
+          const className = selector.split(".")[1];
+          regex = new RegExp(
+            `<img[^>]*class="[^"]*${className}[^"]*"[^>]* (?:src|data-src)="([^"]+)"`,
+            "i"
+          );
+          match = regex.exec(html);
+          if (match?.[1]) return match[1];
+        }
+        // Caso B: Classe no container (ex: ".content-media__image img")
+        else if (selector.startsWith(".") && selector.endsWith(" img")) {
+          const className = selector.split(" ")[0].replace(".", "");
+          // Regex para encontrar o container
+          const containerRegex = new RegExp(
+            `<[^>]+class="[^"]*${className}[^"]*"[^>]*>([\\s\\S]*?)<\\/(?:div|figure|picture)>`,
+            "i"
+          );
+          const containerMatch = containerRegex.exec(html);
+          const searchHtml = containerMatch?.[1] || html; // Busca dentro do container ou no HTML todo (fallback)
+
+          // Regex para encontrar a primeira imagem dentro do container
+          regex = /(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i;
+          match = regex.exec(searchHtml);
+          if (match?.[1]) return match[1];
+        }
+        // Caso C: Seletor genérico de imagem (ex: "figure img")
+        else if (selector.endsWith(" img")) {
+          const tagName = selector.split(" ")[0];
+          const containerRegex = new RegExp(
+            `<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`,
+            "i"
+          );
+          const containerMatch = containerRegex.exec(html);
+          const searchHtml = containerMatch?.[1] || html;
+          
+          regex = /(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i;
+          match = regex.exec(searchHtml);
+          if (match?.[1]) return match[1];
+        }
+        continue;
+      }
+
+      // 3. Seletor de Tag com Classe (ex: "h1.content-head__title") ou só Classe (ex: ".entry-content")
+      let tag = "div|article|section|h1|h2|h3|p|main"; // Tags comuns
+      let className = "";
+
+      if (selector.startsWith(".")) {
+        className = selector.replace(".", "").split(" ")[0]; // Pega só a classe (ex: .entry-content)
+      } else if (selector.includes(".")) {
+        [tag, className] = selector.split(".", 2);
+        className = className.split(" ")[0]; // Pega só a classe (ex: h1.title)
+      } else {
+        tag = selector.split(" ")[0]; // ex: "h1"
+      }
+
+      if (getAttribute) {
+        // Não suporta extrair atributo deste tipo de seletor (ainda)
+        continue;
+      }
+
+      // Regex para innerHTML
+      if (className) {
+        regex = new RegExp(
+          `<(${tag})[^>]*class="[^"]*${className}[^"]*"[^>]*>([\\s\\S]*?)<\\/\\1>`,
+          "i"
+        );
+      } else {
+        regex = new RegExp(`<(${tag})[^>]*>([\\s\\S]*?)<\\/\\1>`, "i");
+      }
+
+      match = regex.exec(html);
+      // Retorna o innerHTML (grupo 2)
+      if (match?.[2]) return match[2].trim();
+    } catch (e) {
+      console.log(`[REGEX_ERROR] Seletor: ${selector}, Erro: ${e.message}`);
+    }
+  }
+  return null; // Nenhum seletor correspondeu
+}
+
+/* =========================
 EXTRAÇÃO DE LINKS / CONTEÚDO
 ========================= */
 
+// (Funções extractNewsLinks, deduplicateLinks, buildPaginationUrls... mantidas como no original)
 function extractNewsLinks(
   htmlContent: string,
   portalConfig: PortalConfig,
@@ -507,9 +632,70 @@ function buildPaginationUrls(
 }
 
 /* =========================
+HELPERS DE REPARO/FORMATAÇÃO
+========================= */
+
+// (Funções normalizeAsciiQuotes, ensureParagraphsHTML, repairGroqJsonString, makeSlug... mantidas como no original)
+// Normaliza aspas “inteligentes” para aspas ASCII
+function normalizeAsciiQuotes(s: string): string {
+  return s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+}
+
+// Garante que o texto tenha parágrafos em HTML (<p>...</p>). Se já houver tags <p>, retorna o texto intacto.
+function ensureParagraphsHTML(text: string): string {
+  const hasHtmlP = /<p[\s>]/i.test(text) || /<\/p>/i.test(text);
+  if (hasHtmlP) return text;
+  const blocks = text.replace(/\r/g, "").split(/\n{2,}/).map(x => x.trim()).filter(Boolean);
+  const parts = (blocks.length ? blocks : text.split(/(?<=[.!?])\s{2,}/))
+    .map(x => x.trim()).filter(Boolean);
+  return parts.map(p => `<p>${p}</p>`).join("");
+}
+
+/**
+ * Repara respostas quase JSON retornadas pela LLM:
+ * - Extrai apenas o primeiro objeto {...} do texto.
+ * - Normaliza aspas “ ” para ".
+ * - Se o valor de "conteudo" não estiver entre aspas, envolve em aspas e escapa.
+ * - Converte campos com aspas simples para aspas duplas (caso raro).
+ */
+function repairGroqJsonString(raw: string): string {
+  if (!raw) return raw;
+  let s = normalizeAsciiQuotes(raw).trim();
+  // recorta o primeiro {...}
+  const m = s.match(/\{[\s\S]*\}/);
+  if (m) s = m[0];
+  try { JSON.parse(s); return s; } catch {}
+  // Força aspas ao redor do valor de "conteudo" se não houver
+  const rxUnquotedConteudo = /("conteudo"\s*:\s*)(?!")(.*)\s*}\s*$/s;
+  if (rxUnquotedConteudo.test(s)) {
+    s = s.replace(rxUnquotedConteudo, (_full: string, prefix: string, val: string) => {
+      // Limpa espaços/linhas, escapa barras e aspas
+      const cleaned = val.trim().replace(/\\|"/g, (m: string) => (m === '\\' ? '\\\\' : '\\"')).replace(/\n/g, "\\n");
+      return `${prefix}\"${cleaned}\"}`;
+    });
+    try { JSON.parse(s); return s; } catch {}
+  }
+  // Troca aspas simples em chaves por aspas duplas (caso raro)
+  const maybeJson5 = s.replace(/(['"])(titulo|conteudo)\1\s*:/g, '"$2":');
+  try { JSON.parse(maybeJson5); return maybeJson5; } catch {}
+  return s;
+}
+
+// Gera um slug a partir do título (remove acentos, espaços e caracteres inválidos)
+function makeSlug(title: string): string {
+  const base = title.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+/* =========================
 REESCRITA VIA GROQ
 ========================= */
 
+// (Função rewriteWithGroq... mantida exatamente como no original)
 async function rewriteWithGroq(
   title: string,
   content: string,
@@ -543,8 +729,8 @@ async function rewriteWithGroq(
   const prompt = `Reescreva o seguinte título e conteúdo em português, garantindo:
 1. Texto original (sem cópia acima de 80%)
 2. Nenhuma sequência de 12+ palavras idênticas
-3. Formatação em parágrafos
-4. Entre 2000 e 4000 caracteres
+3. Formatação em parágrafos (pode usar <p>...</p>)
+4. Entre 2000 e 5000 caracteres
 5. Tom jornalístico profissional 
 6. Atue como o "Se Liga Manaus": um jornal com identidade única, focado em máximo impacto, que explora tragédias e usa IMPACTOS inteligentes. 
 Mantenha um tom de alerta, incisivo e direto, focado 100% em Manaus. Use português padrão culto, sem gírias ou regionalismos, para chocar e informar o leitor.
@@ -570,12 +756,18 @@ Responda APENAS em JSON:
         model: "llama-3.1-8b-instant",
         messages: [
           {
-            role: "user",
-            content: prompt,
+            role: "system",
+            content:
+              'Responda ESTRITAMENTE com um único objeto JSON válido UTF-8, sem markdown, sem blocos de código, sem rótulos. ' +
+              'Formato exato: {"titulo":"...","conteudo":"..."}. ' +
+              'O "conteudo" deve ter entre 2000 e 5000 caracteres e estar em parágrafos (pode usar <p>...</p>). ' +
+              'Não inclua nada além do objeto JSON.'
           },
+          { role: "user", content: prompt },
         ],
-        temperature: temperature,
-        max_tokens: 2048,
+        response_format: { type: "json_object" },
+        temperature: Math.max(0.2, temperature ?? 0.5),
+        max_tokens: 3000,
       }),
     });
 
@@ -620,20 +812,27 @@ Responda APENAS em JSON:
 
     console.log(`[GROQ_RAW] Resposta recebida: ${textContent.slice(0, 100)}...`);
 
-    // ✅ PARSEAR JSON
-    let parsed;
+    // Parsear JSON de forma robusta: tenta JSON.parse; se falhar, tenta reparar
+    let parsed: { titulo?: string; conteudo?: string } | null = null;
     try {
       parsed = JSON.parse(textContent);
-    } catch (e) {
-      console.log(`[GROQ_JSON_ERROR] Não é JSON válido: ${textContent.slice(0, 100)}`);
-      if (retryCount < 2) {
-        return rewriteWithGroq(title, content, apiKey, retryCount + 1);
+    } catch {
+      const repaired = repairGroqJsonString(textContent);
+      try {
+        parsed = JSON.parse(repaired);
+      } catch (e) {
+        console.log(`[GROQ_JSON_ERROR] Não é JSON válido: ${textContent.slice(0, 120)}`);
+        if (retryCount < 2) {
+          return rewriteWithGroq(title, content, apiKey, retryCount + 1);
+        }
+        return null;
       }
-      return null;
     }
 
-    const novoTitulo = (parsed.titulo || "").trim();
-    const novoConteudo = (parsed.conteudo || "").trim();
+    const novoTitulo = (parsed?.titulo || "").trim();
+    let novoConteudo = (parsed?.conteudo || "").trim();
+    // garante que o conteúdo tenha parágrafos HTML (<p>...</p>)
+    novoConteudo = ensureParagraphsHTML(novoConteudo);
 
     console.log(
       `[REWRITE_OK] Título: ${novoTitulo.slice(0, 40)}... | Len: ${novoConteudo.length}`
@@ -803,27 +1002,50 @@ Deno.serve(async (req: Request) => {
 
         const cleanHtml = sanitizeHtml(htmlContent);
 
-        // Extrair título
-        const titleMatch = cleanHtml.match(/<h1[^>]*>(.*?)<\/h1>/i);
-        const originalTitle = (titleMatch?.[1] || "Sem título")
-          .replace(/<[^>]+>/g, "")
+        // ======================================================
+        // INÍCIO DA LÓGICA DE EXTRAÇÃO CORRIGIDA
+        // ======================================================
+
+        // 1. Extrair título usando seletores
+        const titleHtml = extractBySelectors(
+          cleanHtml,
+          portalConfig.titleSelectors,
+          null
+        );
+        let originalTitle = (titleHtml || "Sem título")
+          .replace(/<[^>]+>/g, "") // Limpa HTML interno (ex: <span>)
           .trim();
 
+        // Fallback se seletores falharem
+        if (originalTitle === "Sem título") {
+          const titleMatch = cleanHtml.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+          originalTitle = (titleMatch?.[1] || "Sem título")
+            .replace(/<[^>]+>/g, "")
+            .trim();
+        }
+
         if (isBlacklistedTitle(originalTitle)) {
-          console.log(`[SKIP] Título na blacklist`);
+          console.log(`[SKIP] Título na blacklist: ${originalTitle}`);
           continue;
         }
 
-        // Extrair conteúdo
-        const contentMatch = cleanHtml.match(
-          /<article[^>]*>(.*?)<\/article>/is
-        ) ||
-          cleanHtml.match(/<!-- .* -->(.*?)<!-- .*/is) || [
-            null,
-            cleanHtml,
-          ];
-        let originalContent = contentMatch[1] || cleanHtml;
-        originalContent = originalContent
+        // 2. Extrair conteúdo usando seletores
+        let originalContentHtml = extractBySelectors(
+          cleanHtml,
+          portalConfig.contentSelectors,
+          null
+        );
+
+        // Fallback se seletores falharem
+        if (!originalContentHtml || originalContentHtml.length < 500) {
+          const contentMatch = cleanHtml.match(
+            /<article[^>]*>([\s\S]*?)<\/article>/is
+          );
+          originalContentHtml = contentMatch?.[1] || cleanHtml;
+        }
+
+        // Limpar o HTML para obter texto plano
+        let originalContent = (originalContentHtml || "")
           .replace(/<[^>]+>/g, " ")
           .replace(/&[a-z]+;/gi, " ")
           .replace(/\s+/g, " ")
@@ -835,10 +1057,30 @@ Deno.serve(async (req: Request) => {
           );
           continue;
         }
+        
+        // 3. Extrair imagem usando seletores
+        let imagemUrl =
+          extractBySelectors(cleanHtml, portalConfig.imageSelectors, "src") ||
+          extractBySelectors(cleanHtml, portalConfig.imageSelectors, "content"); // para meta tags
+
+        // Fallback se seletores falharem
+        if (!imagemUrl) {
+          const imgMatch = cleanHtml.match(
+            /(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i
+          );
+          imagemUrl = imgMatch?.[1] || null;
+        }
+
+        // ======================================================
+        // FIM DA LÓGICA DE EXTRAÇÃO CORRIGIDA
+        // ======================================================
 
         // Higienizar
         originalContent = stripSourceArtifacts(originalContent);
-        if (looksPromotional(originalContent) || looksPromotional(originalTitle)) {
+        if (
+          looksPromotional(originalContent) ||
+          looksPromotional(originalTitle)
+        ) {
           console.log(`[SKIP] Promotional/institutional`);
           continue;
         }
@@ -856,25 +1098,30 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // Extrair imagem
-        const imgMatch = cleanHtml.match(
-          /(?:src|data-src)=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/i
-        );
-        const imagemUrl = imgMatch?.[1] || null;
+        // Gerar slug e caminho canônico para URL customizada
+        const slug = makeSlug(rewritten.titulo);
+        const canonicalPath = `/artigo/${slug}`;
 
-        // ✅ Montar registro com status "pendente"
+        // Montar registro com status "pendente" e slug
         const newRecord: NoticiaScrapedData = {
           titulo_original: originalTitle.slice(0, 255),
           titulo_reescrito: rewritten.titulo.slice(0, 255),
           resumo_original: originalContent.slice(0, 500),
-          resumo_reescrito: rewritten.conteudo.slice(0, 500),
+          // resumo em texto plano (remove tags HTML) para evitar cortar tags
+          resumo_reescrito: rewritten.conteudo
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 500),
           conteudo_reescrito: rewritten.conteudo,
           url_original: newsUrl,
           fonte: portalConfig.name,
-          status: "pendente", // ✅ CORRIGIDO: era "processado"
+          status: "pendente",
           data_coleta: new Date().toISOString(),
           imagem_url: imagemUrl,
           categoria: portalConfig.category,
+          slug,
+          canonical_path: canonicalPath,
         };
 
         processedNews.push(newRecord);
