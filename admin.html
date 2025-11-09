@@ -144,6 +144,7 @@ Ignorar páginas promocionais / institucionais (recomendado)
                     <div class="loading">Carregando notícias scraped...</div>
                 </div>
             </div>
+            
 
             <div class="admin-section">
                 <h3>✍️ Criar Notícia Manual</h3>
@@ -361,6 +362,25 @@ Ignorar páginas promocionais / institucionais (recomendado)
     alert('Faça login primeiro!');
     return;
   }
+
+  async function importarRSS() {
+  if (!supabaseClient || !currentSession) {
+    alert('Faça login primeiro!');
+    return;
+  }
+  const anonKey = document.getElementById('anonKey').value;
+  const resp = await fetch('https://<project>.supabase.co/functions/v1/rss_import', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${currentSession.access_token}`,
+      'Content-Type': 'application/json',
+      'apikey': anonKey
+    }
+  });
+  const data = await resp.json();
+  alert(`Importação concluída! ${data.imported} artigos salvos.`);
+  loadNoticias(); // opcional, para recarregar a lista
+}
 
   const statusEl = document.getElementById('scrapeStatus');
   statusEl.classList.remove('hidden');
