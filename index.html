@@ -161,19 +161,23 @@
                     if (error) throw error; // O erro 400 acontecia aqui
 
                     if (newsData && newsData.length > 0) {
-                        newsData.forEach(post => {
-                            const safeCategory = getSafeCategoryId(post.category);
-                            const container = document.getElementById(`category-${safeCategory}-container`);
-                            
-                            if (container) {
-                                container.appendChild(createNewsCard(post));
-                                container.closest('.category-section').style.display = 'block';
-                            } else {
-                                const geralContainer = document.getElementById("category-geral-container");
-                                geralContainer.appendChild(createNewsCard(post));
-                                geralContainer.closest('.category-section').style.display = 'block';
-                            }
-                        });
+                      newsData.forEach(post => {
+                        const safeCategory = getSafeCategoryId(post.category);
+                        let container = document.getElementById(`category-${safeCategory}-container`);
+                        
+                        // Se o container da categoria não existe, usa "amazonas" (que sempre existe)
+                        if (!container) {
+                            container = document.getElementById("category-amazonas-container");
+                        }
+                        
+                        // Só adiciona se encontrou algum container
+                        if (container) {
+                            container.appendChild(createNewsCard(post));
+                            container.closest('.category-section').style.display = 'block';
+                        } else {
+                            console.warn(`Container não encontrado para categoria: ${post.category}`);
+                        }
+                    });
                         
                         document.getElementById("categories-sections").style.display = "block";
                         offset += newsData.length;
