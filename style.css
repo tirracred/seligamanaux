@@ -286,7 +286,7 @@ a:hover {
 }
 /* Botão ATIVADO (Dark Mode) */
 input:checked + .slider {
-    background-color: var(--texto-link); 
+    background-color: #777
 }
 /* Botão DESATIVADO (Light Mode) */
 input:not(:checked) + .slider {
