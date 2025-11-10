@@ -110,13 +110,14 @@ function extractJsonFromText(text: string): {
     // Tenta parse direto
     const parsed = JSON.parse(text);
     if (parsed.titulo && parsed.legenda && parsed.cor_titulo && parsed.conteudo) {
-      return { 
-        titulo: parsed.titulo, 
-        legenda: parsed.legenda,
-        cor_titulo: parsed.cor_titulo,
-        conteudo: parsed.conteudo 
-      };
-    }
+  return { 
+    titulo: parsed.titulo, 
+    legenda: parsed.legenda,
+    cor_titulo: parsed.cor_titulo,
+    prioridade: parseInt(parsed.prioridade) || 1,  // ✅ NOVO (padrão 1)
+    conteudo: parsed.conteudo 
+  };
+}
   } catch (e) {
     log("Parse direto falhou, tentando extrair JSON do texto");
   }
@@ -167,6 +168,7 @@ async function rewriteWithGroq(
   retries = 3
 ): Promise<{ 
   titulo: string; 
+  prioridade: number; 
   legenda: string; 
   cor_titulo: string; 
   conteudo: string 
@@ -198,6 +200,7 @@ async function rewriteWithGroq(
     '{',
     '  "titulo": "novo título aqui",',
     '  "legenda": "legenda contextual aqui",',
+    ' "prioridade": 1 ou 5,',
     '  "cor_titulo": "#e53e3e ou #059669",',
     '  "conteudo": "texto completo reescrito aqui"',
     '}',
@@ -430,6 +433,7 @@ serve(async (req) => {
           content: rewritten.conteudo,
           category: rewritten.legenda,
           headline_colo: rewritten.cor_titulo,
+          prioridade: rewritten.prioridade || 1,  // ✅ NOVO
           image_url: imageUrl || null,
           videos: videoUrl || null,
           link_original: link,  // ✅ NOVO: Salva o link original para evitar duplicatas

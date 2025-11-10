@@ -154,8 +154,10 @@
                     // Busca usando as colunas corrigidas
                     const { data: newsData, error } = await supabase
                         .from(DB_TABLE)
-                        .select(COLUNAS_SELECT) // <--- USANDO AS COLUNAS CORRIGIDAS
-                        .order("created_at", { ascending: false })
+                        .select(COLUNAS_SELECT + ", prioridade")  // ✅ Inclui prioridade
+                        .eq('status', 'publicado')
+                        .order("prioridade", { ascending: false })  // ✅ Primeiro: prioridade
+                        .order("created_at", { ascending: false })  // ✅ Segundo: data
                         .range(offset, offset + pageSize - 1);
 
                     if (error) throw error; // O erro 400 acontecia aqui
