@@ -81,7 +81,7 @@
     <script>
         // === CORREÇÃO 1: Colunas que REALMENTE existem na tabela 'noticias' ===
         // (Removido 'resumo_reescrito' e 'canonical_path' que causaram o erro 400)
-        const COLUNAS_SELECT = "id, title, content, image_url, category, created_at, headline_color";
+        const COLUNAS_SELECT = "id, title, content, category, image_url, headline_colo, videos, created_at";
 
         /**
          * Cria o card de notícia (Versão Corrigida)
@@ -91,7 +91,7 @@
             article.className = "card-noticia";
             
             const imageUrl = post.image_url || "https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux";
-            const titleColorClass = post.headline_color === "red" ? "titulo-vermelho" : "titulo-azul";
+            const titleColorClass = post.headline_colo === "red" ? "titulo-vermelho" : "titulo-azul";
             
             // === CORREÇÃO 2: Voltar a usar o ID, já que 'canonical_path' não existe aqui ===
             const articleUrl = `artigo.html?id=${post.id}`;
