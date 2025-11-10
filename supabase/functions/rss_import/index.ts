@@ -1,76 +1,67 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ---------------------------------------------------------------------------
-// CORS configuration
-// Edge functions run on a different domain than your site, so when
-// calling this function from a browser (e.g. seligamanaux.com.br) you
-// need to allow cross‑origin requests.  The CORS headers below
-// mirror the pattern used in Supabase examples: allow any origin and
-// allow Authorization/apikey headers.  Modify as needed.
+// ===========================================================================
+// CONFIGURAÇÃO CORS
+// ===========================================================================
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
-/**
- * This Edge Function imports articles from a handful of RSS feeds, rewrites
- * them with Groq’s Llama‑3.1‑8B‑Instant model, then persists the rewritten
- * result into your Supabase database.  The goal is to automatically
- * populate your news portal with fresh, unique content sourced from
- * established news providers without scraping their web pages.  See
- * README.md for instructions on deploying this function.
- *
- * Configuration is driven by environment variables.  The function expects
- * the following secrets to be defined in your Supabase project:
- *
- *   SUPABASE_URL               – the URL of your Supabase project
- *   SUPABASE_SERVICE_ROLE_KEY  – a service role key used to insert rows
- *   GROQ_API_KEY_2             – API key for the Groq API (gsk_…)
- *
- * You can optionally override the default RSS feeds by defining a
- * comma‑separated list in RSS_FEEDS.  For example:
- *   RSS_FEEDS="https://example.com/feed.xml,https://other.com/rss"
- *
- * The function uses a simple RegExp based parser to extract information
- * from RSS items.  It is intentionally limited in scope to keep the
- * runtime lean – you may replace it with a proper XML parser if your
- * feeds require more complex parsing.  Each item is processed one at a
- * time to avoid saturating the Groq API.
- */
+// ===========================================================================
+// FEEDS RSS CONFIGURADOS
+// ===========================================================================
+const DEFAULT_FEEDS = [
+  "https://g1.globo.com/rss/g1/am/amazonas/",
+  "https://d24am.com/feed/",
+  "https://g1.globo.com/rss/g1/am/",
+  "https://nossoshowam.com/feed/29/amazonas/",
+  "https://nossoshowam.com/feed/26/manaus/",
+  "https://nossoshowam.com/feed/3/politica/",
+  "https://nossoshowam.com/feed/27/brasil/",
+  "https://nossoshowam.com/feed/7/economia/",
+  "https://nossoshowam.com/feed/13/educacao/",
+  "https://www.portaldoholanda.com.br/feed/rss",
+];
 
-// Helper to extract the first occurrence of a tag from an RSS item.  It
-// strips CDATA wrappers and HTML tags from the result.
+// ===========================================================================
+// FUNÇÕES AUXILIARES
+// ===========================================================================
+
+function log(message: string, data?: any) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${message}`, data || '');
+}
+
 function extractTag(xml: string, tag: string): string {
-  const regex = new RegExp(`<${tag}[^>]*>([\s\S]*?)<\/${tag}>`, "i");
+  const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
   const match = xml.match(regex);
   if (!match) return "";
-  // Remove CDATA and HTML tags
+  
   let content = match[1].trim();
-  content = content.replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1");
+  content = content.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gs, "$1");
   content = content.replace(/<[^>]+>/g, "");
   return content.trim();
 }
 
-// Helper to extract an image URL from common RSS/Atom image fields.
 function extractImage(xml: string): string {
-  // enclosure tag with url attribute
   const encMatch = xml.match(/<enclosure[^>]+url=["']([^"']+)["'][^>]*>/i);
   if (encMatch) return encMatch[1];
-  // media:content or content tag with url attribute
+  
   const mediaMatch = xml.match(/<(?:media:content|content)[^>]+url=["']([^"']+)["'][^>]*>/i);
   if (mediaMatch) return mediaMatch[1];
-  // media:thumbnail or thumbnail tag
+  
   const thumbMatch = xml.match(/<(?:media:thumbnail|thumbnail)[^>]+url=["']([^"']+)["'][^>]*>/i);
   if (thumbMatch) return thumbMatch[1];
-  // fallback: try to find an <img src="..."> inside description
+  
   const imgMatch = xml.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
   if (imgMatch) return imgMatch[1];
+  
   return "";
 }
 
-// Helper to slugify a string for use as a canonical path.
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -81,238 +72,382 @@ function slugify(text: string): string {
     .substring(0, 100);
 }
 
-// Default list of RSS feeds.  You can override this via the RSS_FEEDS
-// environment variable (comma separated).  These feeds reflect the
-// corrected links provided by the admin.  The function will attempt
-// to import from all sources, continuing on errors.
-const DEFAULT_FEEDS = [
-  // G1 AM Amazonas (sem sufixo rss2.xml)
-  "https://g1.globo.com/rss/g1/am/amazonas/",
-  // D24AM principal
-  "https://d24am.com/feed/",
-  // G1 AM
-  "https://g1.globo.com/rss/g1/am/",
-  // Nosso Show AM – Amazonas
-  "https://nossoshowam.com/feed/29/amazonas/",
-  // Nosso Show AM – Manaus
-  "https://nossoshowam.com/feed/26/manaus/",
-  // Nosso Show AM – Política
-  "https://nossoshowam.com/feed/3/politica/",
-  // Nosso Show AM – Brasil
-  "https://nossoshowam.com/feed/27/brasil/",
-  // Nosso Show AM – Economia
-  "https://nossoshowam.com/feed/7/economia/",
-  // Nosso Show AM – Educação
-  "https://nossoshowam.com/feed/13/educacao/",
-  // Portal do Holanda
-  "https://www.portaldoholanda.com.br/feed/rss",
-];
+function extractCategory(feedUrl: string): string {
+  if (feedUrl.includes("/29/amazonas") || feedUrl.includes("/amazonas/")) return "Amazonas";
+  if (feedUrl.includes("/26/manaus") || feedUrl.includes("/manaus/")) return "Manaus";
+  if (feedUrl.includes("/3/politica") || feedUrl.includes("/politica/")) return "Política";
+  if (feedUrl.includes("/27/brasil") || feedUrl.includes("/brasil/")) return "Brasil";
+  if (feedUrl.includes("/7/economia") || feedUrl.includes("/economia/")) return "Economia";
+  if (feedUrl.includes("/13/educacao") || feedUrl.includes("/educacao/")) return "Educação";
+  if (feedUrl.includes("famosos")) return "Entretenimento";
+  return "Geral";
+}
 
-// Main entry point.  Every invocation fetches all feeds and rewrites
-// them.  Invoking this endpoint repeatedly could import duplicate
-// articles if they have not yet been filtered out by title/link.
+function extractImageCredit(link: string): string {
+  try {
+    const url = new URL(link);
+    return `Fonte: ${url.hostname}`;
+  } catch {
+    return "";
+  }
+}
+
+// ===========================================================================
+// VALIDAÇÃO E EXTRAÇÃO DE JSON ROBUSTA
+// ===========================================================================
+function extractJsonFromText(text: string): { titulo: string; conteudo: string } | null {
+  try {
+    // Tenta parse direto
+    const parsed = JSON.parse(text);
+    if (parsed.titulo && parsed.conteudo) {
+      return { titulo: parsed.titulo, conteudo: parsed.conteudo };
+    }
+  } catch (e) {
+    log("Parse direto falhou, tentando extrair JSON do texto");
+  }
+  
+  // Tenta encontrar JSON no meio do texto
+  const jsonMatch = text.match(/\{[\s\S]*"titulo"[\s\S]*"conteudo"[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed.titulo && parsed.conteudo) {
+        return { titulo: parsed.titulo, conteudo: parsed.conteudo };
+      }
+    } catch (e) {
+      log("Parse de JSON extraído falhou");
+    }
+  }
+  
+  // Última tentativa: extração manual com regex
+  const tituloMatch = text.match(/"titulo"\s*:\s*"([^"]+)"/);
+  const conteudoMatch = text.match(/"conteudo"\s*:\s*"([\s\S]+?)"\s*\}/);
+  
+  if (tituloMatch && conteudoMatch) {
+    return {
+      titulo: tituloMatch[1],
+      conteudo: conteudoMatch[1].replace(/\\n/g, '\n')
+    };
+  }
+  
+  return null;
+}
+
+// ===========================================================================
+// FUNÇÃO PRINCIPAL DE REESCRITA COM GROQ
+// ===========================================================================
+async function rewriteWithGroq(
+  title: string, 
+  description: string, 
+  groqKey: string,
+  retries = 3
+): Promise<{ titulo: string; conteudo: string } | null> {
+  
+  const prompt = [
+    'Você é um jornalista profissional de Manaus/Amazonas.',
+    '',
+    'TAREFA: Reescrever completamente a notícia abaixo de forma original.',
+    '',
+    'NOTÍCIA ORIGINAL:',
+    `Título: ${title}`,
+    `Conteúdo: ${description}`,
+    '',
+    'INSTRUÇÕES:',
+    '1. Reescreva o conteúdo de forma TOTALMENTE ORIGINAL',
+    '2. Use linguagem jornalística brasileira, clara e direta',
+    '3. Foque em Manaus/Amazonas quando relevante',
+    '4. Tamanho: MÁXIMO 2.500 palavras (não exceder)',
+    '5. Organize em parágrafos bem estruturados',
+    '6. Crie um título completamente novo e chamativo',
+    '7. IMPORTANTE: Escreva em português brasileiro correto',
+    '',
+    'FORMATO DE RESPOSTA (JSON ESTRITO):',
+    '{',
+    '  "titulo": "novo título aqui",',
+    '  "conteudo": "texto completo reescrito aqui"',
+    '}',
+    '',
+    'ATENÇÃO: Retorne APENAS o JSON, sem texto adicional antes ou depois.'
+  ].join('\n');
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      log(`Tentativa ${attempt}/${retries} de reescrever: ${title.substring(0, 50)}...`);
+      
+      const groqResponse = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-8b-instant",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.7,
+            max_tokens: 4000, // Reduzido para ~2500 palavras
+            response_format: { type: "json_object" },
+          }),
+        }
+      );
+
+      if (!groqResponse.ok) {
+        const errorText = await groqResponse.text();
+        log(`Erro Groq API (${groqResponse.status}): ${errorText}`);
+        
+        // Se for rate limit, espera mais tempo
+        if (groqResponse.status === 429) {
+          const waitTime = Math.pow(2, attempt) * 2000; // Backoff exponencial
+          log(`Rate limit atingido. Aguardando ${waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
+        return null;
+      }
+
+      const groqData = await groqResponse.json();
+      const contentOut = groqData?.choices?.[0]?.message?.content;
+      
+      if (!contentOut) {
+        log("Groq retornou resposta vazia");
+        continue;
+      }
+
+      log("Conteúdo recebido da Groq, tentando parsear...");
+      
+      // Validação robusta de JSON
+      let parsed: any = null;
+      
+      if (typeof contentOut === "object") {
+        parsed = contentOut;
+      } else if (typeof contentOut === "string") {
+        parsed = extractJsonFromText(contentOut);
+      }
+      
+      if (parsed && parsed.titulo && parsed.conteudo) {
+        log("✓ Artigo reescrito com sucesso!");
+        return {
+          titulo: String(parsed.titulo).trim(),
+          conteudo: String(parsed.conteudo).trim()
+        };
+      } else {
+        log("JSON inválido recebido da Groq:", { contentOut: contentOut?.substring?.(0, 200) });
+      }
+      
+    } catch (error) {
+      log(`Erro na tentativa ${attempt}:`, error);
+    }
+    
+    // Delay entre tentativas
+    if (attempt < retries) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
+  
+  return null;
+}
+
+// ===========================================================================
+// FUNÇÃO PRINCIPAL
+// ===========================================================================
 serve(async (req) => {
-  // Respond to CORS preflight
+  // Responder a CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS });
   }
+
+  const startTime = Date.now();
+  log("=== INÍCIO DA EXECUÇÃO RSS IMPORT ===");
+
+  // Validação de variáveis de ambiente
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const groqKey = Deno.env.get("GROQ_API_KEY_2");
   const feedEnv = Deno.env.get("RSS_FEEDS");
-  const feeds = feedEnv
-    ? feedEnv.split(/\s*,\s*/).filter((v) => v)
-    : DEFAULT_FEEDS;
+  const feeds = feedEnv ? feedEnv.split(/\s*,\s*/).filter(v => v) : DEFAULT_FEEDS;
 
   if (!supabaseUrl || !supabaseKey) {
+    log("ERRO: Configuração Supabase ausente");
     return new Response(
-      JSON.stringify({ error: "Missing Supabase configuration" }),
-      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      JSON.stringify({ 
+        error: "Missing Supabase configuration",
+        imported: 0,
+        details: []
+      }),
+      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
     );
   }
+
   if (!groqKey) {
+    log("ERRO: GROQ API key ausente");
     return new Response(
-      JSON.stringify({ error: "Missing GROQ API key" }),
-      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      JSON.stringify({ 
+        error: "Missing GROQ API key",
+        imported: 0,
+        details: []
+      }),
+      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
     );
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
-  const imported: any[] = [];
+  const results: any[] = [];
   let importedCount = 0;
-  // Iterate through feeds sequentially
+  let totalProcessed = 0;
+  let totalErrors = 0;
+
+  log(`Total de feeds a processar: ${feeds.length}`);
+
+  // Processar cada feed individualmente
   for (const feedUrl of feeds) {
+    const feedResult = {
+      feed: feedUrl,
+      status: "pending",
+      articlesProcessed: 0,
+      articlesImported: 0,
+      errors: [] as string[]
+    };
+
     try {
-      const res = await fetch(feedUrl);
+      log(`\n--- Processando feed: ${feedUrl} ---`);
+      
+      const res = await fetch(feedUrl, { 
+        signal: AbortSignal.timeout(30000) // 30s timeout
+      });
+      
       if (!res.ok) {
-        console.warn(`Failed to fetch feed ${feedUrl}: ${res.status}`);
+        const error = `HTTP ${res.status}: ${res.statusText}`;
+        log(`Erro ao buscar feed: ${error}`);
+        feedResult.status = "error";
+        feedResult.errors.push(error);
+        results.push(feedResult);
+        totalErrors++;
         continue;
       }
+
       const text = await res.text();
       const items = [...text.matchAll(/<item[^>]*>([\s\S]*?)<\/item>/gi)];
-      for (const match of items) {
-        const itemXml = match[1];
-        const title = extractTag(itemXml, "title");
-        const link = extractTag(itemXml, "link");
-        const description = extractTag(itemXml, "description");
-        const pubDate = extractTag(itemXml, "pubDate");
-        const imageUrl = extractImage(itemXml);
-        // Skip if required fields missing
-        if (!title || !link || !description) continue;
-        // Optional: you could check for duplicates here by comparing the
-        // article link or title with existing records.  Since the
-        // `noticias` table does not store `original_link`, we skip this
-        // duplicate check to avoid column‑not‑found errors.  You may
-        // implement your own logic here if needed.
-        // Prepare the prompt for Groq.  The prompt is designed
-        // similarly to your Base44 implementation: it instructs the
-        // model to rewrite the article in Portuguese, focusing on
-        // Manaus/Amazonas when relevant, and to output JSON.
-        const prompt = [
-          'Você é um jornalista profissional de Manaus/Amazonas.',
-          '',
-          'TAREFA: Reescrever completamente a notícia abaixo de forma original, mantendo os fatos mas mudando totalmente a redação.',
-          '',
-          'NOTÍCIA ORIGINAL:',
-          `Título: ${title}`,
-          `Conteúdo: ${description}`,
-          '',
-          'INSTRUÇÕES:',
-          '1. Reescreva o conteúdo de forma TOTALMENTE ORIGINAL (não copie frases)',
-          '2. Use linguagem jornalística brasileira, clara e direta',
-          '3. Foque em Manaus/Amazonas quando relevante',
-          '4. Tamanho: entre 2000 e 5000 palavras',
-          '5. Organize em parágrafos bem estruturados',
-          '6. Crie um título completamente novo e chamativo',
-          '7. IMPORTANTE: Escreva em português brasileiro correto',
-          '',
-          'FORMATO DE RESPOSTA (JSON):',
-          '{',
-          '  "titulo": "novo título aqui",',
-          '  "conteudo": "texto completo reescrito aqui (com múltiplos parágrafos separados por\\n\\n)"',
-          '}',
-        ].join('\n');
-        // Call Groq API to rewrite the article.  In case of any
-        // errors or empty responses, fall back to the original title
-        // and description.  We request a reasonable token limit (4096)
-        // to avoid hitting model constraints.  If the API fails or
-        // returns invalid JSON, the original article will still be
-        // inserted.
-        // We intend to rewrite the article via IA.  If the rewrite fails
-        // we will skip inserting this item entirely rather than using
-        // the original content.
-        let newTitle = "";
-        let newContent = "";
-        try {
-          const groqResponse = await fetch(
-            "https://api.groq.com/openai/v1/chat/completions",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${groqKey}`,
-              },
-              body: JSON.stringify({
-                model: "llama-3.1-8b-instant",
-                messages: [
-                  { role: "user", content: prompt },
-                ],
-                temperature: 0.7,
-                // Solicita saída estruturada em JSON.  Com
-                // response_format definido para json_object, a API
-                // assegura que a resposta seja JSON válido.
-                response_format: { "type": "json_object" },
-                // Solicita tokens suficientes para 2–5 mil palavras.  Se
-                // exceder o limite do modelo, a API cortará a saída.
-                max_tokens: 8192,
-              }),
-            },
-          );
-          if (groqResponse.ok) {
-            const groqData = await groqResponse.json();
-            const contentOut = groqData?.choices?.[0]?.message?.content;
-            // When response_format=json_object, message.content should be an
-            // object.  If it's a string, attempt to parse.
-            let parsed: any;
-            if (contentOut && typeof contentOut === "object") {
-              parsed = contentOut;
-            } else if (typeof contentOut === "string" && contentOut.trim()) {
-              try {
-                parsed = JSON.parse(contentOut);
-              } catch (_e) {
-                console.error("Failed to parse JSON from Groq:", contentOut);
-                parsed = null;
-              }
-            }
-            if (parsed && parsed.titulo && parsed.conteudo) {
-              newTitle = String(parsed.titulo).trim();
-              newContent = String(parsed.conteudo).trim();
-            } else {
-              // If JSON is missing expected fields, skip this article
-              console.warn("Groq returned invalid JSON format", parsed);
-            }
-          } else {
-            console.error(`Groq API error: ${groqResponse.status} ${await groqResponse.text()}`);
-          }
-        } catch (llmErr) {
-          console.error(`Error calling Groq API: ${llmErr}`);
-        }
-        // Skip insertion if IA rewrite failed
-        if (!newTitle || !newContent) continue;
-        // Create a slug for the canonical path
-        const slug = slugify(newTitle);
-        // Determine a category based on feed origin.  This mapping
-        // aligns with the new feed list.  If none match, defaults to
-        // "Geral".  Extend as needed to support additional feeds.
-        let category = "Geral";
-        if (feedUrl.includes("/29/amazonas") || feedUrl.includes("/amazonas/")) {
-          category = "Amazonas";
-        } else if (feedUrl.includes("/26/manaus") || feedUrl.includes("/manaus/")) {
-          category = "Manaus";
-        } else if (feedUrl.includes("/3/politica") || feedUrl.includes("/politica/")) {
-          category = "Política";
-        } else if (feedUrl.includes("/27/brasil") || feedUrl.includes("/brasil/")) {
-          category = "Brasil";
-        } else if (feedUrl.includes("/7/economia") || feedUrl.includes("/economia/")) {
-          category = "Economia";
-        } else if (feedUrl.includes("/13/educacao") || feedUrl.includes("/educacao/")) {
-          category = "Educação";
-        } else if (feedUrl.includes("famosos")) {
-          category = "Entretenimento";
-        } else if (feedUrl.includes("amazonas")) {
-          category = "Amazonas";
-        }
-        // Derive a simple image credit from the source domain
-        let imageCredit = "";
-        try {
-          const url = new URL(link);
-          imageCredit = `Fonte: ${url.hostname}`;
-        } catch {}
-        // Insert the article into the database.  The `noticias` table
-        // expects only a few columns: title, content, category and
-        // image_url.  Additional fields such as original_link or
-        // canonical_path are not inserted to avoid column errors.
-        const { error: insertErr } = await supabase.from("noticias").insert({
-          title: newTitle,
-          content: newContent,
-          category,
-          image_url: imageUrl || null,
-        });
-        if (insertErr) {
-          console.error(`Failed to insert article: ${insertErr.message}`);
-          continue;
-        }
-        imported.push({ title: newTitle, slug });
-        importedCount += 1;
-        // Delay a little between requests to avoid hitting rate limits
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      log(`Feed ${feedUrl}: ${items.length} itens encontrados`);
+      
+      if (items.length === 0) {
+        feedResult.status = "empty";
+        feedResult.errors.push("Nenhum item encontrado no feed");
+        results.push(feedResult);
+        continue;
       }
-    } catch (err) {
-      console.error(`Error processing feed ${feedUrl}:`, err);
+
+      // Processar cada item do feed
+      for (const match of items) {
+        totalProcessed++;
+        feedResult.articlesProcessed++;
+        
+        try {
+          const itemXml = match[1];
+          const title = extractTag(itemXml, "title");
+          const link = extractTag(itemXml, "link");
+          const description = extractTag(itemXml, "description");
+          const imageUrl = extractImage(itemXml);
+
+          if (!title || !link || !description) {
+            log(`Item pulado: campos obrigatórios ausentes`);
+            feedResult.errors.push(`Item sem título/link/descrição`);
+            continue;
+          }
+
+          log(`Processando: ${title.substring(0, 60)}...`);
+
+          // Verificar duplicata por título (simples)
+          const { data: existingData } = await supabase
+            .from("noticias")
+            .select("id")
+            .eq("title", title)
+            .limit(1);
+
+          if (existingData && existingData.length > 0) {
+            log(`⊘ Artigo já existe: ${title.substring(0, 50)}...`);
+            feedResult.errors.push(`Duplicado: ${title.substring(0, 50)}`);
+            continue;
+          }
+
+          // Reescrever com IA
+          const rewritten = await rewriteWithGroq(title, description, groqKey);
+          
+          if (!rewritten) {
+            log(`✗ Falha ao reescrever: ${title.substring(0, 50)}...`);
+            feedResult.errors.push(`Reescrita falhou: ${title.substring(0, 50)}`);
+            continue;
+          }
+
+          // Extrair informações adicionais
+          const category = extractCategory(feedUrl);
+          const imageCredit = extractImageCredit(link);
+
+          // Inserir no banco
+          const { error: insertErr } = await supabase.from("noticias").insert({
+            title: rewritten.titulo,
+            content: rewritten.conteudo,
+            category,
+            image_url: imageUrl || null,
+          });
+
+          if (insertErr) {
+            log(`Erro ao inserir no banco: ${insertErr.message}`);
+            feedResult.errors.push(`DB Error: ${insertErr.message}`);
+            continue;
+          }
+
+          log(`✓ Artigo importado com sucesso!`);
+          importedCount++;
+          feedResult.articlesImported++;
+
+          // Delay para respeitar rate limits (2s entre artigos)
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+        } catch (itemError) {
+          log(`Erro ao processar item:`, itemError);
+          feedResult.errors.push(`Item error: ${String(itemError).substring(0, 100)}`);
+          totalErrors++;
+        }
+      }
+
+      feedResult.status = feedResult.articlesImported > 0 ? "success" : "no_imports";
+      results.push(feedResult);
+      
+      log(`Feed ${feedUrl} concluído: ${feedResult.articlesImported}/${feedResult.articlesProcessed} importados`);
+
+    } catch (feedError) {
+      log(`ERRO CRÍTICO no feed ${feedUrl}:`, feedError);
+      feedResult.status = "critical_error";
+      feedResult.errors.push(String(feedError).substring(0, 200));
+      results.push(feedResult);
+      totalErrors++;
     }
   }
+
+  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+  
+  log("\n=== RESUMO FINAL ===");
+  log(`Duração: ${duration}s`);
+  log(`Feeds processados: ${feeds.length}`);
+  log(`Artigos processados: ${totalProcessed}`);
+  log(`Artigos importados: ${importedCount}`);
+  log(`Erros totais: ${totalErrors}`);
+
   return new Response(
-    JSON.stringify({ imported: importedCount, articles: imported }),
-    { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+    JSON.stringify({
+      success: true,
+      imported: importedCount,
+      processed: totalProcessed,
+      errors: totalErrors,
+      duration: `${duration}s`,
+      feeds: results
+    }, null, 2),
+    { 
+      status: 200, 
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" } 
+    }
   );
 });
