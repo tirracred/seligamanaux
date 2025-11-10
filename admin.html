@@ -45,6 +45,7 @@
         .api-config { background: #374151; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>SeligaManaux - Admin</h1>
@@ -140,6 +141,28 @@ Ignorar páginas promocionais / institucionais (recomendado)
 
                 <div id="scrapeStatus" class="loading hidden">Buscando notícias... Aguarde.</div>
             </div>
+
+            <!-- ADICIONAR APÓS A SEÇÃO DE RSS IMPORT -->
+<div class="admin-section" style="margin-top: 20px;">
+    <h3>🔧 Ferramentas de Manutenção</h3>
+    <p>Funções para gerenciar notícias no banco de dados.</p>
+    
+    <div class="source-buttons">
+        <button class="publish-button" onclick="publicarTodasPendentes()">
+            ✅ Publicar Todas Pendentes
+        </button>
+        
+        <button class="scrape-button" onclick="atualizarPrioridades()">
+            🔄 Atualizar Prioridades Antigas
+        </button>
+        
+        <button class="danger-button" onclick="limparBanco()">
+            🗑️ Limpar Banco (Deletar Tudo)
+        </button>
+    </div>
+    
+    <div id="maintenanceStatus" class="loading hidden"></div>
+</div>
 
             <div class="admin-section">
                 <h3>📋 Notícias Scraped Pendentes</h3>
@@ -747,7 +770,110 @@ async function scrapeCustom() {
         function editNoticia(id) {
             alert('Função de edição ainda não implementada. ID: ' + id);
         }
+// Variável para guardar o ID da notícia sendo editada
+let currentEditingId = null;
 
+/**
+ * Abre o modal de edição e carrega os dados da notícia
+ */
+async function editNoticia(id) {
+    if (!supabaseClient) {
+        alert('Configure o Supabase primeiro!');
+        return;
+    }
+
+    try {
+        // Busca a notícia no banco
+        const { data: noticia, error } = await supabaseClient
+            .from('noticias')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        
+        if (!noticia) {
+            alert('Notícia não encontrada!');
+            return;
+        }
+
+        // Preenche os campos do modal
+        document.getElementById('edit-title').value = noticia.title || '';
+        document.getElementById('edit-content').value = noticia.content || '';
+        document.getElementById('edit-category').value = noticia.category || 'Geral';
+        document.getElementById('edit-image').value = noticia.image_url || '';
+
+        // Guarda o ID para usar no save
+        currentEditingId = id;
+
+        // Abre o modal
+        document.getElementById('editModal').classList.remove('hidden');
+
+    } catch (error) {
+        alert('Erro ao carregar notícia: ' + error.message);
+        console.error('Erro:', error);
+    }
+}
+
+/**
+ * Fecha o modal de edição
+ */
+function closeEditModal() {
+    document.getElementById('editModal').classList.add('hidden');
+    currentEditingId = null;
+}
+
+/**
+ * Salva as alterações da notícia
+ */
+async function saveEditedNoticia() {
+    if (!supabaseClient || !currentEditingId) {
+        alert('Erro: Supabase não configurado ou ID inválido');
+        return;
+    }
+
+    const title = document.getElementById('edit-title').value.trim();
+    const content = document.getElementById('edit-content').value.trim();
+    const category = document.getElementById('edit-category').value;
+    const imageUrl = document.getElementById('edit-image').value.trim();
+
+    // Validação
+    if (!title || !content) {
+        alert('❌ Título e conteúdo são obrigatórios!');
+        return;
+    }
+
+    try {
+        // Atualiza no banco
+        const { error } = await supabaseClient
+            .from('noticias')
+            .update({
+                title: title,
+                content: content,
+                category: category,
+                image_url: imageUrl || null
+            })
+            .eq('id', currentEditingId);
+
+        if (error) throw error;
+
+        alert('✅ Notícia atualizada com sucesso!');
+        closeEditModal();
+        loadNoticias(); // Recarrega a lista
+
+    } catch (error) {
+        alert('❌ Erro ao salvar: ' + error.message);
+        console.error('Erro:', error);
+    }
+}
+
+// Adiciona listener para fechar o modal clicando fora dele
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('editModal');
+    if (e.target === modal) {
+        closeEditModal();
+    }
+});
         async function deleteNoticia(id) {
             if (!confirm('Excluir esta notícia?')) return;
 
@@ -771,11 +897,190 @@ async function scrapeCustom() {
                 console.error('Erro:', error);
             }
         }
+        // === NOVAS FUNÇÕES DE MANUTENÇÃO ===
+
+async function publicarTodasPendentes() {
+    if (!supabaseClient || !currentSession) {
+        alert('Faça login primeiro!');
+        return;
+    }
+    
+    if (!confirm('📰 Publicar TODAS as notícias pendentes?\n\nIsso vai mudar o status de "pendente" para "publicado".')) {
+        return;
+    }
+    
+    const statusEl = document.getElementById('maintenanceStatus');
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = 'Publicando notícias pendentes...';
+    statusEl.style.color = '#ccc';
+    
+    try {
+        // 1. Conta quantas pendentes existem
+        const { count: totalPendentes } = await supabaseClient
+            .from('noticias')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pendente');
+        
+        if (totalPendentes === 0) {
+            statusEl.textContent = '✅ Nenhuma notícia pendente encontrada.';
+            statusEl.style.color = 'green';
+            setTimeout(() => statusEl.classList.add('hidden'), 3000);
+            return;
+        }
+        
+        // 2. Publica todas
+        const { error } = await supabaseClient
+            .from('noticias')
+            .update({ status: 'publicado' })
+            .eq('status', 'pendente');
+        
+        if (error) throw error;
+        
+        statusEl.textContent = `✅ ${totalPendentes} notícias publicadas com sucesso!`;
+        statusEl.style.color = 'green';
+        
+        // Recarrega as notícias
+        setTimeout(() => {
+            loadNoticias();
+            statusEl.classList.add('hidden');
+        }, 3000);
+        
+    } catch (error) {
+        statusEl.textContent = `❌ Erro: ${error.message}`;
+        statusEl.style.color = 'red';
+        console.error('Erro ao publicar:', error);
+    }
+}
+
+async function atualizarPrioridades() {
+    if (!supabaseClient || !currentSession) {
+        alert('Faça login primeiro!');
+        return;
+    }
+    
+    if (!confirm('🔄 Atualizar prioridades antigas?\n\nIsso vai definir prioridade=1 para todas as notícias que não têm prioridade definida.')) {
+        return;
+    }
+    
+    const statusEl = document.getElementById('maintenanceStatus');
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = 'Atualizando prioridades...';
+    statusEl.style.color = '#ccc';
+    
+    try {
+        // Atualiza notícias sem prioridade
+        const { error } = await supabaseClient
+            .from('noticias')
+            .update({ prioridade: 1 })
+            .is('prioridade', null);
+        
+        if (error) throw error;
+        
+        statusEl.textContent = '✅ Prioridades atualizadas com sucesso!';
+        statusEl.style.color = 'green';
+        
+        setTimeout(() => {
+            loadNoticias();
+            statusEl.classList.add('hidden');
+        }, 3000);
+        
+    } catch (error) {
+        statusEl.textContent = `❌ Erro: ${error.message}`;
+        statusEl.style.color = 'red';
+        console.error('Erro ao atualizar prioridades:', error);
+    }
+}
+
+async function limparBanco() {
+    if (!supabaseClient || !currentSession) {
+        alert('Faça login primeiro!');
+        return;
+    }
+    
+    const confirmacao = prompt('⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\nDigite "DELETAR TUDO" para confirmar:');
+    
+    if (confirmacao !== 'DELETAR TUDO') {
+        alert('❌ Operação cancelada.');
+        return;
+    }
+    
+    const statusEl = document.getElementById('maintenanceStatus');
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = 'Deletando todas as notícias...';
+    statusEl.style.color = 'red';
+    
+    try {
+        // Deleta TODAS as notícias
+        const { error } = await supabaseClient
+            .from('noticias')
+            .delete()
+            .neq('id', 0); // Deleta todos os registros (truque)
+        
+        if (error) throw error;
+        
+        statusEl.textContent = '✅ Banco de dados limpo! Todas as notícias foram deletadas.';
+        statusEl.style.color = 'green';
+        
+        setTimeout(() => {
+            loadNoticias();
+            statusEl.classList.add('hidden');
+        }, 3000);
+        
+    } catch (error) {
+        statusEl.textContent = `❌ Erro: ${error.message}`;
+        statusEl.style.color = 'red';
+        console.error('Erro ao limpar banco:', error);
+    }
+}
 
         // Inicializa quando a página carrega
         window.addEventListener('DOMContentLoaded', initSupabase);
     </script>
 
+<!-- MODAL DE EDIÇÃO -->
+<div id="editModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>✏️ Editar Notícia</h2>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit-title">Título:</label>
+            <input type="text" id="edit-title" placeholder="Título da notícia">
+        </div>
+        
+        <div class="form-group">
+            <label for="edit-content">Conteúdo:</label>
+            <textarea id="edit-content" rows="15" placeholder="Conteúdo da notícia"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit-category">Categoria:</label>
+            <select id="edit-category">
+                <option value="Geral">Geral</option>
+                <option value="Política">Política</option>
+                <option value="Economia">Economia</option>
+                <option value="Esportes">Esportes</option>
+                <option value="Cultura">Cultura</option>
+                <option value="Amazonas">Amazonas</option>
+                <option value="Crime">Crime</option>
+                <option value="Saúde">Saúde</option>
+                <option value="Educação">Educação</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit-image">URL da Imagem (opcional):</label>
+            <input type="url" id="edit-image" placeholder="https://exemplo.com/imagem.jpg">
+        </div>
+        
+        <div class="modal-actions">
+            <button onclick="closeEditModal()" class="danger-button">❌ Cancelar</button>
+            <button onclick="saveEditedNoticia()" style="background: #059669;">💾 Salvar Alterações</button>
+        </div>
+    </div>
+</div>
 
 </body>
 
