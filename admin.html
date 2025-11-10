@@ -451,25 +451,16 @@ async function scrapeCustom() {
             statusEl.textContent = 'Importando RSS... aguarde.';
             statusEl.style.color = '#ccc';
             try {
-                const anonKey = document.getElementById('anonKey').value;
-                const response = await fetch('https://xtnqypmezntjcidglblc.supabase.co/functions/v1/rss_import', {
-                    method: 'POST',
-                    mode: 'cors',
-                    credentials: 'omit',
-                    headers: {
-                        'Authorization': `Bearer ${currentSession.access_token}`,
-                        'Content-Type': 'application/json',
-                        'apikey': anonKey
-                    }
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    const count = data.imported || (data.articles ? data.articles.length : 0) || 0;
+                // Invoke the Supabase Edge Function using the Supabase JS client.
+                // This automatically handles the Authorization header and CORS.
+                const { data, error } = await supabaseClient.functions.invoke('rss_import');
+                if (error) {
+                    statusEl.textContent = `❌ Erro ao importar RSS: ${error.message || error}`;
+                    statusEl.style.color = 'red';
+                } else {
+                    const count = data?.imported || (data?.articles ? data.articles.length : 0) || 0;
                     statusEl.textContent = `✅ RSS importado: ${count} artigos salvos.`;
                     statusEl.style.color = 'green';
-                } else {
-                    statusEl.textContent = `❌ Erro ao importar RSS: ${data.error || data.message || 'Erro desconhecido'}`;
-                    statusEl.style.color = 'red';
                 }
             } catch (error) {
                 statusEl.textContent = `❌ Erro na requisição RSS: ${error.message}`;
