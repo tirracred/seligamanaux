@@ -22,7 +22,7 @@
 
 body.dark-mode {
     /* TEMA ESCURO (Dark Mode) - Padrão (Estilo Gemini) */
-    --cor-fundo: #1f2937;         /* Fundo do Site (cinza-800) */
+    --cor-fundo: #000000;         /* Fundo do Site (cinza-800) */
     --cor-card: #374151;         /* Fundo dos Cards (cinza-700) */
     --cor-borda: #4b5563;         /* Bordas (cinza-600) */
     --texto-principal: #f3f4f6;   /* Texto (branco) */
