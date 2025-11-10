@@ -91,7 +91,7 @@
                 try {
                     const { data: post, error } = await supabase
                         .from(DB_TABLE)
-                        .select('*, headline_color') // Pega a coluna de cor
+                        .select('*, headline_colo') // Pega a coluna de cor
                         .eq('id', articleId) 
                         .single();
 
@@ -122,7 +122,7 @@
                     .join(''); 
 
                 // Define a classe de cor do título
-                const titleColorClass = post.headline_color === 'red' ? 'titulo-vermelho' : 'titulo-azul';
+                const titleColorClass = post.headline_colo === 'red' ? 'titulo-vermelho' : 'titulo-azul';
 
                 articleContainer.innerHTML = `
                     <span class="categoria-tag">${post.category || 'Geral'}</span>
