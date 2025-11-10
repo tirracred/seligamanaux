@@ -1,286 +1,533 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SeligaManaux - Notícias de Manaus</title>
-    
-    <link rel="stylesheet" href="style.css">
+// Importa o 'edge-runtime' para tipos Deno
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4935884639623224"
-     crossorigin="anonymous"></script>
-</head>
-<body>
-    <header class="site-header">
-        <div class="header-container">
-            <div class="logo"><a href="/"><h1>SELIGAMANAUX</h1></a></div>
-            <button class="nav-toggle" aria-label="Abrir menu"><span class="hamburger"></span></button>
-            <nav class="nav-principal">
-                <ul>
-                    <li><a href="/">Início</a></li>
-                    <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
-                    <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
-                </ul>
-                <div class="theme-switch-wrapper">
-                    <label class="theme-switch" for="theme-toggle">
-                        <input type="checkbox" id="theme-toggle" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </nav>
-        </div>
-    </header>
+// Importa o createClient da biblioteca supabase-js v2
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import Parser from 'npm:rss-parser@3.13.0';
 
-    <div class="denuncia-banner" style="background: #25D366; text-align: center; padding: 0.5rem 1rem;">
-        <a href="https://wa.me/+5516993003322" target="_blank" style="color: white; font-weight: 700; font-size: 1.1rem; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
-            <svg width="24" height="24" fill="#ffffff" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
-            </svg>
-            Quero fazer uma denúncia!
-        </a>
-    </div>
+/* =========================
+TIPOS
+========================= */
 
-    <main class="container">
-        <section class="mais-vistos-section">
-            <h2 class="page-title" style="margin-bottom: 1.5rem; border: none;">Mais vistos</h2>
-            <div id="mais-vistos-loading" style="text-align:center; padding: 2rem 0; color: var(--texto-secundario);">Carregando notícias...</div>
-            <div class="carousel-container" id="mais-vistos-container" style="display: none;">
-                <button class="carousel-prev" id="carousel-prev">&#8249;</button>
-                <div class="carousel-track" id="mais-vistos-track"></div>
-                <button class="carousel-next" id="carousel-next">&#8250;</button>
-            </div>
-        </section>
-        
-        <div id="categories-loading" style="text-align:center; padding: 2rem 0; color: var(--texto-secundario);">Carregando notícias...</div>
-        
-        <div id="categories-sections" style="display:none;">
-            <section class="category-section" id="category-amazonas">
-                <h2 class="page-title">Amazonas</h2>
-                <div class="feed-grid" id="category-amazonas-container"></div>
-            </section>
-            
-            <section class="category-section" id="category-manaus-e-regiao">
-                <h2 class="page-title">Manaus e Região</h2>
-                <div class="feed-grid" id="category-manaus-e-regiao-container"></div>
-            </section>
+interface NoticiaScrapedData {
+  titulo_original: string;
+  titulo_reescrito: string;
+  resumo_original?: string;
+  resumo_reescrito?: string;
+  conteudo_reescrito?: string;
+  url_original: string;
+  fonte: string;
+  status: string;
+  data_coleta: string;
+  data_publicacao?: string;
+  imagem_url?: string | null;
+  categoria: string;
+  slug?: string;
+  canonical_path?: string;
+}
 
-            <section class="category-section" id="category-geral">
-                <h2 class="page-title">Geral</h2>
-                <div class="feed-grid" id="category-geral-container"></div>
-            </section>
-            
-            <section class="category-section" id="category-politica">
-                <h2 class="page-title">Política</h2>
-                <div class="feed-grid" id="category-politica-container"></div>
-            </section>
-            
-            <section class="category-section" id="category-economia">
-                <h2 class="page-title">Economia</h2>
-                <div class="feed-grid" id="category-economia-container"></div>
-            </section>
-            
-            <section class="category-section" id="category-esportes">
-                <h2 class="page-title">Esportes</h2>
-                <div class="feed-grid" id="category-esportes-container"></div>
-            </section>
-            
-            <section class="category-section" id="category-cultura">
-                <h2 class="page-title">Cultura</h2>
-                <div class="feed-grid" id="category-cultura-container"></div>
-            </section>
-        </div>
-        
-        <div id="load-more" style="text-align:center; padding: 1rem; display:none; color: var(--texto-secundario);">Carregando mais...</div>
-    </main>
-    
-    <footer class="site-footer">
-        <p>&copy; 2025 SeligaManaux. Grupo Tirracred 61.811.560/0001-10 - Todos os direitos reservados.</p>
-    </footer>
+interface GroqResponse {
+  titulo: string;
+  conteudo: string;
+}
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <script src="main.js"></script>
-    
-    <script>
-        // Colunas otimizadas para buscar o resumo limpo e o slug
-        const COLUNAS_SELECT = "id, title, resumo_reescrito, content, image_url, category, created_at, headline_color, canonical_path";
+/* =========================
+CONFIGURAÇÃO DE FEEDS RSS
+========================= */
 
-        /**
-         * Cria o card de notícia (Versão Otimizada)
-         */
-        function createNewsCard(post) {
-            const article = document.createElement("article");
-            article.className = "card-noticia";
-            
-            const imageUrl = post.image_url || "https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux";
-            const titleColorClass = post.headline_color === "red" ? "titulo-vermelho" : "titulo-azul";
-            
-            // OTIMIZAÇÃO: Usa o link 'canonical_path' (slug) se existir
-            const articleUrl = post.canonical_path ? `artigo.html?slug=${post.canonical_path}` : `artigo.html?id=${post.id}`;
-            
-            // OTIMIZAÇÃO: Usa 'resumo_reescrito' (sem HTML) se existir
-            const summary = (post.resumo_reescrito || post.content || "")
-                .replace(/<[^>]+>/g, " ") // Remove tags HTML (caso venha do 'content')
-                .replace(/\s+/g, " ")     // Remove espaços extras
-                .trim()
-                .substring(0, 100) + "...";
+const RSS_FEEDS = [
+  {
+    name: 'G1 Amazonas',
+    url: 'https://g1.globo.com/dynamo/am/amazonas/rss2.xml',
+    category: 'Amazonas',
+  },
+  {
+    name: 'D24AM',
+    url: 'https://d24am.com/amazonas/feed/',
+    category: 'Amazonas',
+  },
+  {
+    name: 'Portal O Fato',
+    url: 'https://portalofato.com.br/category/amazonas/feed/',
+    category: 'Amazonas',
+  },
+];
 
-            article.innerHTML = `
-                <a href="${articleUrl}">
-                    <img src="${imageUrl}" alt="${post.title}">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag">${post.category || "Geral"}</span>
-                        <h4 class="${titleColorClass}">${post.title}</h4>
-                        <p>${summary}</p>
-                    </div>
-                </a>
-            `;
-            return article;
+/* =========================
+FILTROS ANTI-PROMO/INSTITUCIONAL
+========================= */
+
+// Mantido para filtrar conteúdo promocional no título ou resumo do RSS
+function looksPromotional(text: string): boolean {
+  const x = (text || '').toLowerCase();
+  return /publieditorial|publicidade|assessoria de imprensa|assine|clique aqui|programação|assista ao|patrocinado|publipost|oferecimento|oferecido por|parceria/i.test(x);
+}
+
+/* =========================
+NORMALIZAÇÃO / HIGIENE DE TEXTO
+========================= */
+
+function stripSourceArtifacts(t: string): string {
+  return (t || '')
+    .replace(/\s+—\s*Foto:.*?(?=\.|$)/gi, '')
+    .replace(/—\s*Foto.*?$/gim, '')
+    .replace(/^\s*Foto:.*$/gim, '')
+    .replace(/^\s*Crédito:.*$/gim, '')
+    .replace(/^\s*Fonte:.*$/gim, '')
+    .replace(/^\s*Com informações de.*$/gim, '')
+    .replace(/^\s*Leia mais:.*$/gim, '')
+    .replace(/\b(g1|globonews|rede amazônica)\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function normalizeText(t: string): string {
+  return (t || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tooSimilar(a: string, b: string): boolean {
+  const A = new Set(normalizeText(a).split(' '));
+  const B = new Set(normalizeText(b).split(' '));
+  let inter = 0;
+  for (const w of A) if (B.has(w)) inter++;
+  const min = Math.max(1, Math.min(A.size, B.size));
+  return inter / min > 0.8;
+}
+
+function has12ConsecutiveMatches(original: string, rewritten: string): boolean {
+  const origWords = original.toLowerCase().split(/\s+/);
+  const rewritWords = rewritten.toLowerCase().split(/\s+/);
+  for (let i = 0; i <= origWords.length - 12; i++) {
+    const window = origWords.slice(i, i + 12).join(' ');
+    if (rewritWords.join(' ').includes(window)) {
+      console.log(`[WARN_COPY] 12+ palavras consecutivas: "${window}"`);
+      return true;
+    }
+  }
+  return false;
+}
+
+/* =========================
+HELPERS DE REPARO/FORMATAÇÃO
+========================= */
+
+// Normaliza aspas “inteligentes” para aspas ASCII
+function normalizeAsciiQuotes(s: string): string {
+  return s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+}
+
+// Garante que o texto tenha parágrafos em HTML (<p>...</p>)
+function ensureParagraphsHTML(text: string): string {
+  const hasHtmlP = /<p[\s>]/i.test(text) || /<\/p>/i.test(text);
+  if (hasHtmlP) return text;
+  const blocks = text.replace(/\r/g, '').split(/\n{2,}/).map(x => x.trim()).filter(Boolean);
+  const parts = (blocks.length ? blocks : text.split(/(?<=[.!?])\s{2,}/))
+    .map(x => x.trim()).filter(Boolean);
+  return parts.map(p => `<p>${p}</p>`).join('');
+}
+
+/**
+ * Repara respostas quase JSON retornadas pela LLM:
+ * - Extrai apenas o primeiro objeto {...} do texto.
+ * - Normaliza aspas inteligentes para ASCII.
+ * - Se o valor de "conteudo" não estiver entre aspas, envolve em aspas e escapa.
+ * - Converte aspas simples em chaves para aspas duplas.
+ */
+function repairGroqJsonString(raw: string): string {
+  if (!raw) return raw;
+  let s = normalizeAsciiQuotes(raw).trim();
+  const m = s.match(/\{[\s\S]*\}/);
+  if (m) s = m[0];
+  try { JSON.parse(s); return s; } catch {}
+  const rxUnquotedConteudo = /("conteudo"\s*:\s*)(?!")(.*)\s*}\s*$/s;
+  if (rxUnquotedConteudo.test(s)) {
+    s = s.replace(rxUnquotedConteudo, (_: string, prefix: string, val: string) => {
+      const cleaned = val.trim().replace(/\\|"/g, m => (m === '\\' ? '\\\\' : '\\"')).replace(/\n/g, "\\n");
+      return `${prefix}"${cleaned}"}`;
+    });
+    try { JSON.parse(s); return s; } catch {}
+  }
+  const maybeJson5 = s.replace(/(['"])(titulo|conteudo)\1\s*:/g, '"$2":');
+  try { JSON.parse(maybeJson5); return maybeJson5; } catch {}
+  return s;
+}
+
+// Gera um slug a partir do título
+function makeSlug(title: string): string {
+  const base = title.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+/* =========================
+REESCRITA VIA GROQ
+========================= */
+
+async function rewriteWithGroq(
+  title: string,
+  content: string,
+  apiKey: string,
+  sourceName: string,
+  imageUrl: string | null,
+  retryCount: number = 0
+): Promise<GroqResponse | null> {
+  if (retryCount > 2) {
+    console.log(`[REWRITE_ABORT] Máximo de tentativas atingido`);
+    return null;
+  }
+
+  const temperature = retryCount === 0 ? 0.5 : retryCount === 1 ? 0.7 : 0.9;
+
+  // Sanitiza entrada
+  const cleanTitle = (title || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .trim()
+    .slice(0, 300);
+
+  const cleanContent = (content || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .trim()
+    .slice(0, 5000);
+
+  // Monta prompt com instrução para fonte da imagem
+  const prompt = `Reescreva o seguinte título e conteúdo em português, garantindo:
+1. Texto original (sem cópia acima de 80%)
+2. Nenhuma sequência de 12+ palavras idênticas
+3. Formatação em parágrafos (pode usar <p>...</p>)
+4. Entre 2000 e 5000 caracteres
+5. Tom jornalístico profissional 
+6. Atue como o "Se Liga Manaus": um jornal com identidade única, focado em máximo impacto, que explora tragédias e usa IMPACTOS inteligentes. Mantenha um tom de alerta, incisivo e direto, focado 100% em Manaus. Use português padrão culto, sem gírias ou regionalismos.
+7. IMPORTANTE: Se a notícia original tiver uma imagem (cuja URL é ${imageUrl || 'não fornecida'}), adicione uma linha NO FINAL do conteúdo reescrito, em uma nova linha, no formato: (Fonte da Imagem: ${sourceName})
+
+TÍTULO: ${cleanTitle}
+
+CONTEÚDO: ${cleanContent}
+
+Responda APENAS em JSON:
+{"titulo": "novo título", "conteudo": "novo conteúdo"}`;
+
+  try {
+    console.log(`[GROQ_DEBUG] Retry: ${retryCount} | Temp: ${temperature}`);
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Responda ESTRITAMENTE com um único objeto JSON válido UTF-8, sem markdown, sem blocos de código, sem rótulos. ' +
+              'Formato exato: {"titulo":"...","conteudo":"..."}. ' +
+              'O "conteudo" deve ter entre 2000 e 5000 caracteres e estar em parágrafos (pode usar <p>...</p>). ' +
+              'Não inclua nada além do objeto JSON.'
+          },
+          { role: 'user', content: prompt },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: Math.max(0.2, temperature ?? 0.5),
+        max_tokens: 3000,
+      }),
+    });
+
+    console.log(`[GROQ_RESPONSE] Status: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`[GROQ_ERROR] HTTP ${response.status} | ${errorText.slice(0, 200)}`);
+      if (response.status === 401) {
+        console.log(`[GROQ_FATAL] 401 - API Key inválida!`);
+        return null;
+      }
+      if (response.status === 404) {
+        console.log(`[GROQ_FATAL] 404 - Modelo não encontrado!`);
+        return null;
+      }
+      if (retryCount < 2) {
+        console.log(`[GROQ_RETRY] Tentativa ${retryCount + 1}/3...`);
+        await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
+        return rewriteWithGroq(title, content, apiKey, sourceName, imageUrl, retryCount + 1);
+      }
+      return null;
+    }
+
+    const data = await response.json();
+    const textContent = data.choices?.[0]?.message?.content || '';
+    if (!textContent) {
+      console.log(`[GROQ_EMPTY] Resposta vazia, retry...`);
+      if (retryCount < 2) {
+        return rewriteWithGroq(title, content, apiKey, sourceName, imageUrl, retryCount + 1);
+      }
+      return null;
+    }
+
+    console.log(`[GROQ_RAW] Resposta recebida: ${textContent.slice(0, 100)}...`);
+
+    // Parseia JSON de forma robusta
+    let parsed: { titulo?: string; conteudo?: string } | null = null;
+    try {
+      parsed = JSON.parse(textContent);
+    } catch {
+      const repaired = repairGroqJsonString(textContent);
+      try {
+        parsed = JSON.parse(repaired);
+      } catch (e) {
+        console.log(`[GROQ_JSON_ERROR] Não é JSON válido: ${textContent.slice(0, 120)}`);
+        if (retryCount < 2) {
+          return rewriteWithGroq(title, content, apiKey, sourceName, imageUrl, retryCount + 1);
+        }
+        return null;
+      }
+    }
+
+    const novoTitulo = (parsed?.titulo || '').trim();
+    let novoConteudo = (parsed?.conteudo || '').trim();
+    novoConteudo = ensureParagraphsHTML(novoConteudo);
+
+    console.log(`[REWRITE_OK] Título: ${novoTitulo.slice(0, 40)}... | Len: ${novoConteudo.length}`);
+
+    // Validação anti-cópia
+    if (
+      novoConteudo.length < 1800 ||
+      tooSimilar(content, novoConteudo) ||
+      has12ConsecutiveMatches(content, novoConteudo)
+    ) {
+      console.log(`[REWRITE_REJECTED] Similar ou curto (${novoConteudo.length} chars), retry...`);
+      if (retryCount < 2) {
+        return rewriteWithGroq(title, content, apiKey, sourceName, imageUrl, retryCount + 1);
+      }
+      return null;
+    }
+
+    return { titulo: novoTitulo, conteudo: novoConteudo };
+  } catch (err) {
+    console.log(`[GROQ_EXCEPTION] ${err}`);
+    if (retryCount < 2) {
+      await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
+      return rewriteWithGroq(title, content, apiKey, sourceName, imageUrl, retryCount + 1);
+    }
+    return null;
+  }
+}
+
+/* =========================
+MAIN HANDLER
+========================= */
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders, status: 204 });
+  }
+
+  // Ignora o corpo JSON da requisição (chamadas agora acionam processamento de todos os feeds)
+  try {
+    await req.json();
+    console.log('[DEBUG] Chamada recebida com corpo JSON (ignorado).');
+  } catch {
+    console.log('[DEBUG] Chamada recebida sem corpo JSON.');
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const groqApiKey = Deno.env.get('GROQ_API_KEY');
+
+    if (!supabaseUrl || !supabaseKey || !groqApiKey) {
+      return new Response(
+        JSON.stringify({ error: 'Variáveis de ambiente incompletas' }),
+        { status: 500, headers: corsHeaders },
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const rssParser = new Parser({
+      customFields: {
+        item: [['media:content', 'mediaContent', { keepArray: true }]],
+      },
+    });
+
+    console.log('[RSS_START] Iniciando processamento de feeds RSS...');
+    const stats = {
+      feedsProcessados: 0,
+      noticiasEncontradas: 0,
+      noticiasNovas: 0,
+      noticiasReescritas: 0,
+      erros: 0,
+    };
+    const recordsToInsert: NoticiaScrapedData[] = [];
+
+    // Loop pelos feeds configurados
+    for (const feed of RSS_FEEDS) {
+      stats.feedsProcessados++;
+      try {
+        console.log(`[RSS_FETCH] Buscando feed: ${feed.name}`);
+        const parsedFeed = await rssParser.parseURL(feed.url);
+        if (!parsedFeed?.items?.length) {
+          console.log(`[RSS_FETCH] Nenhum item encontrado para ${feed.name}`);
+          continue;
         }
 
-        /**
-         * Normaliza nomes de categoria para IDs de HTML
-         * (Ex: "Manaus e Região" vira "manaus-e-regiao")
-         */
-        function getSafeCategoryId(categoryName) {
-            if (!categoryName) return "geral";
-            return categoryName
-                .toLowerCase()
-                .normalize("NFD") // Remove acentos
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-z0-9]+/g, "-") // Substitui espaços e símbolos por hífen
-                .replace(/^-+|-+$/g, ""); // Remove hífens no início/fim
+        for (const item of parsedFeed.items) {
+          stats.noticiasEncontradas++;
+          const originalUrl = item.link;
+          if (!originalUrl) {
+            console.log(`[RSS_SKIP] Item sem link: ${item.title}`);
+            continue;
+          }
+
+          // 1. Verifica duplicata no banco
+          const { data: existente, error: checkError } = await supabase
+            .from('noticias_scraped')
+            .select('id')
+            .eq('url_original', originalUrl)
+            .limit(1);
+          if (checkError) {
+            console.error(`[DB_ERROR] Erro ao checar DB (${originalUrl}):`, checkError.message);
+            stats.erros++;
+            continue;
+          }
+          if (existente && existente.length > 0) {
+            // Notícia já existe, pula
+            continue;
+          }
+
+          stats.noticiasNovas++;
+
+          // 2. Extrai dados básicos do item
+          const originalTitle = item.title ? item.title.trim() : 'Sem título';
+          let rawContent = item.content || item.contentSnippet || '';
+          // Remove tags HTML para evitar ruído
+          rawContent = rawContent.replace(/<[^>]+>/g, ' ');
+          const originalContent = stripSourceArtifacts(rawContent);
+
+          // Filtra promoções
+          if (looksPromotional(originalTitle) || looksPromotional(originalContent)) {
+            console.log(`[RSS_SKIP] Conteúdo promocional: ${originalTitle}`);
+            continue;
+          }
+          if (originalContent.length < 200) {
+            console.log(`[RSS_SKIP] Conteúdo muito curto: ${originalTitle}`);
+            continue;
+          }
+
+          // 3. Extrai URL da imagem, se houver
+          let imageUrl: string | null = null;
+          if (item.enclosure?.url && item.enclosure?.type?.startsWith('image')) {
+            imageUrl = item.enclosure.url;
+          } else if ((item as any).mediaContent?.length > 0) {
+            // Suporte a <media:content> (ex: G1)
+            const mediaImage = (item as any).mediaContent.find((m: any) =>
+              m.$?.medium === 'image' || m.$?.type?.startsWith('image')
+            );
+            if (mediaImage) {
+              imageUrl = mediaImage.$.url;
+            }
+          }
+          // Fallback: tenta extrair de eventual HTML do conteúdo
+          if (!imageUrl && item.content) {
+            const imgMatch = item.content.match(/<img[^>]+src="([^">]+)"/);
+            if (imgMatch && imgMatch[1]) {
+              imageUrl = imgMatch[1];
+            }
+          }
+
+          // 4. Reescreve título e conteúdo via Groq AI
+          console.log(`[REWRITE_START] RSS: ${originalTitle.slice(0, 50)}...`);
+          const rewritten = await rewriteWithGroq(originalTitle, originalContent, groqApiKey, feed.name, imageUrl);
+          if (!rewritten || !rewritten.titulo || !rewritten.conteudo) {
+            console.log(`[RSS_SKIP] Reescrita falhou para: ${originalTitle}`);
+            stats.erros++;
+            continue;
+          }
+
+          // 5. Gera slug e caminho canônico
+          const slug = makeSlug(rewritten.titulo);
+          const canonicalPath = `/artigo/${slug}`;
+
+          // 6. Monta registro para inserir
+          const newRecord: NoticiaScrapedData = {
+            titulo_original: originalTitle.slice(0, 255),
+            titulo_reescrito: rewritten.titulo.slice(0, 255),
+            resumo_original: originalContent.slice(0, 500),
+            resumo_reescrito: rewritten.conteudo
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .slice(0, 500),
+            conteudo_reescrito: rewritten.conteudo,
+            url_original: originalUrl,
+            fonte: feed.name,
+            status: 'pendente',
+            data_coleta: new Date().toISOString(),
+            data_publicacao: item.isoDate ? new Date(item.isoDate).toISOString() : new Date().toISOString(),
+            imagem_url: imageUrl,
+            categoria: feed.category || 'Geral',
+            slug,
+            canonical_path: canonicalPath,
+          };
+
+          recordsToInsert.push(newRecord);
+          stats.noticiasReescritas++;
+          console.log(`[INSERT_READY] ${rewritten.titulo.slice(0, 40)}...`);
         }
+      } catch (err) {
+        console.error(`[RSS_ERROR] Erro ao processar feed ${feed.name}:`, err.message);
+        stats.erros++;
+      }
+    }
 
-        document.addEventListener("DOMContentLoaded", async () => {
-            // Lógica do Carrossel (Específica desta página)
-            const carouselTrack = document.getElementById("mais-vistos-track");
-            const prevBtn = document.getElementById("carousel-prev");
-            const nextBtn = document.getElementById("carousel-next");
-            
-            if (prevBtn && nextBtn && carouselTrack) {
-                prevBtn.addEventListener("click", () => {
-                    carouselTrack.scrollBy({ left: -carouselTrack.clientWidth * 0.8, behavior: "smooth" });
-                });
-                nextBtn.addEventListener("click", () => {
-                    carouselTrack.scrollBy({ left: carouselTrack.clientWidth * 0.8, behavior: "smooth" });
-                });
-            }
+    // 7. Insere todos os novos registros de uma vez
+    if (recordsToInsert.length > 0) {
+      const { error } = await supabase
+        .from('noticias_scraped')
+        .insert(recordsToInsert);
+      if (error) {
+        console.error(`[INSERT_ERROR] ${error.message}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: error.message,
+            inserted: 0,
+            stats,
+          }),
+          { status: 500, headers: corsHeaders },
+        );
+      }
+      console.log(`[INSERT_SUCCESS] ${recordsToInsert.length} registros salvos`);
+    } else {
+      console.log('[INSERT_SKIP] Nenhuma notícia nova para inserir.');
+    }
 
-            // --- Lógica de Carregamento de Notícias ---
-            if (typeof supabase === 'undefined' || !supabase) {
-                console.error("ERRO GRAVE: 'main.js' falhou ao carregar ou definir 'supabase'.");
-                document.getElementById("mais-vistos-loading").innerText = "Erro fatal ao conectar.";
-                document.getElementById("categories-loading").style.display = "none";
-                return;
-            }
-
-            let highlightPosts = [];
-
-            // 1. Carrega "Mais Vistos" (Carrossel)
-            try {
-                // (Idealmente, você teria uma coluna 'view_count' para ordenar)
-                const { data: highlightData, error: highlightError } = await supabase
-                    .from(DB_TABLE)
-                    .select(COLUNAS_SELECT)
-                    .order("created_at", { ascending: false }) 
-                    .limit(5);
-                
-                if (highlightError) throw highlightError;
-
-                if (highlightData && highlightData.length > 0) {
-                    highlightPosts = highlightData;
-                    const track = document.getElementById("mais-vistos-track");
-                    highlightData.forEach(post => {
-                        track.appendChild(createNewsCard(post));
-                    });
-                    document.getElementById("mais-vistos-loading").style.display = "none";
-                    document.getElementById("mais-vistos-container").style.display = "block";
-                } else {
-                    document.getElementById("mais-vistos-loading").innerText = "Nenhuma notícia disponível.";
-                }
-            } catch (err) {
-                console.error("Erro ao carregar notícias em destaque:", err);
-                document.getElementById("mais-vistos-loading").innerText = "Erro ao carregar notícias.";
-            }
-
-            // 2. Carrega Notícias Iniciais (Categorias)
-            let offset = highlightPosts.length; // Pula as que já estão no carrossel
-            const pageSize = 9; // Carrega 9 de cada vez (3 colunas)
-            let reachedEnd = false;
-
-            async function loadMoreNews(isInitialLoad = false) {
-                if (reachedEnd || !supabase) return;
-
-                const loadIndicator = isInitialLoad ? document.getElementById("categories-loading") : document.getElementById("load-more");
-                loadIndicator.style.display = "block";
-
-                try {
-                    const { data: newsData, error } = await supabase
-                        .from(DB_TABLE)
-                        .select(COLUNAS_SELECT)
-                        .order("created_at", { ascending: false })
-                        .range(offset, offset + pageSize - 1);
-
-                    if (error) throw error;
-
-                    if (newsData && newsData.length > 0) {
-                        newsData.forEach(post => {
-                            const safeCategory = getSafeCategoryId(post.category);
-                            const container = document.getElementById(`category-${safeCategory}-container`);
-                            
-                            if (container) {
-                                // Adiciona na seção da categoria correta
-                                container.appendChild(createNewsCard(post));
-                                // Garante que a seção esteja visível
-                                container.closest('.category-section').style.display = 'block';
-                            } else {
-                                // Fallback: Joga no 'Geral' se a categoria não existir
-                                const geralContainer = document.getElementById("category-geral-container");
-                                geralContainer.appendChild(createNewsCard(post));
-                                geralContainer.closest('.category-section').style.display = 'block';
-                            }
-                        });
-                        
-                        document.getElementById("categories-sections").style.display = "block";
-                        offset += newsData.length;
-                        
-                        if (newsData.length < pageSize) {
-                            reachedEnd = true;
-                        }
-                    } else {
-                        reachedEnd = true;
-                        if (isInitialLoad) {
-                            document.getElementById("categories-loading").innerText = "Nenhuma notícia encontrada.";
-                        }
-                    }
-
-                } catch (err) {
-                    console.error("Erro ao carregar notícias:", err);
-                    loadIndicator.innerText = "Erro ao carregar notícias.";
-                } finally {
-                    loadIndicator.style.display = "none";
-                }
-            }
-            
-            // Carrega o primeiro lote
-            await loadMoreNews(true);
-
-            // 3. Lógica do Scroll Infinito
-            window.addEventListener("scroll", () => {
-                if (reachedEnd || !supabase || document.getElementById("load-more").style.display === "block") {
-                    return;
-                }
-                
-                // Ativa 300px antes de chegar no fim
-                if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
-                    loadMoreNews();
-                }
-            });
-        });
-    </script>
-</body>
-</html>
+    // Retorna sucesso com estatísticas
+    return new Response(
+      JSON.stringify({
+        success: true,
+        processed: stats.noticiasReescritas,
+        message: `${stats.noticiasReescritas} notícias processadas e salvas.`,
+        stats,
+      }),
+      { headers: corsHeaders },
+    );
+  } catch (err) {
+    console.error('[MAIN_ERROR]', err);
+    return new Response(
+      JSON.stringify({ error: String(err) }),
+      { status: 500, headers: corsHeaders },
+    );
+  }
+});
