@@ -62,25 +62,20 @@ function extractImage(xml: string): string {
   return "";
 }
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .substring(0, 100);
-}
-
-function extractCategory(feedUrl: string): string {
-  if (feedUrl.includes("/29/amazonas") || feedUrl.includes("/amazonas/")) return "Amazonas";
-  if (feedUrl.includes("/26/manaus") || feedUrl.includes("/manaus/")) return "Manaus";
-  if (feedUrl.includes("/3/politica") || feedUrl.includes("/politica/")) return "Política";
-  if (feedUrl.includes("/27/brasil") || feedUrl.includes("/brasil/")) return "Brasil";
-  if (feedUrl.includes("/7/economia") || feedUrl.includes("/economia/")) return "Economia";
-  if (feedUrl.includes("/13/educacao") || feedUrl.includes("/educacao/")) return "Educação";
-  if (feedUrl.includes("famosos")) return "Entretenimento";
-  return "Geral";
+// NOVA FUNÇÃO: Extrair vídeos do XML RSS
+function extractVideo(xml: string): string {
+  // Procura por vídeos em tags comuns de RSS (media:content com type video, enclosure type video)
+  const mediaVideoMatch = xml.match(/<(?:media:content|content)[^>]+type=["']video\/[^"']+["'][^>]+url=["']([^"']+)["'][^>]*>/i);
+  if (mediaVideoMatch) return mediaVideoMatch[1];
+  
+  const enclosureVideoMatch = xml.match(/<enclosure[^>]+type=["']video\/[^"']+["'][^>]+url=["']([^"']+)["'][^>]*>/i);
+  if (enclosureVideoMatch) return enclosureVideoMatch[1];
+  
+  // Também tenta ordem inversa (url antes de type)
+  const mediaVideoMatch2 = xml.match(/<(?:media:content|content)[^>]+url=["']([^"']+)["'][^>]+type=["']video\/[^"']+["'][^>]*>/i);
+  if (mediaVideoMatch2) return mediaVideoMatch2[1];
+  
+  return "";
 }
 
 function extractImageCredit(link: string): string {
@@ -92,27 +87,52 @@ function extractImageCredit(link: string): string {
   }
 }
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .substring(0, 100);
+}
+
 // ===========================================================================
-// VALIDAÇÃO E EXTRAÇÃO DE JSON ROBUSTA
+// VALIDAÇÃO E EXTRAÇÃO DE JSON ROBUSTA (ATUALIZADA PARA 4 CAMPOS)
 // ===========================================================================
-function extractJsonFromText(text: string): { titulo: string; conteudo: string } | null {
+function extractJsonFromText(text: string): { 
+  titulo: string; 
+  legenda: string; 
+  cor_titulo: string; 
+  conteudo: string 
+} | null {
   try {
     // Tenta parse direto
     const parsed = JSON.parse(text);
-    if (parsed.titulo && parsed.conteudo) {
-      return { titulo: parsed.titulo, conteudo: parsed.conteudo };
+    if (parsed.titulo && parsed.legenda && parsed.cor_titulo && parsed.conteudo) {
+      return { 
+        titulo: parsed.titulo, 
+        legenda: parsed.legenda,
+        cor_titulo: parsed.cor_titulo,
+        conteudo: parsed.conteudo 
+      };
     }
   } catch (e) {
     log("Parse direto falhou, tentando extrair JSON do texto");
   }
   
   // Tenta encontrar JSON no meio do texto
-  const jsonMatch = text.match(/\{[\s\S]*"titulo"[\s\S]*"conteudo"[\s\S]*\}/);
+  const jsonMatch = text.match(/\{[\s\S]*"titulo"[\s\S]*"legenda"[\s\S]*"cor_titulo"[\s\S]*"conteudo"[\s\S]*\}/);
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[0]);
-      if (parsed.titulo && parsed.conteudo) {
-        return { titulo: parsed.titulo, conteudo: parsed.conteudo };
+      if (parsed.titulo && parsed.legenda && parsed.cor_titulo && parsed.conteudo) {
+        return { 
+          titulo: parsed.titulo, 
+          legenda: parsed.legenda,
+          cor_titulo: parsed.cor_titulo,
+          conteudo: parsed.conteudo 
+        };
       }
     } catch (e) {
       log("Parse de JSON extraído falhou");
@@ -121,11 +141,15 @@ function extractJsonFromText(text: string): { titulo: string; conteudo: string }
   
   // Última tentativa: extração manual com regex
   const tituloMatch = text.match(/"titulo"\s*:\s*"([^"]+)"/);
+  const legendaMatch = text.match(/"legenda"\s*:\s*"([^"]+)"/);
+  const corMatch = text.match(/"cor_titulo"\s*:\s*"([^"]+)"/);
   const conteudoMatch = text.match(/"conteudo"\s*:\s*"([\s\S]+?)"\s*\}/);
   
-  if (tituloMatch && conteudoMatch) {
+  if (tituloMatch && legendaMatch && corMatch && conteudoMatch) {
     return {
       titulo: tituloMatch[1],
+      legenda: legendaMatch[1],
+      cor_titulo: corMatch[1],
       conteudo: conteudoMatch[1].replace(/\\n/g, '\n')
     };
   }
@@ -134,14 +158,19 @@ function extractJsonFromText(text: string): { titulo: string; conteudo: string }
 }
 
 // ===========================================================================
-// FUNÇÃO PRINCIPAL DE REESCRITA COM GROQ
+// FUNÇÃO PRINCIPAL DE REESCRITA COM GROQ (ATUALIZADA)
 // ===========================================================================
 async function rewriteWithGroq(
   title: string, 
   description: string, 
   groqKey: string,
   retries = 3
-): Promise<{ titulo: string; conteudo: string } | null> {
+): Promise<{ 
+  titulo: string; 
+  legenda: string; 
+  cor_titulo: string; 
+  conteudo: string 
+} | null> {
   
   const prompt = [
     'Você é um jornalista profissional de Manaus/Amazonas.',
@@ -159,11 +188,17 @@ async function rewriteWithGroq(
     '4. Tamanho: MÁXIMO 2.500 palavras (não exceder)',
     '5. Organize em parágrafos bem estruturados',
     '6. Crie um título completamente novo e chamativo',
-    '7. IMPORTANTE: Escreva em português brasileiro correto',
+    '7. Crie uma LEGENDA curta e contextual (ex: "Terror", "Esporte", "Crime Brutal", "Política", "Economia")',
+    '8. Escolha uma COR para o título:',
+    '   - "#e53e3e" (vermelho) para notícias urgentes, graves, crimes, alertas',
+    '   - "#059669" (azul) para notícias gerais, padrão, menos alarmantes',
+    '9. IMPORTANTE: Escreva em português brasileiro correto',
     '',
     'FORMATO DE RESPOSTA (JSON ESTRITO):',
     '{',
     '  "titulo": "novo título aqui",',
+    '  "legenda": "legenda contextual aqui",',
+    '  "cor_titulo": "#e53e3e ou #059669",',
     '  "conteudo": "texto completo reescrito aqui"',
     '}',
     '',
@@ -186,7 +221,7 @@ async function rewriteWithGroq(
             model: "llama-3.1-8b-instant",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.7,
-            max_tokens: 4000, // Reduzido para ~2500 palavras
+            max_tokens: 4000, // ~2500 palavras
             response_format: { type: "json_object" },
           }),
         }
@@ -226,10 +261,12 @@ async function rewriteWithGroq(
         parsed = extractJsonFromText(contentOut);
       }
       
-      if (parsed && parsed.titulo && parsed.conteudo) {
+      if (parsed && parsed.titulo && parsed.legenda && parsed.cor_titulo && parsed.conteudo) {
         log("✓ Artigo reescrito com sucesso!");
         return {
           titulo: String(parsed.titulo).trim(),
+          legenda: String(parsed.legenda).trim(),
+          cor_titulo: String(parsed.cor_titulo).trim(),
           conteudo: String(parsed.conteudo).trim()
         };
       } else {
@@ -267,6 +304,10 @@ serve(async (req) => {
   const groqKey = Deno.env.get("GROQ_API_KEY_2");
   const feedEnv = Deno.env.get("RSS_FEEDS");
   const feeds = feedEnv ? feedEnv.split(/\s*,\s*/).filter(v => v) : DEFAULT_FEEDS;
+  
+  // NOVA FLAG: Modo automático (publicar direto) ou manual (status pendente)
+  const isAuto = Deno.env.get("RSS_IMPORT_AUTO") === "true";
+  log(`Modo de importação: ${isAuto ? "AUTOMÁTICO (publica direto)" : "MANUAL (status pendente)"}`);
 
   if (!supabaseUrl || !supabaseKey) {
     log("ERRO: Configuração Supabase ausente");
@@ -350,6 +391,8 @@ serve(async (req) => {
           const link = extractTag(itemXml, "link");
           const description = extractTag(itemXml, "description");
           const imageUrl = extractImage(itemXml);
+          const videoUrl = extractVideo(itemXml); // NOVO: extrai vídeo
+          const sourceCredit = extractImageCredit(link); // crédito da fonte
 
           if (!title || !link || !description) {
             log(`Item pulado: campos obrigatórios ausentes`);
@@ -359,7 +402,7 @@ serve(async (req) => {
 
           log(`Processando: ${title.substring(0, 60)}...`);
 
-          // Verificar duplicata por título (simples)
+          // Verificar duplicata por título
           const { data: existingData } = await supabase
             .from("noticias")
             .select("id")
@@ -372,7 +415,7 @@ serve(async (req) => {
             continue;
           }
 
-          // Reescrever com IA
+          // Reescrever com IA (agora retorna 4 campos)
           const rewritten = await rewriteWithGroq(title, description, groqKey);
           
           if (!rewritten) {
@@ -381,16 +424,15 @@ serve(async (req) => {
             continue;
           }
 
-          // Extrair informações adicionais
-          const category = extractCategory(feedUrl);
-          const imageCredit = extractImageCredit(link);
-
-          // Inserir no banco
+          // Inserir no banco com NOVOS CAMPOS
           const { error: insertErr } = await supabase.from("noticias").insert({
             title: rewritten.titulo,
             content: rewritten.conteudo,
-            category,
+            category: rewritten.legenda,        // LEGENDA DINÂMICA (não mais categoria fixa)
+            headline_colo: rewritten.cor_titulo, // COR DINÂMICA DO TÍTULO
             image_url: imageUrl || null,
+            videos: videoUrl || null,            // NOVO: campo de vídeos
+            status: isAuto ? "publicado" : "pendente", // STATUS CONDICIONAL
           });
 
           if (insertErr) {
@@ -399,7 +441,7 @@ serve(async (req) => {
             continue;
           }
 
-          log(`✓ Artigo importado com sucesso!`);
+          log(`✓ Artigo importado com sucesso! [${rewritten.legenda}] [${rewritten.cor_titulo}]`);
           importedCount++;
           feedResult.articlesImported++;
 
@@ -443,6 +485,7 @@ serve(async (req) => {
       processed: totalProcessed,
       errors: totalErrors,
       duration: `${duration}s`,
+      mode: isAuto ? "automático" : "manual",
       feeds: results
     }, null, 2),
     { 
