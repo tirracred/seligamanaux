@@ -404,10 +404,10 @@ serve(async (req) => {
 
           // Verificar duplicata por título
           const { data: existingData } = await supabase
-            .from("noticias")
-            .select("id")
-            .eq("title", title)
-            .limit(1);
+          .from("noticias")
+          .select("id")
+          .eq("link_original", link)  // ✅ Verifica pelo link único da notícia
+          .limit(1);
 
           if (existingData && existingData.length > 0) {
             log(`⊘ Artigo já existe: ${title.substring(0, 50)}...`);
@@ -426,14 +426,15 @@ serve(async (req) => {
 
           // Inserir no banco com NOVOS CAMPOS
           const { error: insertErr } = await supabase.from("noticias").insert({
-            title: rewritten.titulo,
-            content: rewritten.conteudo,
-            category: rewritten.legenda,        // LEGENDA DINÂMICA (não mais categoria fixa)
-            headline_colo: rewritten.cor_titulo, // COR DINÂMICA DO TÍTULO
-            image_url: imageUrl || null,
-            videos: videoUrl || null,            // NOVO: campo de vídeos
-            status: isAuto ? "publicado" : "pendente", // STATUS CONDICIONAL
-          });
+          title: rewritten.titulo,
+          content: rewritten.conteudo,
+          category: rewritten.legenda,
+          headline_colo: rewritten.cor_titulo,
+          image_url: imageUrl || null,
+          videos: videoUrl || null,
+          link_original: link,  // ✅ NOVO: Salva o link original para evitar duplicatas
+          status: isAuto ? "publicado" : "pendente",
+        });
 
           // oxi tu é doido homii
 
