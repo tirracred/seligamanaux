@@ -3,32 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="./public/favicon.png"/>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4935884639623224"
+     crossorigin="anonymous"></script>
     <title>Carregando... - SeligaManaux</title>
     
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <head><link rel="icon" type="image/png" href="./public/favicon.png"/>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4935884639623224"
-     crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-    
-    </head>
+</head>
 <body>
-
+    <!-- ============ HEADER (IGUAL AO INDEX) ============ -->
     <header class="site-header">
         <div class="header-container">
+            <!-- Logo clicável -->
+            <div class="logo">
+                <a href="/">
+                    <img src="./public/favicon.png" alt="Logo SLM" style="height: 4em; display: inline-block; vertical-align: middle; margin: 0;">
+                </a>
+            </div>
             
-            <img src="./public/favicon.png"  href="./index.html"></a> alt="Logo SLM" style="height: 4em; display: inline-block; vertical-align: middle; margin: 0;">
-        
             <button class="nav-toggle" aria-label="Abrir menu">
                 <span class="hamburger"></span>
             </button>
+            
             <nav class="nav-principal">
                 <ul>
-                    <li><a href="/">Início</a></li>
-                    <li><a href="ultimas-noticias.html">Últimas Notícias</a></li>
-                    <li><a href="manaus-e-regiao.html">Manaus e Região</a></li>
+                    <li><a href="./ultimasnoticias.html">Últimas Notícias</a></li>
+                    <li><a href="./manauseregião.html">Manaus e Região</a></li>
+                    <li><a href="https://www.instagram.com/seligamanaux/" target="_blank">Instagram</a></li>
                 </ul>
                 
                 <div class="theme-switch-wrapper">
@@ -39,29 +43,33 @@
                 </div>
             </nav>
         </div>
-        <div class="denuncia-banner" style="background: #ffe600; text-align: center; padding: 0.5rem 1rem;">
-        <a href="https://wa.me/5516993003322?text=Olá%2C%20gostaria%20de%20fazer%20uma%20denúncia%20para%20o%20SeligaManaux.%20Tenho%20informações%20importantes%20que%20gostaria%20de%20compartilhar%20com%20o%20jornal%20de%20forma%20confidencial." target_blank style="color: rgb(0, 0, 0); font-weight: 700; font-size: 1.1rem; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+    </header>
+
+    <!-- ============ BANNER WHATSAPP (FORA DO HEADER) ============ -->
+    <div class="denuncia-banner" style="background: #ffe600; text-align: center; padding: 0.5rem 1rem;">
+        <a href="https://wa.me/5516993003322?text=Olá%2C%20gostaria%20de%20fazer%20uma%20denúncia%20para%20o%20SeligaManaux.%20Tenho%20informações%20importantes%20que%20gostaria%20de%20compartilhar%20com%20o%20jornal%20de%20forma%20confidencial." target="_blank" style="color: rgb(0, 0, 0); font-weight: 700; font-size: 1.1rem; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
             <svg width="24" height="24" fill="#000000" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
                 <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
             </svg>
             Quero fazer uma denúncia!
         </a>
     </div>
-    </header>
 
-    <main>
+    <!-- ============ CONTEÚDO PRINCIPAL ============ -->
+    <main class="container">
         <article id="article-container">
-            
             <div id="loading-message" style="text-align: center; padding: 4rem 0;">
                 <p style="font-size: 1.2rem; color: var(--texto-secundario);">Carregando artigo...</p>
             </div>
-            </article>
+        </article>
     </main>
 
+    <!-- ============ FOOTER ============ -->
     <footer class="site-footer">
-        <p>&copy; 2025 SeligaManaux. Todos os direitos reservados.</p>
+        <p>&copy; 2025 SeligaManaux. Grupo Tirracred 61.811.560/0001-10 - Todos os direitos reservados.</p>
     </footer>
 
+    <!-- ============ SCRIPTS ============ -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="main.js"></script>
     <script>
@@ -99,7 +107,7 @@
                 try {
                     const { data: post, error } = await supabase
                         .from(DB_TABLE)
-                        .select('*, headline_colo') // Pega a coluna de cor
+                        .select('id, title, content, category, image_url, headline_colo, videos, created_at')
                         .eq('id', articleId) 
                         .single();
 
@@ -129,13 +137,13 @@
                     .map(p => `<p>${p}</p>`) 
                     .join(''); 
 
-                // Define a classe de cor do título
-                const titleColorClass = post.headline_colo === 'red' ? 'titulo-vermelho' : 'titulo-azul';
+                // CORREÇÃO: Usar a cor hex diretamente
+                const titleColor = post.headline_colo || '#059669';
 
                 articleContainer.innerHTML = `
                     <span class="categoria-tag">${post.category || 'Geral'}</span>
                     
-                    <h1 class="page-title ${titleColorClass}" style="border-bottom: none; margin: 0.5rem 0 0.5rem 0; line-height: 1.2;">
+                    <h1 class="page-title" style="color: ${titleColor}; border-bottom: none; margin: 0.5rem 0 0.5rem 0; line-height: 1.2;">
                         ${post.title}
                     </h1>
                     
@@ -144,6 +152,15 @@
                     </p>
                     
                     ${post.image_url ? `<img src="${post.image_url}" alt="${post.title}" class="article-image">` : ''}
+                    
+                    ${post.videos ? `
+                        <div style="margin: 20px 0;">
+                            <video controls style="width: 100%; max-width: 800px; border-radius: 8px;">
+                                <source src="${post.videos}" type="video/mp4">
+                                Seu navegador não suporta vídeos.
+                            </video>
+                        </div>
+                    ` : ''}
                     
                     <div class="article-body">
                         ${formattedContent}
