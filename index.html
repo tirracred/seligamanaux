@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <head><link rel="icon" type="image/png" href="./public/favicon.png"/>
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4935884639623224"
+     crossorigin="anonymous"></script>
     <title>SeligaManaux - Notícias de Manaus e Região</title>
     
     <link rel="stylesheet" href="style.css">
@@ -11,8 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4935884639623224"
-     crossorigin="anonymous"></script>
+    
 </head>
 <body>
     <header class="site-header">
@@ -91,7 +92,7 @@
             article.className = "card-noticia";
             
             const imageUrl = post.image_url || "https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux";
-            const titleColorClass = post.headline_colo === "red" ? "titulo-vermelho" : "titulo-azul";
+            const titleColor = post.headline_colo || "#059669"; // Pega a cor do banco ou usa azul como padrão
             
             // === CORREÇÃO 2: Voltar a usar o ID, já que 'canonical_path' não existe aqui ===
             const articleUrl = `artigo.html?id=${post.id}`;
@@ -108,7 +109,7 @@
                     <img src="${imageUrl}" alt="${post.title}">
                     <div class="card-conteudo">
                         <span class="categoria-tag">${post.category || "Geral"}</span>
-                        <h4 class="${titleColorClass}">${post.title}</h4>
+                        <h4 style="color: ${titleColor}">${post.title}</h4>
                         <p>${summary}</p>
                     </div>
                 </a>
