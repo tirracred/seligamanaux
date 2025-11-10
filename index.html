@@ -82,7 +82,7 @@
     <script>
         // === CORREÇÃO 1: Colunas que REALMENTE existem na tabela 'noticias' ===
         // (Removido 'resumo_reescrito' e 'canonical_path' que causaram o erro 400)
-        const COLUNAS_SELECT = "id, title, content, category, image_url, headline_colo, videos, created_at";
+        const COLUNAS_SELECT = "id, title, content, category, image_url, headline_colo, videos, created_at, prioridade, status";
 
         /**
          * Cria o card de notícia (Versão Corrigida)
@@ -154,10 +154,10 @@
                     // Busca usando as colunas corrigidas
                     const { data: newsData, error } = await supabase
                         .from(DB_TABLE)
-                        .select(COLUNAS_SELECT + ", prioridade")  // ✅ Inclui prioridade
-                        .eq('status', 'publicado')
-                        .order("prioridade", { ascending: false })  // ✅ Primeiro: prioridade
-                        .order("created_at", { ascending: false })  // ✅ Segundo: data
+                        .select(COLUNAS_SELECT)
+                        .eq('status', 'publicado')                 // ✅ Filtra só publicadas
+                        .order("prioridade", { ascending: false }) // ✅ Primeiro: prioridade
+                        .order("created_at", { ascending: false }) // ✅ Segundo: data
                         .range(offset, offset + pageSize - 1);
 
                     if (error) throw error; // O erro 400 acontecia aqui
