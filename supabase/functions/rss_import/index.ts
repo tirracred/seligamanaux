@@ -1,6 +1,19 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// ---------------------------------------------------------------------------
+// CORS configuration
+// Edge functions run on a different domain than your site, so when
+// calling this function from a browser (e.g. seligamanaux.com.br) you
+// need to allow cross‑origin requests.  The CORS headers below
+// mirror the pattern used in Supabase examples: allow any origin and
+// allow Authorization/apikey headers.  Modify as needed.
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
+};
+
 /**
  * This Edge Function imports articles from a handful of RSS feeds, rewrites
  * them with Groq’s Llama‑3.1‑8B‑Instant model, then persists the rewritten
@@ -69,22 +82,40 @@ function slugify(text: string): string {
 }
 
 // Default list of RSS feeds.  You can override this via the RSS_FEEDS
-// environment variable (comma separated).
+// environment variable (comma separated).  These feeds reflect the
+// corrected links provided by the admin.  The function will attempt
+// to import from all sources, continuing on errors.
 const DEFAULT_FEEDS = [
-  // Portal do Holanda
-  "https://www.portaldoholanda.com.br/feed", // removed tracking params
-  // Globo G1 Amazonas
-  "https://g1.globo.com/rss/g1/am/amazonas/rss2.xml",
+  // G1 AM Amazonas (sem sufixo rss2.xml)
+  "https://g1.globo.com/rss/g1/am/amazonas/",
+  // D24AM principal
+  "https://d24am.com/feed/",
+  // G1 AM
+  "https://g1.globo.com/rss/g1/am/",
+  // Nosso Show AM – Amazonas
+  "https://nossoshowam.com/feed/29/amazonas/",
   // Nosso Show AM – Manaus
   "https://nossoshowam.com/feed/26/manaus/",
-  // Nosso Show AM – Famosos e Entretenimento
-  "https://nossoshowam.com/feed/2/famosos-e-entretenimento/",
+  // Nosso Show AM – Política
+  "https://nossoshowam.com/feed/3/politica/",
+  // Nosso Show AM – Brasil
+  "https://nossoshowam.com/feed/27/brasil/",
+  // Nosso Show AM – Economia
+  "https://nossoshowam.com/feed/7/economia/",
+  // Nosso Show AM – Educação
+  "https://nossoshowam.com/feed/13/educacao/",
+  // Portal do Holanda
+  "https://www.portaldoholanda.com.br/feed/rss",
 ];
 
 // Main entry point.  Every invocation fetches all feeds and rewrites
 // them.  Invoking this endpoint repeatedly could import duplicate
 // articles if they have not yet been filtered out by title/link.
 serve(async (req) => {
+  // Respond to CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const groqKey = Deno.env.get("GROQ_API_KEY_2");
@@ -96,13 +127,13 @@ serve(async (req) => {
   if (!supabaseUrl || !supabaseKey) {
     return new Response(
       JSON.stringify({ error: "Missing Supabase configuration" }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
     );
   }
   if (!groqKey) {
     return new Response(
       JSON.stringify({ error: "Missing GROQ API key" }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
     );
   }
 
@@ -145,7 +176,30 @@ serve(async (req) => {
         // similarly to your Base44 implementation: it instructs the
         // model to rewrite the article in Portuguese, focusing on
         // Manaus/Amazonas when relevant, and to output JSON.
-        const prompt = `Você é um jornalista profissional de Manaus/Amazonas.\n\nTAREFA: Reescrever completamente a notícia abaixo de forma original, mantendo os fatos mas mudando totalmente a redação.\n\nNOTÍCIA ORIGINAL:\nTítulo: ${title}\nConteúdo: ${description}\n\nINSTRUÇÕES:\n1. Reescreva o conteúdo de forma TOTALMENTE ORIGINAL (não copie frases)\n2. Use linguagem jornalística brasileira, clara e direta\n3. Foque em Manaus/Amazonas quando relevante\n4. Tamanho: entre 1500 e 3000 caracteres\n5. Organize em parágrafos bem estruturados\n6. Crie um título completamente novo e chamativo\n7. IMPORTANTE: Escreva em português brasileiro correto\n\nFORMATO DE RESPOSTA (JSON):\n{\n  \"titulo\": \"novo título aqui\",\n  \"conteudo\": \"texto completo reescrito aqui (com múltiplos parágrafos separados por\\n\\n)\"\n}`;
+        const prompt = [
+          'Você é um jornalista profissional de Manaus/Amazonas.',
+          '',
+          'TAREFA: Reescrever completamente a notícia abaixo de forma original, mantendo os fatos mas mudando totalmente a redação.',
+          '',
+          'NOTÍCIA ORIGINAL:',
+          `Título: ${title}`,
+          `Conteúdo: ${description}`,
+          '',
+          'INSTRUÇÕES:',
+          '1. Reescreva o conteúdo de forma TOTALMENTE ORIGINAL (não copie frases)',
+          '2. Use linguagem jornalística brasileira, clara e direta',
+          '3. Foque em Manaus/Amazonas quando relevante',
+          '4. Tamanho: entre 2000 e 5000 palavras',
+          '5. Organize em parágrafos bem estruturados',
+          '6. Crie um título completamente novo e chamativo',
+          '7. IMPORTANTE: Escreva em português brasileiro correto',
+          '',
+          'FORMATO DE RESPOSTA (JSON):',
+          '{',
+          '  "titulo": "novo título aqui",',
+          '  "conteudo": "texto completo reescrito aqui (com múltiplos parágrafos separados por\\n\\n)"',
+          '}',
+        ].join('\n');
         // Call Groq API
         let newTitle = "";
         let newContent = "";
@@ -164,7 +218,8 @@ serve(async (req) => {
                   { role: "user", content: prompt },
                 ],
                 temperature: 0.7,
-                max_tokens: 1024,
+                // Solicita mais tokens para comportar 2–5 mil palavras.
+                max_tokens: 8192,
               }),
             },
           );
@@ -193,11 +248,27 @@ serve(async (req) => {
         if (!newTitle || !newContent) continue;
         // Create a slug for the canonical path
         const slug = slugify(newTitle);
-        // Determine a category based on feed origin
+        // Determine a category based on feed origin.  This mapping
+        // aligns with the new feed list.  If none match, defaults to
+        // "Geral".  Extend as needed to support additional feeds.
         let category = "Geral";
-        if (feedUrl.includes("/26/manaus")) category = "Manaus";
-        else if (feedUrl.includes("famosos")) category = "Entretenimento";
-        else if (feedUrl.includes("amazonas")) category = "Amazonas";
+        if (feedUrl.includes("/29/amazonas") || feedUrl.includes("/amazonas/")) {
+          category = "Amazonas";
+        } else if (feedUrl.includes("/26/manaus") || feedUrl.includes("/manaus/")) {
+          category = "Manaus";
+        } else if (feedUrl.includes("/3/politica") || feedUrl.includes("/politica/")) {
+          category = "Política";
+        } else if (feedUrl.includes("/27/brasil") || feedUrl.includes("/brasil/")) {
+          category = "Brasil";
+        } else if (feedUrl.includes("/7/economia") || feedUrl.includes("/economia/")) {
+          category = "Economia";
+        } else if (feedUrl.includes("/13/educacao") || feedUrl.includes("/educacao/")) {
+          category = "Educação";
+        } else if (feedUrl.includes("famosos")) {
+          category = "Entretenimento";
+        } else if (feedUrl.includes("amazonas")) {
+          category = "Amazonas";
+        }
         // Derive a simple image credit from the source domain
         let imageCredit = "";
         try {
@@ -233,6 +304,6 @@ serve(async (req) => {
   }
   return new Response(
     JSON.stringify({ imported: importedCount, articles: imported }),
-    { status: 200, headers: { "Content-Type": "application/json" } },
+    { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
   );
 });
