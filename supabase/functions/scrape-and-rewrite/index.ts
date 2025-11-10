@@ -178,8 +178,11 @@ async function rewriteWithGroq(
   imageUrl: string | null,
   retryCount: number = 0
 ): Promise<GroqResponse | null> {
+
+  
   if (retryCount > 2) {
     console.log(`[REWRITE_ABORT] Máximo de tentativas atingido`);
+    
     return null;
   }
 
@@ -263,6 +266,7 @@ Responda APENAS em JSON:
         await new Promise(r => setTimeout(r, 1000 * (retryCount + 1)));
         return rewriteWithGroq(title, content, apiKey, sourceName, imageUrl, retryCount + 1);
       }
+      
       return null;
     }
 
@@ -295,11 +299,29 @@ Responda APENAS em JSON:
       }
     }
 
-    const novoTitulo = (parsed?.titulo || '').trim();
+   const novoTitulo = (parsed?.titulo || '').trim();
     let novoConteudo = (parsed?.conteudo || '').trim();
     novoConteudo = ensureParagraphsHTML(novoConteudo);
 
     console.log(`[REWRITE_OK] Título: ${novoTitulo.slice(0, 40)}... | Len: ${novoConteudo.length}`);
+
+    // ✅ NOVA VALIDAÇÃO: Rejeita títulos que são códigos de cor
+    if (novoTitulo.match(/^#[0-9a-f]{6}$/i)) {
+      console.log(`[REWRITE_REJECTED] Título é código de cor: ${novoTitulo}, retry...`);
+      if (retryCount < 2) {
+        return rewriteWithGroq(title, content, apiKey, sourceName, imageUrl, retryCount + 1);
+      }
+      return null;
+    }
+
+    // ✅ NOVA VALIDAÇÃO: Rejeita títulos muito curtos (menos de 10 caracteres)
+    if (novoTitulo.length < 10) {
+      console.log(`[REWRITE_REJECTED] Título muito curto: "${novoTitulo}", retry...`);
+      if (retryCount < 2) {
+        return rewriteWithGroq(title, content, apiKey, sourceName, imageUrl, retryCount + 1);
+      }
+      return null;
+    }
 
     // Validação anti-cópia
     if (
@@ -313,7 +335,7 @@ Responda APENAS em JSON:
       }
       return null;
     }
-
+    
     return { titulo: novoTitulo, conteudo: novoConteudo };
   } catch (err) {
     console.log(`[GROQ_EXCEPTION] ${err}`);

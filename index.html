@@ -156,8 +156,8 @@
                         .from(DB_TABLE)
                         .select(COLUNAS_SELECT)
                         .eq('status', 'publicado')                 // ✅ Filtra só publicadas
-                        .order("prioridade", { ascending: false }) // ✅ Primeiro: prioridade
-                        .order("created_at", { ascending: false }) // ✅ Segundo: data
+                        .order("prioridade", { ascending: false })
+                        .order("created_at", { ascending: false })// ✅ Segundo: data
                         .range(offset, offset + pageSize - 1);
 
                     if (error) throw error; // O erro 400 acontecia aqui
@@ -206,18 +206,64 @@
             }
             
             // Carrega o primeiro lote
-            await loadMoreNews(true);
+            async function loadMoreNews(isInitialLoad = false) {
+    if (reachedEnd || !supabase) return;
 
-            // 3. Lógica do Scroll Infinito
-            window.addEventListener("scroll", () => {
-                if (reachedEnd || !supabase || document.getElementById("load-more").style.display === "block") {
-                    return;
-                }
-                
-                if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
-                    loadMoreNews();
-                }
-            });
+    const loadIndicator = isInitialLoad ? document.getElementById("categories-loading") : document.getElementById("load-more");
+    loadIndicator.style.display = "block";
+
+    try {
+        // ✅ CORRIGIDO: Ordena por prioridade PRIMEIRO
+        const { data: newsData, error } = await supabase
+            .from(DB_TABLE)
+            .select(COLUNAS_SELECT)
+            .eq('status', 'publicado')
+            .order("prioridade", { ascending: false })  // ✅ PRIORIDADE PRIMEIRO!
+            .order("created_at", { ascending: false })   // ✅ DEPOIS DATA
+            .range(offset, offset + pageSize - 1);
+
+        if (error) throw error;
+
+        if (newsData && newsData.length > 0) {
+          newsData.forEach(post => {
+            const safeCategory = getSafeCategoryId(post.category);
+            let container = document.getElementById(`category-${safeCategory}-container`);
+            
+            if (!container) {
+                container = document.getElementById("category-amazonas-container");
+            }
+            
+            if (container) {
+                container.appendChild(createNewsCard(post));
+                container.closest('.category-section').style.display = 'block';
+            } else {
+                console.warn(`Container não encontrado para categoria: ${post.category}`);
+            }
+        });
+            
+            document.getElementById("categories-sections").style.display = "block";
+            offset += newsData.length;
+            
+            if (newsData.length < pageSize) {
+                reachedEnd = true;
+            }
+        } else {
+            reachedEnd = true;
+            if (isInitialLoad && offset === 0) {
+                document.getElementById("categories-loading").innerText = "Nenhuma notícia encontrada.";
+            }
+        }
+
+    } catch (err) {
+        console.error("Erro ao carregar notícias:", err);
+        loadIndicator.innerText = "Erro ao carregar notícias.";
+        if (err.message.includes("400")) {
+            loadIndicator.innerText = "Erro (400): Verifique as colunas da tabela.";
+        }
+    } finally {
+        loadIndicator.style.display = "none";
+    }
+}
         });
     </script>
 </body>
