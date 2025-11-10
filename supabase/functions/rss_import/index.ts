@@ -104,6 +104,7 @@ function extractJsonFromText(text: string): {
   titulo: string; 
   legenda: string; 
   cor_titulo: string; 
+  prioridade: number;  // ✅ ADICIONAR
   conteudo: string 
 } | null {
   try {
@@ -132,6 +133,7 @@ function extractJsonFromText(text: string): {
           titulo: parsed.titulo, 
           legenda: parsed.legenda,
           cor_titulo: parsed.cor_titulo,
+          prioridade: parseInt(parsed.prioridade) || 1,  // ✅ NOVO (padrão 1)
           conteudo: parsed.conteudo 
         };
       }
@@ -144,6 +146,7 @@ function extractJsonFromText(text: string): {
   const tituloMatch = text.match(/"titulo"\s*:\s*"([^"]+)"/);
   const legendaMatch = text.match(/"legenda"\s*:\s*"([^"]+)"/);
   const corMatch = text.match(/"cor_titulo"\s*:\s*"([^"]+)"/);
+  const prioridadeMatch = text.match(/"prioridade"\s*:\s*(\d+)/);
   const conteudoMatch = text.match(/"conteudo"\s*:\s*"([\s\S]+?)"\s*\}/);
   
   if (tituloMatch && legendaMatch && corMatch && conteudoMatch) {
@@ -151,6 +154,7 @@ function extractJsonFromText(text: string): {
       titulo: tituloMatch[1],
       legenda: legendaMatch[1],
       cor_titulo: corMatch[1],
+      prioridade: prioridadeMatch ? parseInt(prioridadeMatch[1]) : 1,  // ✅ ADICIONAR
       conteudo: conteudoMatch[1].replace(/\\n/g, '\n')
     };
   }
@@ -270,6 +274,7 @@ async function rewriteWithGroq(
           titulo: String(parsed.titulo).trim(),
           legenda: String(parsed.legenda).trim(),
           cor_titulo: String(parsed.cor_titulo).trim(),
+          prioridade: parseInt(parsed.prioridade) || 1,  // ✅ ADICIONAR
           conteudo: String(parsed.conteudo).trim()
         };
       } else {
