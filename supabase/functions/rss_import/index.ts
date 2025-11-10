@@ -435,6 +435,9 @@ serve(async (req) => {
             status: isAuto ? "publicado" : "pendente", // STATUS CONDICIONAL
           });
 
+          // oxi tu é doido homii
+
+
           if (insertErr) {
             log(`Erro ao inserir no banco: ${insertErr.message}`);
             feedResult.errors.push(`DB Error: ${insertErr.message}`);
