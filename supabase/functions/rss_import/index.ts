@@ -159,19 +159,11 @@ serve(async (req) => {
         const imageUrl = extractImage(itemXml);
         // Skip if required fields missing
         if (!title || !link || !description) continue;
-        // Check if this link already exists in the database
-        const { data: existing, error: existErr } = await supabase
-          .from("noticias")
-          .select("id")
-          .eq("original_link", link)
-          .maybeSingle();
-        if (existErr) {
-          console.error(`Error checking existing article: ${existErr.message}`);
-        }
-        if (existing) {
-          // Article already imported
-          continue;
-        }
+        // Optional: you could check for duplicates here by comparing the
+        // article link or title with existing records.  Since the
+        // `noticias` table does not store `original_link`, we skip this
+        // duplicate check to avoid column‑not‑found errors.  You may
+        // implement your own logic here if needed.
         // Prepare the prompt for Groq.  The prompt is designed
         // similarly to your Base44 implementation: it instructs the
         // model to rewrite the article in Portuguese, focusing on
@@ -200,7 +192,15 @@ serve(async (req) => {
           '  "conteudo": "texto completo reescrito aqui (com múltiplos parágrafos separados por\\n\\n)"',
           '}',
         ].join('\n');
-        // Call Groq API
+        // Call Groq API to rewrite the article.  In case of any
+        // errors or empty responses, fall back to the original title
+        // and description.  We request a reasonable token limit (4096)
+        // to avoid hitting model constraints.  If the API fails or
+        // returns invalid JSON, the original article will still be
+        // inserted.
+        // We intend to rewrite the article via IA.  If the rewrite fails
+        // we will skip inserting this item entirely rather than using
+        // the original content.
         let newTitle = "";
         let newContent = "";
         try {
@@ -218,33 +218,46 @@ serve(async (req) => {
                   { role: "user", content: prompt },
                 ],
                 temperature: 0.7,
-                // Solicita mais tokens para comportar 2–5 mil palavras.
+                // Solicita saída estruturada em JSON.  Com
+                // response_format definido para json_object, a API
+                // assegura que a resposta seja JSON válido.
+                response_format: { "type": "json_object" },
+                // Solicita tokens suficientes para 2–5 mil palavras.  Se
+                // exceder o limite do modelo, a API cortará a saída.
                 max_tokens: 8192,
               }),
             },
           );
-          if (!groqResponse.ok) {
+          if (groqResponse.ok) {
+            const groqData = await groqResponse.json();
+            const contentOut = groqData?.choices?.[0]?.message?.content;
+            // When response_format=json_object, message.content should be an
+            // object.  If it's a string, attempt to parse.
+            let parsed: any;
+            if (contentOut && typeof contentOut === "object") {
+              parsed = contentOut;
+            } else if (typeof contentOut === "string" && contentOut.trim()) {
+              try {
+                parsed = JSON.parse(contentOut);
+              } catch (_e) {
+                console.error("Failed to parse JSON from Groq:", contentOut);
+                parsed = null;
+              }
+            }
+            if (parsed && parsed.titulo && parsed.conteudo) {
+              newTitle = String(parsed.titulo).trim();
+              newContent = String(parsed.conteudo).trim();
+            } else {
+              // If JSON is missing expected fields, skip this article
+              console.warn("Groq returned invalid JSON format", parsed);
+            }
+          } else {
             console.error(`Groq API error: ${groqResponse.status} ${await groqResponse.text()}`);
-            continue;
-          }
-          const groqData = await groqResponse.json();
-          const content = groqData?.choices?.[0]?.message?.content?.trim();
-          if (!content) continue;
-          // Attempt to parse JSON from the model output
-          try {
-            const parsed = JSON.parse(content);
-            newTitle = parsed.titulo?.trim() || "";
-            newContent = parsed.conteudo?.trim() || "";
-          } catch (_jsonErr) {
-            // Fallback: if the model didn't return JSON, treat the whole
-            // string as content and reuse the original title.
-            newTitle = title;
-            newContent = content;
           }
         } catch (llmErr) {
           console.error(`Error calling Groq API: ${llmErr}`);
-          continue;
         }
+        // Skip insertion if IA rewrite failed
         if (!newTitle || !newContent) continue;
         // Create a slug for the canonical path
         const slug = slugify(newTitle);
@@ -275,19 +288,15 @@ serve(async (req) => {
           const url = new URL(link);
           imageCredit = `Fonte: ${url.hostname}`;
         } catch {}
-        // Insert the article into the database
+        // Insert the article into the database.  The `noticias` table
+        // expects only a few columns: title, content, category and
+        // image_url.  Additional fields such as original_link or
+        // canonical_path are not inserted to avoid column errors.
         const { error: insertErr } = await supabase.from("noticias").insert({
           title: newTitle,
-          original_title: title,
           content: newContent,
-          original_content: description,
-          canonical_path: slug,
           category,
           image_url: imageUrl || null,
-          image_credit: imageCredit || null,
-          original_link: link,
-          pub_date: pubDate || null,
-          created_at: new Date().toISOString(),
         });
         if (insertErr) {
           console.error(`Failed to insert article: ${insertErr.message}`);

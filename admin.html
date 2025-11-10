@@ -451,9 +451,12 @@ async function scrapeCustom() {
             statusEl.textContent = 'Importando RSS... aguarde.';
             statusEl.style.color = '#ccc';
             try {
-                // Invoke the Supabase Edge Function using the Supabase JS client.
-                // This automatically handles the Authorization header and CORS.
-                const { data, error } = await supabaseClient.functions.invoke('rss_import');
+                // Invoca a edge function rss_import usando o cliente Supabase
+                const { data, error } = await supabaseClient.functions.invoke('rss_import', {
+                    // Mesmo sem body, a API exige um objeto; assim garante que
+                    // o header Authorization seja enviado corretamente
+                    body: {}
+                });
                 if (error) {
                     statusEl.textContent = `❌ Erro ao importar RSS: ${error.message || error}`;
                     statusEl.style.color = 'red';
