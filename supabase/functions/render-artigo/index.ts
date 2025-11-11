@@ -1,19 +1,62 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// === NOVOS CABEÇALHOS DE RESPOSTA ===
+// === CABEÇALHOS DE RESPOSTA ===
+/**
+ * Headers enviados com a resposta HTML.
+ *
+ * A política de segurança de conteúdo (Content-Security-Policy) a seguir
+ * foi ajustada para permitir que o código JavaScript e os estilos sejam
+ * executados corretamente quando o usuário acessa o artigo. A política
+ * define as fontes permitidas para scripts, estilos, imagens, fontes e
+ * conexões. Veja notas importantes:
+ *
+ * - script-src: permite scripts carregados do próprio domínio ('self'),
+ *   scripts inline (necessário para o pequeno script de hidratação da página)
+ *   e scripts de CDNs utilizados pelo projeto. Inclui o CDN da biblioteca
+ *   Supabase (cdn.jsdelivr.net) e o domínio de anúncios do Google
+ *   (pagead2.googlesyndication.com).
+ * - style-src: permite estilos do próprio domínio, estilos inline e
+ *   a folha de estilos hospedada no Google Fonts (fonts.googleapis.com).
+ * - img-src: permite imagens de qualquer origem, além de blobs e data URLs,
+ *   necessários para thumbnails de vídeo ou imagens externas.
+ * - connect-src: permite requisições para qualquer origem; isso é
+ *   necessário para as chamadas da API Supabase feitas pelo script
+ *   incorporado na página.
+ * - font-src: explicitamente permite fontes do Google Fonts (fonts.gstatic.com)
+ *   e do próprio domínio.
+ * - frame-src: mantém-se amplo para permitir incorporação de vídeos ou
+ *   anúncios, se existirem.
+ *
+ * Não definimos a diretiva `sandbox`, que poderia restringir a execução de
+ * scripts. A ausência dessa diretiva garante que o navegador não coloque a
+ * página em uma sandbox que bloqueie JavaScript, evitando o erro
+ * "Blocked script execution in ... because the document's frame is
+ * sandboxed and the 'allow-scripts' permission is not set".
+ */
 const RESPONSE_HEADERS = {
+  // Permite o acesso a partir de qualquer origem; necessário para o preview
+  // em diferentes plataformas (por exemplo, WhatsApp e Telegram).
   "Access-Control-Allow-Origin": "*",
+  // Permite cabeçalhos personalizados comuns em requisições CORS.
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  // Define o tipo de conteúdo como HTML UTF‑8.
   "Content-Type": "text/html; charset=utf-8",
+  // Evita que o navegador faça inferring do tipo de conteúdo, reforçando
+  // a segurança contra ataques de MIME sniffing.
   "X-Content-Type-Options": "nosniff",
-
-  // ESTA É A NOVA POLÍTICA DE SEGURANÇA
-  // Ela diz que é permitido rodar scripts e estilos "inline"
-  // e carregar conteúdo de qualquer lugar (*).
-  "Content-Security-Policy": "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';",
+  // Politica de segurança de conteúdo ajustada conforme descrito acima.
+  "Content-Security-Policy": [
+    "default-src 'self'", // recurso padrão do próprio domínio
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://pagead2.googlesyndication.com", // scripts permitidos
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // estilos permitidos
+    "img-src * data: blob:", // imagens de qualquer origem + data/blob
+    "connect-src *", // conexões ajax/fetch para quaisquer domínios
+    "font-src 'self' https://fonts.gstatic.com", // fontes permitidas
+    "frame-src *" // frames de qualquer origem (ex.: vídeos)
+  ].join('; '),
 };
-// ===================================
+// ===============================
 
 serve(async (req) => {
   // Trata requisições OPTIONS (CORS)
