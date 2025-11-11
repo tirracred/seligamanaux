@@ -83,189 +83,151 @@
         // === CORREÇÃO 1: Colunas que REALMENTE existem na tabela 'noticias' ===
         // (Removido 'resumo_reescrito' e 'canonical_path' que causaram o erro 400)
         const COLUNAS_SELECT = "id, title, content, category, image_url, headline_colo, videos, created_at, prioridade, status";
+    // NOTA: Verifique se no seu Supabase a coluna é 'headline_colo' mesmo ou 'headline_color' (com R no final).
+    
+    const DB_TABLE = "noticias"; 
+    const PAGE_SIZE = 9; 
 
-        /**
-         * Cria o card de notícia (Versão Corrigida)
-         */
-        function createNewsCard(post) {
-            const article = document.createElement("article");
-            article.className = "card-noticia";
-            
-            const imageUrl = post.image_url || "https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux";
-            const titleColor = post.headline_colo || "#059669"; // Pega a cor do banco ou usa azul como padrão
-            
-            // === CORREÇÃO 2: Voltar a usar o ID, já que 'canonical_path' não existe aqui ===
-            const articleUrl = `artigo.html?id=${post.id}`;
-            
-            // === CORREÇÃO 3: Usar 'post.content' para o resumo, já que 'resumo_reescrito' não existe ===
-            const summary = (post.content || "") // Usando 'content' como fonte
-                .replace(/<[^>]+>/g, " ") // Remove tags HTML (importante)
-                .replace(/\s+/g, " ")     
-                .trim()
-                .substring(0, 100) + "...";
+    // Variáveis de controle global
+    let offset = 0;
+    let reachedEnd = false;
+    let isLoading = false; // Para evitar chamadas duplas
 
-            article.innerHTML = `
-                <a href="${articleUrl}">
-                    <img src="${imageUrl}" alt="${post.title}">
-                    <div class="card-conteudo">
-                        <span class="categoria-tag">${post.category || "Geral"}</span>
-                        <h4 style="color: ${titleColor}">${post.title}</h4>
-                        <p>${summary}</p>
-                    </div>
-                </a>
-            `;
-            return article;
+    /**
+     * Cria o card de notícia
+     */
+    function createNewsCard(post) {
+        const article = document.createElement("article");
+        article.className = "card-noticia";
+        
+        const imageUrl = post.image_url || "https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux";
+        // Fallback para cor se headline_colo vier vazio
+        const titleColor = post.headline_colo || "#059669"; 
+        
+        const articleUrl = `artigo.html?id=${post.id}`;
+        
+        // Cria resumo limpo
+        const summary = (post.content || "")
+            .replace(/<[^>]+>/g, " ") 
+            .replace(/\s+/g, " ")     
+            .trim()
+            .substring(0, 100) + "...";
+
+        article.innerHTML = `
+            <a href="${articleUrl}">
+                <img src="${imageUrl}" alt="${post.title}">
+                <div class="card-conteudo">
+                    <span class="categoria-tag">${post.category || "Geral"}</span>
+                    <h4 style="color: ${titleColor}">${post.title}</h4>
+                    <p>${summary}</p>
+                </div>
+            </a>
+        `;
+        return article;
+    }
+
+    /**
+     * Normaliza nomes de categoria para IDs
+     */
+    function getSafeCategoryId(categoryName) {
+        if (!categoryName) return "geral";
+        return categoryName
+            .toLowerCase()
+            .normalize("NFD") 
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-") 
+            .replace(/^-+|-+$/g, ""); 
+    }
+
+    /**
+     * Função PRINCIPAL de carregamento
+     */
+    async function loadMoreNews(isInitialLoad = false) {
+        // Verificações de segurança
+        if (reachedEnd || isLoading) return;
+        if (typeof supabase === 'undefined' || !supabase) {
+            console.error("ERRO GRAVE: Supabase não inicializado.");
+            if (isInitialLoad) document.getElementById("categories-loading").innerText = "Erro de conexão.";
+            return;
         }
 
-        /**
-         * Normaliza nomes de categoria para IDs de HTML
-         */
-        function getSafeCategoryId(categoryName) {
-            if (!categoryName) return "geral";
-            return categoryName
-                .toLowerCase()
-                .normalize("NFD") 
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-z0-9]+/g, "-") 
-                .replace(/^-+|-+$/g, ""); 
-        }
+        isLoading = true;
+        const loadIndicator = isInitialLoad ? document.getElementById("categories-loading") : document.getElementById("load-more");
+        if (loadIndicator) loadIndicator.style.display = "block";
 
-        document.addEventListener("DOMContentLoaded", async () => {
-            
-            // --- Lógica de Carregamento de Notícias ---
-            if (typeof supabase === 'undefined' || !supabase) {
-                console.error("ERRO GRAVE: 'main.js' falhou ao carregar ou definir 'supabase'.");
-                document.getElementById("categories-loading").innerText = "Erro fatal ao conectar.";
-                return;
-            }
+        try {
+            // === A QUERY CORRIGIDA ===
+            const { data: newsData, error } = await supabase
+                .from(DB_TABLE)
+                .select(COLUNAS_SELECT)
+                .eq('status', 'publicado')
+                // ORDENAÇÃO: Primeiro por prioridade (maior primeiro), depois por data (mais recente primeiro)
+                .order("prioridade", { ascending: false })  
+                .order("created_at", { ascending: false })   
+                .range(offset, offset + PAGE_SIZE - 1);
 
-            // === CORREÇÃO 4: Remover lógica "Mais Vistos" e começar do zero ===
-            let offset = 0; // Começa do início
-            const pageSize = 9; 
-            let reachedEnd = false;
+            if (error) throw error;
 
-            async function loadMoreNews(isInitialLoad = false) {
-                if (reachedEnd || !supabase) return;
+            if (newsData && newsData.length > 0) {
+                // Se for carregamento inicial, limpa o loading e mostra as seções
+                if (isInitialLoad) {
+                    document.getElementById("categories-loading").style.display = "none";
+                    document.getElementById("categories-sections").style.display = "block";
+                }
 
-                const loadIndicator = isInitialLoad ? document.getElementById("categories-loading") : document.getElementById("load-more");
-                loadIndicator.style.display = "block";
-
-                try {
-                    // Busca usando as colunas corrigidas
-                    const { data: newsData, error } = await supabase
-                        .from(DB_TABLE)
-                        .select(COLUNAS_SELECT)
-                        .eq('status', 'publicado')                 // ✅ Filtra só publicadas
-                        .order("prioridade", { ascending: false })
-                        .order("created_at", { ascending: false })// ✅ Segundo: data
-                        .range(offset, offset + pageSize - 1);
-
-                    if (error) throw error; // O erro 400 acontecia aqui
-
-                    if (newsData && newsData.length > 0) {
-                      newsData.forEach(post => {
-                        const safeCategory = getSafeCategoryId(post.category);
-                        let container = document.getElementById(`category-${safeCategory}-container`);
-                        
-                        // Se o container da categoria não existe, usa "amazonas" (que sempre existe)
-                        if (!container) {
-                            container = document.getElementById("category-amazonas-container");
-                        }
-                        
-                        // Só adiciona se encontrou algum container
-                        if (container) {
-                            container.appendChild(createNewsCard(post));
-                            container.closest('.category-section').style.display = 'block';
-                        } else {
-                            console.warn(`Container não encontrado para categoria: ${post.category}`);
-                        }
-                    });
-                        
-                        document.getElementById("categories-sections").style.display = "block";
-                        offset += newsData.length;
-                        
-                        if (newsData.length < pageSize) {
-                            reachedEnd = true;
-                        }
-                    } else {
-                        reachedEnd = true;
-                        if (isInitialLoad && offset === 0) { // Só mostra se for o primeiro carregamento e não vier nada
-                            document.getElementById("categories-loading").innerText = "Nenhuma notícia encontrada.";
-                        }
+                newsData.forEach(post => {
+                    const safeCategory = getSafeCategoryId(post.category);
+                    // Tenta achar o container específico da categoria, senão usa o Amazonas como padrão
+                    let container = document.getElementById(`category-${safeCategory}-container`);
+                    if (!container) {
+                        container = document.getElementById("category-amazonas-container");
                     }
-
-                } catch (err) {
-                    console.error("Erro ao carregar notícias:", err);
-                    loadIndicator.innerText = "Erro ao carregar notícias.";
-                    if (err.message.includes("400")) {
-                        loadIndicator.innerText = "Erro (400): Verifique as colunas da tabela.";
+                    
+                    if (container) {
+                        container.appendChild(createNewsCard(post));
+                        // Garante que a seção pai está visível
+                        container.closest('.category-section').style.display = 'block';
                     }
-                } finally {
-                    loadIndicator.style.display = "none";
+                });
+                
+                // Atualiza o offset para a próxima página
+                offset += newsData.length;
+                
+                // Se vieram menos notícias que o tamanho da página, chegamos ao fim
+                if (newsData.length < PAGE_SIZE) {
+                    reachedEnd = true;
+                    if (!isInitialLoad && loadIndicator) loadIndicator.style.display = "none";
+                }
+
+            } else {
+                reachedEnd = true;
+                if (isInitialLoad) {
+                    document.getElementById("categories-loading").innerText = "Nenhuma notícia encontrada.";
                 }
             }
-            
-            // Carrega o primeiro lote
-            async function loadMoreNews(isInitialLoad = false) {
-    if (reachedEnd || !supabase) return;
 
-    const loadIndicator = isInitialLoad ? document.getElementById("categories-loading") : document.getElementById("load-more");
-    loadIndicator.style.display = "block";
-
-    try {
-        // ✅ CORRIGIDO: Ordena por prioridade PRIMEIRO
-        const { data: newsData, error } = await supabase
-            .from(DB_TABLE)
-            .select(COLUNAS_SELECT)
-            .eq('status', 'publicado')
-            .order("prioridade", { ascending: false })  // ✅ PRIORIDADE PRIMEIRO!
-            .order("created_at", { ascending: false })   // ✅ DEPOIS DATA
-            .range(offset, offset + pageSize - 1);
-
-        if (error) throw error;
-
-        if (newsData && newsData.length > 0) {
-          newsData.forEach(post => {
-            const safeCategory = getSafeCategoryId(post.category);
-            let container = document.getElementById(`category-${safeCategory}-container`);
-            
-            if (!container) {
-                container = document.getElementById("category-amazonas-container");
-            }
-            
-            if (container) {
-                container.appendChild(createNewsCard(post));
-                container.closest('.category-section').style.display = 'block';
-            } else {
-                console.warn(`Container não encontrado para categoria: ${post.category}`);
-            }
-        });
-            
-            document.getElementById("categories-sections").style.display = "block";
-            offset += newsData.length;
-            
-            if (newsData.length < pageSize) {
-                reachedEnd = true;
-            }
-        } else {
-            reachedEnd = true;
-            if (isInitialLoad && offset === 0) {
-                document.getElementById("categories-loading").innerText = "Nenhuma notícia encontrada.";
+        } catch (err) {
+            console.error("Erro ao carregar notícias:", err);
+            if (loadIndicator) loadIndicator.innerText = "Erro ao carregar.";
+        } finally {
+            isLoading = false;
+            if (!isInitialLoad && loadIndicator && !reachedEnd) {
+                 loadIndicator.style.display = "none";
             }
         }
-
-    } catch (err) {
-        console.error("Erro ao carregar notícias:", err);
-        loadIndicator.innerText = "Erro ao carregar notícias.";
-        if (err.message.includes("400")) {
-            loadIndicator.innerText = "Erro (400): Verifique as colunas da tabela.";
-        }
-    } finally {
-        loadIndicator.style.display = "none";
     }
-}
-        });
-    </script>
+
+    // === PONTO DE ENTRADA DO SCRIPT ===
+    // Isso garante que o código só roda quando a página estiver pronta
+    document.addEventListener("DOMContentLoaded", () => {
+        loadMoreNews(true);
+
+        // Opcional: Se quiser um botão "Carregar Mais" manual funcionando:
+        // document.getElementById('btn-carregar-mais').addEventListener('click', () => loadMoreNews(false));
+    });
+    
+</script>
+
 </body>
 
 
