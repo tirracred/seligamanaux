@@ -107,11 +107,15 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="main.js"></script>
   <script>
-    
-    const supabaseUrl = "https://xtnqypmezntjcidglblc.supabase.co";
-    const supabaseKey =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODEwMDksImV4cCI6MjA3NzU1NzAwOX0.fz__YKaMuEWjoXVansGZnLgUhsdsg7J1tLCriMhV8Ls"; // substitua aqui pela sua chave pública anon
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    // --- CONFIGURAÇÕES ---
+    // Use nomes diferentes para não conflitar com globais se main.js já estiver usando
+    const SUPABASE_URL_LOCAL = "https://xtnqypmezntjcidglblc.supabase.co";
+    const SUPABASE_KEY_LOCAL = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bnF5cG1lem50amNpZGdsYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODEwMDksImV4cCI6MjA3NzU1NzAwOX0.fz__YKaMuEWjoXVansGZnLgUhsdsg7J1tLCriMhV8Ls";
+    const DB_TABLE_LOCAL = "noticias"; // Definindo a tabela aqui para garantir
+
+    // Inicializa o cliente Supabase localmente para este script
+    // Usamos 'window.supabase' para garantir que estamos pegando a biblioteca do CDN
+    const sbClient = window.supabase.createClient(SUPABASE_URL_LOCAL, SUPABASE_KEY_LOCAL);
 
     document.addEventListener("DOMContentLoaded", () => {
       const articleContainer = document.getElementById("article-container");
@@ -133,25 +137,25 @@
         const urlParams = new URLSearchParams(window.location.search);
         const articleId = urlParams.get("id");
 
+        // 1. Validação de ID
         if (!articleId) {
           loadingMessage.innerHTML =
-            '<h1 class="page-title">Erro</h1><p style="color: var(--texto-secundario);">Nenhum artigo foi especificado.</p>';
+            '<h1 class="page-title">Artigo não especificado</h1><p style="color: var(--texto-secundario);">Retorne para a página inicial.</p>';
           return;
         }
 
-        if (!supabase) {
-          console.error("Supabase client not initialized.");
-          loadingMessage.innerHTML =
-            '<h1 class="page-title">Erro de Conexão</h1>';
+        // 2. Validação do Cliente
+        if (!sbClient) {
+          console.error("Erro crítico: Cliente Supabase não inicializou.");
+          loadingMessage.innerHTML = '<h1 class="page-title">Erro Interno</h1>';
           return;
         }
 
         try {
-          const { data: post, error } = await supabase
-            .from(DB_TABLE)
-            .select(
-              "id, title, content, category, image_url, headline_colo, videos, created_at"
-            )
+          // 3. Busca no Banco de Dados
+          const { data: post, error } = await sbClient
+            .from(DB_TABLE_LOCAL) // Usa a constante local
+            .select("id, title, content, category, image_url, headline_colo, videos, created_at")
             .eq("id", articleId)
             .single();
 
@@ -159,73 +163,71 @@
 
           if (!post) {
             loadingMessage.innerHTML =
-              '<h1 class="page-title">Artigo não encontrado</h1><p style="color: var(--texto-secundario);">O link que você seguiu pode estar quebrado ou o artigo foi removido.</p>';
+              '<h1 class="page-title">Não encontrado</h1><p style="color: var(--texto-secundario);">Este artigo pode ter sido removido.</p>';
             return;
           }
 
           renderArticle(post);
+
         } catch (err) {
-          console.error("Erro ao buscar artigo:", err);
-          loadingMessage.innerHTML =
-            '<h1 class="page-title">Erro ao Carregar</h1><p style="color: var(--texto-secundario);">Não foi possível conectar ao banco de dados para carregar este artigo.</p>';
+          console.error("Erro ao carregar artigo:", err);
+          // Detalhe melhor o erro na tela se for um erro de conexão/código
+          let msgErro = "Não foi possível carregar o conteúdo.";
+          if (err.code === "PGRST116") msgErro = "Artigo não encontrado (JSON vazio)."; // Erro comum do .single()
+
+          loadingMessage.innerHTML = `<h1 class="page-title">Erro</h1><p style="color: var(--texto-secundario);">${msgErro}</p>`;
         }
       }
 
       function renderArticle(post) {
         document.title = `${post.title} - SeligaManaux`;
+        // Oculta a mensagem de carregamento
         loadingMessage.style.display = "none";
 
-        // Formata o conteúdo: substitui quebras de linha (\n) por tags <p>
-        const formattedContent = post.content
+        // Formatação do Conteúdo
+        // Garante que não quebra se content for nulo
+        const safeContent = post.content || "";
+        const formattedContent = safeContent
           .split("\n")
           .filter((p) => p.trim() !== "")
           .map((p) => `<p>${p}</p>`)
           .join("");
 
-        // CORREÇÃO: Usar a cor hex diretamente
         const titleColor = post.headline_colo || "#059669";
 
+        // Renderização do HTML
         articleContainer.innerHTML = `
-                    <span class="categoria-tag">${
-                      post.category || "Geral"
-                    }</span>
-                    
-                    <h1 class="page-title" style="color: ${titleColor}; border-bottom: none; margin: 0.5rem 0 0.5rem 0; line-height: 1.2;">
-                        ${post.title}
-                    </h1>
-                    
-                    <p class="article-meta">
-                        Publicado em ${formatTimestamp(post.created_at)}
-                    </p>
-                    
-                    ${
-                      post.image_url
-                        ? `<img src="${post.image_url}" alt="${post.title}" class="article-image">`
-                        : ""
-                    }
-                    
-                    ${
-                      post.videos
-                        ? `
-                        <div style="margin: 20px 0;">
-                            <video controls style="width: 100%; max-width: 800px; border-radius: 8px;">
-                                <source src="${post.videos}" type="video/mp4">
-                                Seu navegador não suporta vídeos.
-                            </video>
-                        </div>
-                    `
-                        : ""
-                    }
-                    
-                    <div class="article-body">
-                        ${formattedContent}
-                    </div>
-                `;
+            <span class="categoria-tag">${post.category || "Geral"}</span>
+            
+            <h1 class="page-title" style="color: ${titleColor}; border-bottom: none; margin: 0.5rem 0 0.5rem 0; line-height: 1.2;">
+                ${post.title}
+            </h1>
+            
+            <p class="article-meta">
+                Publicado em ${formatTimestamp(post.created_at)}
+            </p>
+            
+            ${post.image_url ? `<img src="${post.image_url}" alt="${post.title}" class="article-image">` : ""}
+            
+            ${post.videos ? `
+                <div style="margin: 20px 0;">
+                    <video controls style="width: 100%; max-width: 800px; border-radius: 8px;">
+                        <source src="${post.videos}" type="video/mp4">
+                        Seu navegador não suporta vídeos.
+                    </video>
+                </div>
+            ` : ""}
+            
+            <div class="article-body">
+                ${formattedContent}
+            </div>
+        `;
       }
 
+      // Inicia o carregamento
       loadArticle();
     });
-  </script>
+</script>
 </body>
 
 
