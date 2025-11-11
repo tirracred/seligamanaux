@@ -35,9 +35,10 @@ jobs:
             --project-ref $SUPABASE_PROJECT_ID \
             --no-verify-jwt
 
-
-            - name: Deploy render-artigo
+      - name: Deploy render-artigo
         run: |
           supabase functions deploy render-artigo \
             --project-ref $SUPABASE_PROJECT_ID \
             --no-verify-jwt
+
+            
