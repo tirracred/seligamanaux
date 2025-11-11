@@ -1,16 +1,19 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Cabeçalhos CORS e de Segurança para permitir que o site funcione
+// === NOVOS CABEÇALHOS DE RESPOSTA ===
 const RESPONSE_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Content-Type": "text/html; charset=utf-8",
-  // Permite que scripts, estilos e imagens de qualquer lugar funcionem (necessário para seus ads e scripts externos)
-  "Content-Security-Policy": "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';",
-  // Evita que o navegador tente "adivinhar" tipos de arquivo incorretamente
   "X-Content-Type-Options": "nosniff",
+  
+  // REMOVEMOS o 'Content-Security-Policy' complexo
+  // E ADICIONAMOS um cabeçalho 'Sandbox' PERMISSIVO
+  // Isso diz ao navegador: "Confie neste conteúdo e permita que ele rode scripts e use estilos"
+  "Sandbox": "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-presentation",
 };
+// ===================================
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: RESPONSE_HEADERS });
@@ -19,7 +22,6 @@ serve(async (req) => {
     const reqUrl = new URL(req.url);
     const articleId = reqUrl.searchParams.get("id");
 
-
     if (!articleId) {
       return new Response("Artigo não especificado.", { 
         status: 404, 
@@ -27,11 +29,9 @@ serve(async (req) => {
       });
     }
 
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
 
     const { data: post, error } = await supabase
       .from("noticias")
@@ -52,8 +52,6 @@ serve(async (req) => {
       .trim()
       .substring(0, 160) + "...";
     
-
-
     const safeTitle = (post.title || "").replace(/"/g, '&quot;');
     const safeDesc = cleanDesc.replace(/"/g, '&quot;');
     const imageUrl = post.image_url || "https://seligamanaux.com.br/public/favicon.png";
@@ -68,8 +66,6 @@ serve(async (req) => {
       .replace(/{{ARTICLE_ID}}/g, articleId)
       .replace('{{POST_DATA_JSON}}', JSON.stringify(post).replace(/</g, '\\u003c'));
 
-
-
     return new Response(finalHtml, {
       headers: {
         ...RESPONSE_HEADERS,
@@ -82,13 +78,13 @@ serve(async (req) => {
   }
 });
 
+// O HTML_TEMPLATE continua o mesmo da vez anterior, não precisa mudar.
+// Se quiser garantir, cole o template da resposta anterior aqui.
 const HTML_TEMPLATE = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-
     <title>{{TITLE}} - SeligaManaux</title>
     <meta name="description" content="{{DESCRIPTION}}">
 
@@ -105,8 +101,6 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
     <meta name="twitter:image" content="{{IMAGE_URL}}">
 
     <link rel="icon" type="image/png" href="https://seligamanaux.com.br/public/favicon.png"/>
-
-
     <link rel="stylesheet" href="https://seligamanaux.com.br/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -161,14 +155,8 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
         <p>&copy; 2025 SeligaManaux. Grupo Tirracred.</p>
     </footer>
 
-
-
     <script src="https://seligamanaux.com.br/main.js"></script>
-
-
     <script>
-
-    
         document.addEventListener('DOMContentLoaded', () => {
             const postData = {{POST_DATA_JSON}};
             const container = document.getElementById('article-container');
@@ -193,9 +181,10 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
                 \`;
             }
 
-
+            
         });
 
+        
     </script>
 </body>
 </html>`;
