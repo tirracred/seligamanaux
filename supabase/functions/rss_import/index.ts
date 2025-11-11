@@ -179,6 +179,7 @@ async function rewriteWithGroq(
 } | null> {
   
   const prompt = [
+    const prompt = [
     'Você é um jornalista profissional de Manaus/Amazonas.',
     '',
     'TAREFA: Reescrever completamente a notícia abaixo de forma original.',
@@ -194,22 +195,28 @@ async function rewriteWithGroq(
     '4. Tamanho: MÁXIMO 2.500 palavras (não exceder)',
     '5. Organize em parágrafos bem estruturados',
     '6. Crie um título completamente novo e chamativo',
-    '7. Crie uma LEGENDA curta e contextual (ex: "Terror", "Esporte", "Crime Brutal", "Política", "Economia")',
+    '7. Crie uma LEGENDA curta e contextual (ex: "Polícia", "Tragédia", "Educação", "Economia", "Serviço")',
     '8. Escolha uma COR para o título:',
-    '   - "#e53e3e" (vermelho) para notícias urgentes, graves, crimes, alertas',
-    '   - "#059669" (azul) para notícias gerais, padrão, menos alarmantes',
-    '9. IMPORTANTE: Escreva em português brasileiro correto',
+    '   - "#e53e3e" (vermelho) para notícias urgentes, graves, crimes, mortes, alertas',
+    '   - "#059669" (azul) para notícias gerais, serviços, vagas, política cotidiana, esportes',
+    '9. DEFINA A PRIORIDADE (CRÍTICO - Siga estritamente):',
+    '   - NOTA 5 (MÁXIMA): Homicídios, mortes, acidentes fatais, tiroteios, tragédias naturais, alertas de perigo iminente.',
+    '   - NOTA 4 (ALTA): Crimes sem morte (roubos, prisões), operações policiais grandes, denúncias graves, falta de luz/água generalizada.',
+    '   - NOTA 3 (MÉDIA): Decisões políticas, economia local, problemas de infraestrutura (buracos), trânsito, previsão do tempo relevante.',
+    '   - NOTA 2 (BAIXA): Eventos culturais, esportes comuns, curiosidades.',
+    '   - NOTA 1 (MÍNIMA): Vagas de emprego/estágio, cursos, projetos sociais, inaugurações, dicas de saúde, notícias positivas ou "leves".',
+    '10. IMPORTANTE: Escreva em português brasileiro correto',
     '',
     'FORMATO DE RESPOSTA (JSON ESTRITO):',
     '{',
     '  "titulo": "novo título aqui",',
     '  "legenda": "legenda contextual aqui",',
-    ' "prioridade": 1 ou 5,',
-    '  "cor_titulo": "#e53e3e ou #059669",',
+    '  "prioridade": 1,', // Exemplo com número
+    '  "cor_titulo": "#e53e3e",',
     '  "conteudo": "texto completo reescrito aqui"',
     '}',
     '',
-    'ATENÇÃO: Retorne APENAS o JSON, sem texto adicional antes ou depois.'
+    'ATENÇÃO: Retorne APENAS o JSON. Seja rigoroso na prioridade: se não tem morte, crime grave ou urgência, NÃO USE 5.'
   ].join('\n');
 
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -269,15 +276,23 @@ async function rewriteWithGroq(
       }
       
       if (parsed && parsed.titulo && parsed.legenda && parsed.cor_titulo && parsed.conteudo) {
-        log("✓ Artigo reescrito com sucesso!");
-        return {
-          titulo: String(parsed.titulo).trim(),
-          legenda: String(parsed.legenda).trim(),
-          cor_titulo: String(parsed.cor_titulo).trim(),
-          prioridade: parseInt(parsed.prioridade) || 1,  // ✅ ADICIONAR
-          conteudo: String(parsed.conteudo).trim()
-        };
-      } else {
+  log("✓ Artigo reescrito com sucesso!");
+  
+  // --- CAMADA DE SEGURANÇA ---
+  // Remove qualquer código hex (ex: #ff0000) que a IA tenha colocado por engano no início do título
+  let tituloLimpo = String(parsed.titulo).trim();
+  tituloLimpo = tituloLimpo.replace(/^#[0-9A-Fa-f]{6}\s*/, ""); 
+
+  return {
+    titulo: tituloLimpo, 
+    legenda: String(parsed.legenda).trim(),
+    cor_titulo: String(parsed.cor_titulo).trim(),
+    prioridade: parseInt(parsed.prioridade) || 1,
+    conteudo: String(parsed.conteudo).trim()
+  };
+}
+
+else {
         log("JSON inválido recebido da Groq:", { contentOut: contentOut?.substring?.(0, 200) });
       }
       
