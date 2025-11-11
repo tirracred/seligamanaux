@@ -7,16 +7,19 @@ const RESPONSE_HEADERS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Content-Type": "text/html; charset=utf-8",
   "X-Content-Type-Options": "nosniff",
-  
-  // REMOVEMOS o 'Content-Security-Policy' complexo
-  // E ADICIONAMOS um cabeçalho 'Sandbox' PERMISSIVO
-  // Isso diz ao navegador: "Confie neste conteúdo e permita que ele rode scripts e use estilos"
-  "Sandbox": "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-presentation",
+
+  // ESTA É A NOVA POLÍTICA DE SEGURANÇA
+  // Ela diz que é permitido rodar scripts e estilos "inline"
+  // e carregar conteúdo de qualquer lugar (*).
+  "Content-Security-Policy": "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';",
 };
 // ===================================
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: RESPONSE_HEADERS });
+  // Trata requisições OPTIONS (CORS)
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: RESPONSE_HEADERS });
+  }
 
   try {
     const reqUrl = new URL(req.url);
@@ -66,10 +69,14 @@ serve(async (req) => {
       .replace(/{{ARTICLE_ID}}/g, articleId)
       .replace('{{POST_DATA_JSON}}', JSON.stringify(post).replace(/</g, '\\u003c'));
 
+    // Retorna o HTML final
     return new Response(finalHtml, {
       headers: {
         ...RESPONSE_HEADERS,
-        "Cache-Control": "public, s-maxage=60, max-age=600",
+        // FORÇA O NAVEGADOR A NÃO USAR CACHE (para testes)
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
       },
     });
 
@@ -78,9 +85,8 @@ serve(async (req) => {
   }
 });
 
-// O HTML_TEMPLATE continua o mesmo da vez anterior, não precisa mudar.
-// Se quiser garantir, cole o template da resposta anterior aqui.
-const HTML_TEMPLATE = `<!DOCTYPE html>
+// O TEMPLATE HTML (COLE O DA RESPOSTA ANTERIOR AQUI, ELE ESTAVA CORRETO)
+const HTML_TEMPLATE = \`<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -180,11 +186,9 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
                     <div class="article-body">\${formattedContent}</div>
                 \`;
             }
-
-            
+                
         });
 
-        
     </script>
 </body>
-</html>`;
+</html>\`;
