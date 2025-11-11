@@ -38,6 +38,6 @@ jobs:
 
             - name: Deploy render-artigo
         run: |
-          supabase functions deploy rss_import \
+          supabase functions deploy render-artigo \
             --project-ref $SUPABASE_PROJECT_ID \
             --no-verify-jwt
