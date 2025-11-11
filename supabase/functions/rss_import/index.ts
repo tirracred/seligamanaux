@@ -178,7 +178,6 @@ async function rewriteWithGroq(
   conteudo: string 
 } | null> {
   
-  const prompt = [
     const prompt = [
     'Você é um jornalista profissional de Manaus/Amazonas.',
     '',
