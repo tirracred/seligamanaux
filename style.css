@@ -706,54 +706,95 @@ input:checked + .slider:before {
     flex: 1;
 }
 
-.article-extras {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(0,0,0,0.1);
-}
+    .page-title {
+      font-size: clamp(1.5rem, 6.2vw, 2.25rem);
+      line-height: 1.2;
+      word-break: break-word;
+      margin-top: .5rem;
+      margin-bottom: .5rem;
+    }
 
-.ad-wrap {
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 1rem;
-  position: relative;
-  margin-bottom: 2rem;
-  border: 1px solid rgba(0,0,0,0.07);
-}
+    /* Parágrafos mais confortáveis */
+    .article-body p {
+      font-size: clamp(1rem, 3.8vw, 1.125rem);
+      line-height: 1.75;
+      margin: 0 0 1rem 0;
+    }
 
-.ad-badge {
-  position: absolute;
-  top: .6rem;
-  right: .6rem;
-  background: #e2e8f0;
-  color: #475569;
-  padding: .2rem .5rem;
-  font-size: .75rem;
-  border-radius: 6px;
-}
+    .article-meta {
+      color: var(--texto-secundario, #6b7280);
+      font-size: .95rem;
+      margin-bottom: 1rem;
+    }
 
-.ad-cta {
-  display: block;
-  margin-top: .75rem;
-  padding: .9rem;
-  text-align: center;
-  border-radius: 10px;
-  background: #ef4444;
-  color: white;
-  font-weight: bold;
-  text-decoration: none;
-}
+    /* Imagens fluidas dentro do corpo */
+    .article-image {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      display: block;
+      margin: 1rem 0;
+    }
 
-.ad-cta:hover {
-  filter: brightness(0.9);
-}
+    /* ====== Bloco extra: publicidade ====== */
+    .article-extras {
+      margin-top: 2rem;
+      border-top: 1px solid rgba(0,0,0,.06);
+      padding-top: 1.25rem;
+    }
 
-.page-title {
-  font-size: clamp(1.6rem, 6vw, 2.3rem);
-  line-height: 1.2;
-}
+    .ad-wrap {
+      background: var(--bg-soft, #f8fafc);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 12px;
+      padding: 1rem;
+      position: relative;
+    }
 
-.article-body p {
-  font-size: clamp(1rem, 3.8vw, 1.15rem);
-  line-height: 1.7;
-}
+    .ad-badge {
+      position: absolute;
+      top: .5rem;
+      right: .5rem;
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid rgba(0,0,0,.06);
+      font-size: .75rem;
+      padding: .15rem .4rem;
+      border-radius: 6px;
+      letter-spacing: .02em;
+    }
+
+    .ad-card {
+      display: grid;
+      gap: .75rem;
+    }
+
+    .ad-video {
+      width: 100%;
+      max-height: 60vh;
+      border-radius: 10px;
+      display: block;
+      background: #000;
+    }
+
+    .ad-cta {
+      display: inline-block;
+      text-align: center;
+      width: 100%;
+      padding: .9rem 1rem;
+      border-radius: 10px;
+      font-weight: 700;
+      text-decoration: none;
+      background: #ef4444; /* vermelho SLM */
+      color: #fff;
+      transition: filter .2s ease;
+    }
+    .ad-cta:hover { filter: brightness(0.95); }
+
+    /* container principal pode já existir no seu CSS; isto só suaviza o padding no mobile */
+    .container { padding-left: clamp(12px, 3.5vw, 24px); padding-right: clamp(12px, 3.5vw, 24px); }
+
+    /* Reduz espaços exagerados do cabeçalho no mobile */
+    @media (max-width: 420px) {
+      .site-header .logo img { height: 3.2em !important; }
+    }
