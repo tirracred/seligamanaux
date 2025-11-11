@@ -96,8 +96,7 @@
             const titleColor = post.headline_colo || "#059669"; // Pega a cor do banco ou usa azul como padrão
             
             // === CORREÇÃO 2: Voltar a usar o ID, já que 'canonical_path' não existe aqui ===
-            const articleUrl = `artigo.html?id=${post.id}`;
-            
+            const articleUrl = `./noticia/${post.id}`;            
             // === CORREÇÃO 3: Usar 'post.content' para o resumo, já que 'resumo_reescrito' não existe ===
             const summary = (post.content || "") // Usando 'content' como fonte
                 .replace(/<[^>]+>/g, " ") // Remove tags HTML (importante)

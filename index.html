@@ -86,8 +86,7 @@
             
             const imageUrl = post.image_url || "https://placehold.co/400x250/1f2937/9ca3af?text=SeligaManaux";
             const titleColor = post.headline_colo || "#059669"; 
-            const articleUrl = `artigo.html?id=${post.id}`;
-            
+            const articleUrl = `./noticia/${post.id}`;            
             // LIMPEZA DO TÍTULO: Remove código hex no início
             let cleanTitle = (post.title || "Sem título").replace(/^#[0-9A-F]{6}\s*/yi, "");
 
