@@ -79,7 +79,7 @@
         let manausReachedEnd = false;
         let isManausLoading = false;
 
-        // Função para criar o card (com limpeza de título)
+        // Função para ccriar o card (com limpeza de título)
         function createNewsCard(post) {
             const article = document.createElement("article");
             article.className = "card-noticia";
@@ -110,12 +110,13 @@
             return article;
         }
 
-        // Função Principal de Carregamento
+       // Função Principal de Carregamento
         async function loadManausNews(isInitialLoad = false) {
             if (manausReachedEnd || isManausLoading) return;
             
-            if (typeof supabase === 'undefined' || !supabase) {
-                console.error("ERRO: Supabase não inicializado.");
+            // CORREÇÃO: Verifica explicitamente window._supabase
+            if (!window._supabase) {
+                console.error("ERRO: window._supabase não definido. Verifique o main.js.");
                 if (isInitialLoad) document.getElementById("categories-loading").innerText = "Erro de conexão.";
                 return;
             }
@@ -125,17 +126,16 @@
             if (loadIndicator) loadIndicator.style.display = "block";
 
             try {
-                // === QUERY COM ORDENAÇÃO POR PRIORIDADE ===
-                const { data: newsData, error } = await supabase
+                // CORREÇÃO: Chama window._supabase.from() para garantir que usa o cliente correto
+                const { data: newsData, error } = await window._supabase
                     .from(MANAUS_TABLE)
                     .select(MANAUS_COLUMNS)
                     .eq('status', 'publicado')
-                    // Filtro opcional: se quiser só notícias que contenham "Manaus" ou "Amazonas" na categoria, descomente abaixo:
-                    // .or('category.ilike.%Manaus%,category.ilike.%Amazonas%')
-                    
-                    // 1. Ordena por prioridade (maior primeiro, nulos por último)
+
+
                     .order("prioridade", { ascending: false, nullsFirst: false })  
-                    // 2. Ordena por data (mais recente primeiro)
+
+
                     .order("created_at", { ascending: false })   
                     .range(manausOffset, manausOffset + MANAUS_PAGE_SIZE - 1);
 
@@ -159,7 +159,7 @@
 
                 } else {
                     manausReachedEnd = true;
-                    if (isInitialLoad) document.getElementById("categories-loading").innerText = "Nenhuma notícia encontrada para esta região.";
+                    if (isInitialLoad) document.getElementById("categories-loading").innerText = "Nenhuma notícia encontrada.";
                 }
 
             } catch (err) {

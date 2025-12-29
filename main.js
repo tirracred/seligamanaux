@@ -13,13 +13,12 @@ const DB_TABLE = 'noticias';
 const STORAGE_BUCKET = 'midia';
 
 // Inicializa o cliente Supabase
-
-let supabase;
+// Usamos window._supabase para garantir acesso global e evitar conflito de nomes
 try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window._supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } catch (e) {
     console.error("Erro ao inicializar Supabase:", e);
-
+    
 }
 
 
